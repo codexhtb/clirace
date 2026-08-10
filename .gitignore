@@ -1,0 +1,14 @@
+node_modules/
+.pnpm-store/
+dist/
+.env
+.env.*.local
+!.env.example
+!.env.server.example
+*.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+clirace-deploy.tar.gz
+*.tsbuildinfo

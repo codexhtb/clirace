@@ -1,0 +1,22 @@
+# Server-only overlay for the local rootless shell prototype.
+# Keep this gateway bound to loopback and reach it through an SSH tunnel.
+services:
+  gateway:
+    ports: !override
+      - "127.0.0.1:${APP_PORT:-8080}:80"
+
+  api:
+    environment:
+      SANDBOX_ENABLED: "true"
+      SANDBOX_DOCKER_SOCKET: /run/clirace-sandbox/docker.sock
+      SANDBOX_IMAGE: ${SANDBOX_IMAGE:-clirace-sandbox:0.2.0}
+      SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-256}
+      SANDBOX_CPUS: ${SANDBOX_CPUS:-0.25}
+      SANDBOX_PIDS: ${SANDBOX_PIDS:-64}
+      SANDBOX_MAX_SESSIONS: ${SANDBOX_MAX_SESSIONS:-4}
+      SANDBOX_MAX_LIFETIME_SECONDS: ${SANDBOX_MAX_LIFETIME_SECONDS:-900}
+      SANDBOX_IDLE_TIMEOUT_SECONDS: ${SANDBOX_IDLE_TIMEOUT_SECONDS:-180}
+    volumes:
+      - ${SANDBOX_DOCKER_SOCKET_HOST:-/run/user/1001/docker.sock}:/run/clirace-sandbox/docker.sock
+    group_add:
+      - "${SANDBOX_SOCKET_GID:-1001}"

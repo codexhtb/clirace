@@ -1,0 +1,128 @@
+import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
+import { AuthService } from './auth-service.js';
+import type { AppConfig } from './config.js';
+import { hasSameOrigin } from './http-security.js';
+import type { SandboxManager } from './sandbox-manager.js';
+import { SandboxCapacityError, SandboxUnavailableError, SandboxUserSessionError } from './sandbox-manager.js';
+import type { Dependencies } from './services.js';
+
+const ticketSchema = z.object({
+  excludeChallengeId: z.string().regex(/^[a-z0-9-]{1,64}$/).optional(),
+  gameSessionId: z.string().uuid().optional(),
+}).strict();
+
+export async function registerSandboxRoutes(
+  app: FastifyInstance,
+  sandboxManager: SandboxManager,
+  config: AppConfig,
+  dependencies: Dependencies,
+): Promise<void> {
+  const auth = new AuthService(config, dependencies);
+
+  app.get('/api/sandbox/status', async (_request, reply) => reply.header('cache-control', 'no-store').send({
+    enabled: sandboxManager.enabled,
+    authenticatedGameSessions: true,
+  }));
+
+  app.post('/api/sandbox/sessions', {
+    config: {
+      rateLimit: { max: 20, timeWindow: '1 minute' },
+    },
+    preHandler: async (request, reply) => {
+      if (!hasSameOrigin(request)) {
+        return reply.code(403).send({
+          error: 'Forbidden origin',
+          message: 'Запуск shell разрешён только со страницы CLIRace.',
+        });
+      }
+    },
+  }, async (request, reply) => {
+    const user = await auth.currentUser(request);
+    if (!user) return reply.code(401).send({
+      error: 'Unauthorized',
+      message: 'Войдите в аккаунт, чтобы запустить настоящий shell.',
+    });
+    const parsed = ticketSchema.safeParse(request.body ?? {});
+    if (!parsed.success) return reply.code(400).send({
+      error: 'Invalid request', message: 'Некорректные параметры shell-сессии.',
+    });
+
+    try {
+      let game: {
+        gameSessionId: string;
+        sessionTaskId: string;
+        challengeId: string;
+        sandboxChallengeId: string;
+      } | undefined;
+      if (parsed.data.gameSessionId) {
+        const task = await dependencies.postgres.query<{
+          session_task_id: string;
+          challenge_id: string;
+          validation_config: Record<string, unknown>;
+        }>(`
+          SELECT st.id AS session_task_id, c.id AS challenge_id, c.validation_config
+          FROM game_sessions gs
+          JOIN session_tasks st ON st.game_session_id = gs.id
+          JOIN challenges c ON c.id = st.challenge_id
+          WHERE gs.id = $1 AND gs.user_id = $2 AND gs.status = 'active'
+            AND st.status = 'active' AND c.type = 'real_shell'
+        `, [parsed.data.gameSessionId, user.id]);
+        const activeTask = task.rows[0];
+        const sandboxChallengeId = activeTask?.validation_config.sandboxChallengeId;
+        if (!activeTask || typeof sandboxChallengeId !== 'string') {
+          return reply.code(409).send({
+            error: 'No active shell task',
+            message: 'В этом забеге сейчас нет активного Shell-задания.',
+          });
+        }
+        game = {
+          gameSessionId: parsed.data.gameSessionId,
+          sessionTaskId: activeTask.session_task_id,
+          challengeId: activeTask.challenge_id,
+          sandboxChallengeId,
+        };
+      }
+      const ticket = await sandboxManager.createTicket({
+        userId: user.id,
+        ...(parsed.data.excludeChallengeId ? { excludeChallengeId: parsed.data.excludeChallengeId } : {}),
+        ...(game ? { game } : {}),
+      });
+      return reply.header('cache-control', 'no-store').code(201).send(ticket);
+    } catch (error) {
+      if (error instanceof SandboxCapacityError) {
+        return reply.code(429).send({
+          error: 'Sandbox capacity reached',
+          message: 'Все локальные терминалы заняты. Попробуйте через минуту.',
+        });
+      }
+      if (error instanceof SandboxUnavailableError) {
+        app.log.warn({ error }, 'Sandbox is unavailable');
+        return reply.code(503).send({
+          error: 'Sandbox unavailable',
+          message: 'Локальный shell временно недоступен.',
+        });
+      }
+      if (error instanceof SandboxUserSessionError) {
+        return reply.code(409).send({
+          error: 'Sandbox already active',
+          message: 'У вас уже есть активная shell-сессия. Закройте её или подождите завершения.',
+        });
+      }
+      throw error;
+    }
+  });
+
+  app.get('/ws/terminal/:sessionId', { websocket: true }, (socket, request) => {
+    if (!hasSameOrigin(request)) {
+      socket.close(1008, 'Forbidden origin');
+      return;
+    }
+    const { sessionId } = request.params as { sessionId: string };
+    if (!/^[0-9a-f-]{36}$/i.test(sessionId)) {
+      socket.close(1008, 'Invalid session id');
+      return;
+    }
+    sandboxManager.bindSocket(sessionId, socket);
+  });
+}

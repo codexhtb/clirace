@@ -1,0 +1,29 @@
+{
+  "name": "clirace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fast, competitive Linux and DevOps CLI training.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter @clirace/api build && pnpm --filter @clirace/web build",
+    "dev": "concurrently -n api,web -c cyan,magenta \"pnpm --filter @clirace/api dev\" \"pnpm --filter @clirace/web dev\"",
+    "dev:api": "pnpm --filter @clirace/api dev",
+    "dev:web": "pnpm --filter @clirace/web dev",
+    "typecheck": "pnpm --filter @clirace/api typecheck && pnpm --filter @clirace/web typecheck",
+    "test:battle-e2e": "node scripts/test-battle-e2e.mjs",
+    "test:shell-e2e": "node scripts/test-shell-e2e.mjs",
+    "start": "pnpm --filter @clirace/api start"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@11.16.0",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.2",
+    "ws": "^8.21.3"
+  }
+}
