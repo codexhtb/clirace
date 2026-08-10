@@ -1,70 +1,305 @@
 # CLIRace
 
-CLIRace is a fast, competitive platform for Linux and DevOps CLI practice. The repository contains the runnable **PHASE 8 core**: infrastructure, browser authentication, 129 challenges, server-authoritative game sessions, daily challenges, private real-time battles, achievements, ratings, public profiles, leaderboards, saved history, and account-bound rootless Linux game sandboxes.
+**CLIRace** — соревновательная платформа для практики Linux и DevOps через реальный CLI.
 
-## Project structure
+Вместо тестов с вариантами ответов пользователь получает задачу и настоящий изолированный Linux shell, где должен решить её командой или последовательностью команд.
+
+Проект рассчитан как на самостоятельную практику, так и на соревнования между пользователями в реальном времени.
+
+Текущая версия репозитория содержит полностью рабочее ядро **PHASE 8**.
+
+---
+
+## Что уже реализовано
+
+На текущем этапе CLIRace включает:
+
+* регистрацию и авторизацию пользователей;
+* HttpOnly browser sessions;
+* **129 CLI-заданий**;
+* категории и фильтрацию заданий;
+* режимы одиночной игры;
+* Daily Challenge;
+* streak-систему;
+* достижения;
+* рейтинги;
+* глобальный leaderboard;
+* рейтинги по категориям;
+* публичные профили;
+* историю прохождений;
+* серверный расчёт результатов;
+* реальные Linux sandbox-сессии;
+* rootless Docker isolation;
+* browser terminal через WebSocket;
+* приватные PvP-битвы;
+* realtime lobby и countdown;
+* матчи на 3 / 5 / 10 раундов;
+* восстановление активной сессии после refresh;
+* серверное определение победителя;
+* сохранение результатов матчей.
+
+---
+
+# Архитектура
+
+CLIRace состоит из нескольких изолированных компонентов:
+
+```text
+Browser
+   │
+   ▼
+Nginx Gateway
+   │
+   ├── Web frontend
+   │
+   ├── REST API
+   │
+   ├── Battle WebSocket
+   │
+   └── Terminal WebSocket
+           │
+           ▼
+      Fastify API
+       │        │
+       │        ├── Redis
+       │        │
+       │        └── PostgreSQL
+       │
+       ▼
+Rootless Docker daemon
+       │
+       ▼
+Disposable Linux sandboxes
+```
+
+Frontend построен на:
+
+* React;
+* TypeScript;
+* Vite;
+* Tailwind CSS.
+
+Backend:
+
+* Fastify;
+* TypeScript;
+* PostgreSQL;
+* Redis;
+* WebSocket.
+
+Sandbox infrastructure:
+
+* rootless Docker;
+* отдельный daemon;
+* disposable containers;
+* network isolation;
+* cgroup PID limits.
+
+---
+
+# Структура проекта
 
 ```text
 clirace/
 ├── apps/
-│   ├── api/                 # Fastify + TypeScript API and dependency health checks
-│   │   ├── migrations/     # Ordered PostgreSQL schema and seed migrations
+│   ├── api/
+│   │   ├── migrations/
 │   │   ├── src/
 │   │   └── Dockerfile
-│   └── web/                 # React + TypeScript + Vite + Tailwind frontend
+│   │
+│   └── web/
 │       ├── src/
 │       ├── Dockerfile
-│       └── nginx.conf       # Static SPA server inside the web container
+│       └── nginx.conf
+│
 ├── infra/
-│   └── nginx/
-│       └── nginx.conf       # Public gateway: routes web, API, and future WebSockets
-├── .env.example             # Complete application environment contract
-├── docker-compose.yml       # Single-VM application stack
-├── package.json             # npm workspace and local development commands
-└── tsconfig.base.json       # Shared strict TypeScript rules
+│   ├── nginx/
+│   │   └── nginx.conf
+│   │
+│   └── sandbox/
+│       └── Dockerfile
+│
+├── scripts/
+│   └── deploy-local-shell.sh
+│
+├── .env.example
+├── .env.server.example
+├── docker-compose.yml
+├── docker-compose.sandbox.yml
+├── package.json
+└── tsconfig.base.json
 ```
 
-The `edge` network connects only Nginx, the web container, and the API. PostgreSQL and Redis are placed on the Compose-internal `data` network and publish no host ports. Database migrations run under a PostgreSQL advisory lock before the API starts accepting requests.
+---
 
-## Run with Docker Compose
+# Docker networking
 
-Requirements: Docker Engine with the Compose plugin.
+Основной application stack использует две Docker-сети.
+
+### `edge`
+
+Доступна только для компонентов, которым необходимо взаимодействовать с gateway:
+
+```text
+Nginx
+Web
+API
+```
+
+### `data`
+
+Внутренняя сеть для:
+
+```text
+API
+PostgreSQL
+Redis
+```
+
+PostgreSQL и Redis **не публикуют host ports**.
+
+Таким образом база данных и Redis недоступны напрямую извне Docker Compose stack.
+
+---
+
+# Быстрый запуск
+
+## Требования
+
+Необходимо установить:
+
+* Docker Engine;
+* Docker Compose plugin.
+
+Создайте конфигурацию окружения:
 
 ```bash
 cp .env.example .env
-# Replace both passwords in .env before exposing the service.
+```
+
+Перед использованием приложения обязательно замените пароли в `.env`.
+
+Запуск:
+
+```bash
 docker compose up --build -d
+```
+
+Проверить состояние контейнеров:
+
+```bash
 docker compose ps
+```
+
+Проверить gateway:
+
+```bash
 curl http://localhost/healthz
+```
+
+Проверить API:
+
+```bash
 curl http://localhost/api/health
 ```
 
-Open <http://localhost>. Stop the stack with:
+После запуска интерфейс доступен по адресу:
+
+```text
+http://localhost
+```
+
+---
+
+# Остановка
 
 ```bash
 docker compose down
 ```
 
-PostgreSQL data is kept in the named `postgres_data` volume. `docker compose down` preserves it; add `--volumes` only when you intentionally want a clean database.
+PostgreSQL использует named volume:
 
-## Local development
+```text
+postgres_data
+```
 
-Requirements: Node.js 22+, pnpm 11+, local PostgreSQL, and local Redis.
+Поэтому обычный:
+
+```bash
+docker compose down
+```
+
+не удаляет данные.
+
+Для полного сброса окружения:
+
+```bash
+docker compose down --volumes
+```
+
+Используйте эту команду только если действительно хотите удалить данные PostgreSQL.
+
+---
+
+# Локальная разработка
+
+## Требования
+
+* Node.js 22+
+* pnpm 11+
+* PostgreSQL
+* Redis
+
+Установка зависимостей:
 
 ```bash
 pnpm install
+```
+
+Создание environment-файла:
+
+```bash
 cp .env.example .env
 ```
 
-For local processes, set `DATABASE_URL` and `REDIS_URL` to reachable development services, then run:
+Укажите локальные:
+
+```text
+DATABASE_URL
+REDIS_URL
+```
+
+После этого:
 
 ```bash
 pnpm dev
 ```
 
-The web app is served at <http://localhost:5173>; Vite proxies `/api` to <http://localhost:3000>.
+Frontend:
 
-## Verification
+```text
+http://localhost:5173
+```
+
+Backend:
+
+```text
+http://localhost:3000
+```
+
+Vite автоматически проксирует:
+
+```text
+/api
+```
+
+на API-сервер.
+
+---
+
+# Проверка проекта
+
+Основной набор проверок:
 
 ```bash
 pnpm typecheck
@@ -75,75 +310,676 @@ docker compose up --build -d
 docker compose ps
 ```
 
-Expected HTTP checks:
+---
 
-- `GET /healthz` — Nginx gateway liveness.
-- `GET /health/live` — API process liveness (internal API route).
-- `GET /api/health` — API readiness including PostgreSQL and Redis.
-- `GET /api/categories` — enabled categories with challenge counts.
-- `GET /api/challenges` — public challenge catalog with filters.
-- `POST /api/auth/register` — create an account and HttpOnly browser session.
-- `POST /api/auth/login` — authenticate by username or email.
-- `POST /api/auth/logout` — revoke the current Redis-backed session.
-- `GET /api/auth/me` — return the current public account identity.
-- `DELETE /api/auth/account` — delete the signed-in account after password confirmation.
-- `POST /api/game/sessions` — create an authenticated Recall, Quick, or mixed run.
-- `GET /api/game/sessions/:id` — resume the current user's active run.
-- `POST /api/game/sessions/:id/submit` — validate a command and award server-calculated points.
-- `POST /api/game/sessions/:id/skip` — skip the active task and advance the run.
-- `GET /api/profiles/:username` — public profile, ratings, aggregate statistics, and recent runs.
-- `GET /api/profiles/:username/history` — paginated public run history.
-- `GET /api/leaderboard` — overall or category leaderboard.
-- `GET /api/daily` — today’s shared challenge, community progress, and the signed-in user’s streak.
-- `POST /api/daily/start` — create or resume the signed-in user’s one daily attempt.
-- `GET /api/sandbox/status` — report whether the rootless Shell mode is available.
-- `POST /api/sandbox/sessions` — create an authenticated one-time shell ticket for a game task.
-- `GET /ws/terminal/:sessionId` — attach the browser terminal with the one-time bearer token.
-- `GET /api/battles/options` — list battle categories and supported round counts.
-- `POST /api/battles` — create a private room and immutable ordered challenge set.
-- `POST /api/battles/:roomCode/join` — join a room idempotently as its second player.
-- `POST /api/battles/:roomCode/ready` — change readiness before the match countdown.
-- `POST /api/battles/:roomCode/terminal` — issue or reconnect the current round's sandbox ticket.
-- `GET /ws/battle/:roomCode` — receive authoritative lobby, countdown, progress, and result events.
+# Health checks
 
-## Phase boundary
+### Nginx
 
-PHASE 8 adds two-player private Shell battles to the PHASE 7 feature set. A room uses a short invite code, 3/5/10 immutable ordered challenges, server time for the shared countdown, independent per-player round progress, backend-only winner selection, persistent results, and realtime WebSocket state. Each player receives a separate disposable rootless container; terminal bytes never pass through the opponent's battle channel. Refresh reconnects the same active session for 60 seconds instead of creating a second sandbox.
+```http
+GET /healthz
+```
 
-Run the production two-client regression test against the SSH tunnel with `pnpm test:battle-e2e`. It creates two temporary accounts, verifies duplicate join/ready handling, opens two battle and two terminal WebSockets, completes three rounds at different speeds, reconnects one terminal to the same session ID, validates the stored winner/results, and removes the accounts afterward.
+Проверяет доступность публичного gateway.
 
-## Rootless game shell
+---
 
-The game shell uses a second, rootless Docker daemon owned by `clirace-sandbox`. The application API receives only that daemon's Unix socket; it never receives the system Docker socket. User containers have no network, host mounts, published ports, devices, added capabilities, or access to another session. Tickets require an authenticated account, game shells are linked to the active game task or battle round and database result, and each user may have only one live sandbox. Sessions expire after 15 minutes and are destroyed after 3 minutes of inactivity. Per-container PID isolation is enforced with the cgroup `PidsLimit`; do not add an `nproc` ulimit in rootless mode because it counts all processes owned by the shared daemon user rather than one container.
+### API process
 
-Build the sandbox image with the rootless daemon:
+```http
+GET /health/live
+```
+
+Проверяет, что API-процесс работает.
+
+---
+
+### API readiness
+
+```http
+GET /api/health
+```
+
+Проверяет:
+
+* API;
+* PostgreSQL;
+* Redis.
+
+---
+
+# Authentication API
+
+### Registration
+
+```http
+POST /api/auth/register
+```
+
+Создаёт пользователя и browser session.
+
+---
+
+### Login
+
+```http
+POST /api/auth/login
+```
+
+Поддерживает вход через:
+
+* username;
+* email.
+
+---
+
+### Logout
+
+```http
+POST /api/auth/logout
+```
+
+Текущая Redis-backed session отзывается.
+
+---
+
+### Current user
+
+```http
+GET /api/auth/me
+```
+
+Возвращает публичную информацию об авторизованном пользователе.
+
+---
+
+### Delete account
+
+```http
+DELETE /api/auth/account
+```
+
+Удаляет аккаунт после подтверждения пароля.
+
+---
+
+# Challenges
+
+Получить категории:
+
+```http
+GET /api/categories
+```
+
+Получить каталог заданий:
+
+```http
+GET /api/challenges
+```
+
+Каталог поддерживает фильтрацию.
+
+Всего в текущем seed-наборе:
+
+```text
+129 challenges
+```
+
+---
+
+# Game sessions
+
+Создание игровой сессии:
+
+```http
+POST /api/game/sessions
+```
+
+Поддерживаемые режимы:
+
+* Recall;
+* Quick;
+* Mixed.
+
+Получить активную сессию:
+
+```http
+GET /api/game/sessions/:id
+```
+
+Отправить решение:
+
+```http
+POST /api/game/sessions/:id/submit
+```
+
+Пропустить задачу:
+
+```http
+POST /api/game/sessions/:id/skip
+```
+
+Проверка команд и начисление очков выполняются **на backend**.
+
+Frontend не является источником истины для игровых результатов.
+
+---
+
+# Daily Challenge
+
+Текущее ежедневное задание:
+
+```http
+GET /api/daily
+```
+
+Endpoint возвращает:
+
+* сегодняшнее общее задание;
+* community progress;
+* streak текущего пользователя.
+
+Начать Daily Challenge:
+
+```http
+POST /api/daily/start
+```
+
+Один пользователь может иметь только одну daily attempt на текущий день.
+
+---
+
+# Profiles
+
+Публичный профиль:
+
+```http
+GET /api/profiles/:username
+```
+
+Содержит:
+
+* рейтинг;
+* статистику;
+* достижения;
+* результаты;
+* последние игровые сессии.
+
+Полная история:
+
+```http
+GET /api/profiles/:username/history
+```
+
+Поддерживается pagination.
+
+---
+
+# Leaderboard
+
+```http
+GET /api/leaderboard
+```
+
+Можно получать:
+
+* общий leaderboard;
+* leaderboard по категории.
+
+---
+
+# Linux Sandbox
+
+Главная особенность CLIRace — задачи можно выполнять внутри настоящего Linux shell.
+
+Каждая sandbox-сессия запускается внутри отдельного disposable container.
+
+Проверить доступность Shell Mode:
+
+```http
+GET /api/sandbox/status
+```
+
+Создать sandbox session:
+
+```http
+POST /api/sandbox/sessions
+```
+
+API выдаёт одноразовый ticket для подключения терминала.
+
+Подключение браузера:
+
+```http
+GET /ws/terminal/:sessionId
+```
+
+Для подключения используется одноразовый bearer token.
+
+---
+
+# Sandbox security model
+
+CLIRace **не передаёт API системный `/var/run/docker.sock`**.
+
+Для игровых контейнеров запускается отдельный:
+
+```text
+rootless Docker daemon
+```
+
+под пользователем:
+
+```text
+clirace-sandbox
+```
+
+API получает доступ исключительно к Unix socket этого daemon.
+
+---
+
+Каждый игровой контейнер создаётся без:
+
+* network access;
+* host mounts;
+* published ports;
+* devices;
+* added Linux capabilities;
+* доступа к другим sandbox-сессиям.
+
+Sandbox также связан с:
+
+* авторизованным аккаунтом;
+* активной игровой сессией;
+* конкретным заданием;
+* battle round;
+* сохранённым результатом.
+
+---
+
+# Sandbox limits
+
+Одновременно пользователь может иметь только:
+
+```text
+1 live sandbox
+```
+
+Максимальная продолжительность сессии:
+
+```text
+15 минут
+```
+
+Timeout при отсутствии активности:
+
+```text
+3 минуты
+```
+
+После timeout контейнер уничтожается.
+
+Количество процессов ограничивается через:
+
+```text
+cgroup PidsLimit
+```
+
+В rootless-режиме не используется:
+
+```text
+nproc
+```
+
+поскольку такой лимит учитывал бы процессы всего пользователя rootless Docker daemon, а не конкретного контейнера.
+
+---
+
+# Сборка sandbox image
+
+Получить UID пользователя:
 
 ```bash
 SANDBOX_UID=$(id -u clirace-sandbox)
+```
+
+Собрать image через rootless daemon:
+
+```bash
 sudo -u clirace-sandbox env \
   XDG_RUNTIME_DIR="/run/user/${SANDBOX_UID}" \
   DOCKER_HOST="unix:///run/user/${SANDBOX_UID}/docker.sock" \
-  docker build -t clirace-sandbox:0.2.0 -f infra/sandbox/Dockerfile infra/sandbox
+  docker build \
+  -t clirace-sandbox:0.2.0 \
+  -f infra/sandbox/Dockerfile \
+  infra/sandbox
 ```
 
-Copy `.env.server.example` to `.env`, replace both passwords, confirm the rootless socket UID/GID with `stat -c '%u:%g' /run/user/1001/docker.sock`, then start:
+---
+
+# Проверка rootless Docker socket
+
+Например:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.sandbox.yml up --build -d
+stat -c '%u:%g' /run/user/1001/docker.sock
 ```
 
-On the prepared Ubuntu server, the guarded deployment script performs the image build, socket detection, Compose startup, and readiness check:
+UID/GID socket должны соответствовать конфигурации сервера.
+
+---
+
+# Запуск с Sandbox Mode
+
+Создайте `.env`:
+
+```bash
+cp .env.server.example .env
+```
+
+Измените placeholder-пароли.
+
+После этого:
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.sandbox.yml \
+  up --build -d
+```
+
+---
+
+# Deployment script
+
+На подготовленном Ubuntu-сервере можно использовать:
 
 ```bash
 sudo bash scripts/deploy-local-shell.sh
 ```
 
-On its first run it creates a mode-`0600` `.env` and stops so the two placeholder passwords can be replaced safely.
+Скрипт выполняет:
 
-The gateway listens only on `127.0.0.1:8080`. From an administrator workstation, use an SSH tunnel rather than publishing the unauthenticated prototype:
+1. проверку окружения;
+2. создание `.env`;
+3. настройку permissions;
+4. определение rootless Docker socket;
+5. сборку sandbox image;
+6. запуск Compose stack;
+7. readiness check.
 
-```bash
-ssh -L 8080:127.0.0.1:8080 -p 6222 codex@SERVER_ADDRESS
+При первом запуске создаётся:
+
+```text
+.env
 ```
 
-Open <http://localhost:8080>. Do not bind this prototype to a public interface; browser authentication and per-user authorization are introduced before public terminal access.
+с permissions:
+
+```text
+0600
+```
+
+После этого deployment намеренно останавливается, чтобы administrator заменил placeholder-пароли.
+
+---
+
+# Private Battles
+
+PHASE 8 добавляет полноценные приватные PvP Shell-битвы.
+
+Получить настройки battle:
+
+```http
+GET /api/battles/options
+```
+
+Создать комнату:
+
+```http
+POST /api/battles
+```
+
+Backend создаёт:
+
+* короткий room code;
+* фиксированный challenge set;
+* порядок заданий;
+* количество раундов.
+
+Поддерживаются:
+
+```text
+3 rounds
+5 rounds
+10 rounds
+```
+
+---
+
+# Join
+
+Второй игрок подключается через:
+
+```http
+POST /api/battles/:roomCode/join
+```
+
+Операция идемпотентная.
+
+Повторный запрос не создаёт второго игрока и не ломает состояние комнаты.
+
+---
+
+# Ready state
+
+```http
+POST /api/battles/:roomCode/ready
+```
+
+Игрок может менять ready state до начала матча.
+
+После готовности обоих игроков backend запускает общий countdown.
+
+---
+
+# Battle WebSocket
+
+Realtime-состояние комнаты передаётся через:
+
+```http
+GET /ws/battle/:roomCode
+```
+
+Battle WebSocket используется для:
+
+* lobby state;
+* ready state;
+* countdown;
+* текущего раунда;
+* прогресса игроков;
+* завершения раунда;
+* завершения матча;
+* результатов.
+
+---
+
+# Battle Terminal
+
+Для каждого раунда игрок получает отдельную sandbox session.
+
+Ticket:
+
+```http
+POST /api/battles/:roomCode/terminal
+```
+
+Терминал подключается отдельно через Terminal WebSocket.
+
+Важно:
+
+```text
+Terminal traffic Player A
+```
+
+никогда не проходит через:
+
+```text
+Battle channel Player B
+```
+
+Игроки имеют независимые терминальные соединения и отдельные контейнеры.
+
+---
+
+# Server-authoritative battles
+
+CLIRace использует server-authoritative модель.
+
+Backend определяет:
+
+* текущее время;
+* начало countdown;
+* challenge order;
+* состояние раундов;
+* успешность решения;
+* время прохождения;
+* score;
+* winner.
+
+Клиент не может самостоятельно объявить победу.
+
+---
+
+# Reconnect
+
+При обновлении страницы пользователь не получает новую sandbox-сессию автоматически.
+
+В течение:
+
+```text
+60 секунд
+```
+
+можно подключиться к той же активной session.
+
+Это предотвращает появление нескольких контейнеров для одного battle round.
+
+---
+
+# Battle E2E test
+
+Полный production regression test:
+
+```bash
+pnpm test:battle-e2e
+```
+
+Тест эмулирует двух игроков.
+
+Во время теста:
+
+1. создаются два временных аккаунта;
+2. создаётся battle room;
+3. второй пользователь входит в комнату;
+4. проверяются duplicate `join`;
+5. проверяются duplicate `ready`;
+6. открываются два Battle WebSocket;
+7. открываются два Terminal WebSocket;
+8. пользователи проходят три раунда;
+9. игроки проходят задания с разной скоростью;
+10. один terminal reconnect выполняется к тому же session ID;
+11. backend определяет победителя;
+12. проверяются сохранённые результаты;
+13. временные аккаунты удаляются.
+
+---
+
+# Database migrations
+
+Миграции выполняются перед началом обработки API requests.
+
+Для защиты от одновременного запуска нескольких экземпляров используется:
+
+```text
+PostgreSQL advisory lock
+```
+
+Это позволяет избежать параллельного выполнения одной migration несколькими API instances.
+
+---
+
+# Безопасный доступ к текущему prototype
+
+Gateway на подготовленном сервере слушает только:
+
+```text
+127.0.0.1:8080
+```
+
+То есть приложение намеренно не публикуется напрямую в Интернет.
+
+Для доступа с administrator workstation используется SSH port forwarding:
+
+```bash
+ssh \
+  -L 8080:127.0.0.1:8080 \
+  -p 6222 \
+  codex@SERVER_ADDRESS
+```
+
+После подключения:
+
+```text
+http://localhost:8080
+```
+
+будет проксироваться на CLIRace server.
+
+---
+
+# Важно
+
+Не изменяйте bind gateway с:
+
+```text
+127.0.0.1
+```
+
+на публичный интерфейс без проверки security model.
+
+Несмотря на наличие authentication и sandbox isolation, публичный shell-сервис требует отдельного security review перед production deployment.
+
+---
+
+# Текущая стадия
+
+```text
+PHASE 8
+```
+
+Основное ядро платформы уже работает:
+
+```text
+Authentication
+      ↓
+Challenges
+      ↓
+Game Sessions
+      ↓
+Real Linux Sandbox
+      ↓
+Profiles / Ratings
+      ↓
+Daily Challenges
+      ↓
+Private Realtime Battles
+```
+
+Следующие этапы могут развивать CLIRace в сторону полноценной multiplayer-платформы для Linux / DevOps практики.
+
+---
+
+## CLIRace
+
+**Learn the command line by competing in it.**
