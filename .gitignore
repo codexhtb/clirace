@@ -2,9 +2,12 @@ node_modules/
 .pnpm-store/
 dist/
 .env
+.env.production
 .env.*.local
 !.env.example
 !.env.server.example
+!.env.production.example
+backups/
 *.log
 .DS_Store
 .idea/

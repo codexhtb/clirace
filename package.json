@@ -15,6 +15,7 @@
     "test:battle-e2e": "node scripts/test-battle-e2e.mjs",
     "test:shell-e2e": "node scripts/test-shell-e2e.mjs",
     "test:interview-100": "node scripts/test-interview-100.mjs",
+    "test:production-smoke": "node scripts/test-production-smoke.mjs",
     "start": "pnpm --filter @clirace/api start"
   },
   "engines": {

@@ -41,6 +41,8 @@ try {
     '--exclude=node_modules',
     '--exclude=dist',
     '--exclude=.env',
+    '--exclude=.env.production',
+    '--exclude=backups',
     '--exclude=clirace-deploy.tar.gz',
     '.'
   )

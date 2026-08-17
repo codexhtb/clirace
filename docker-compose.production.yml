@@ -1,0 +1,36 @@
+# Public single-server edge. Apply after docker-compose.yml and docker-compose.sandbox.yml.
+services:
+  caddy:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  api:
+    environment:
+      AUTH_COOKIE_SECURE: "true"
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -21,8 +21,8 @@ while IFS= read -r member; do
     echo "Unsafe path in deployment archive: $member" >&2
     exit 1
   fi
-  if [[ "$clean" == ".env" ]]; then
-    echo "The deployment archive must not overwrite the server .env file." >&2
+  if [[ "$clean" == ".env" || "$clean" == ".env.production" ]]; then
+    echo "The deployment archive must not overwrite server environment files." >&2
     exit 1
   fi
 done < <(tar -tzf "$ARCHIVE")

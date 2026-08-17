@@ -6,7 +6,7 @@
 
 Проект рассчитан как на самостоятельную практику, так и на соревнования между пользователями в реальном времени.
 
-Текущая версия репозитория содержит полностью рабочее ядро **PHASE 8**.
+Текущая версия репозитория содержит полностью рабочее ядро **PHASE 9**.
 
 ---
 
@@ -139,6 +139,9 @@ clirace/
 │       └── nginx.conf
 │
 ├── infra/
+│   ├── caddy/
+│   │   └── Caddyfile
+│   │
 │   ├── nginx/
 │   │   └── nginx.conf
 │   │
@@ -146,12 +149,17 @@ clirace/
 │       └── Dockerfile
 │
 ├── scripts/
-│   └── deploy-local-shell.sh
+│   ├── deploy-local-shell.sh
+│   ├── deploy-production.sh
+│   ├── backup-postgres.sh
+│   └── test-production-smoke.mjs
 │
 ├── .env.example
 ├── .env.server.example
+├── .env.production.example
 ├── docker-compose.yml
 ├── docker-compose.sandbox.yml
+├── docker-compose.production.yml
 ├── package.json
 └── tsconfig.base.json
 ```
@@ -964,24 +972,223 @@ http://localhost:8080
 
 ---
 
-# Важно
+# Публикация CLIRace в Интернет
 
-Не изменяйте bind gateway с:
+PHASE 9 добавляет воспроизводимый production deployment на одном Ubuntu-сервере. До появления домена локальный gateway продолжает работать на `127.0.0.1:8080` и не публикуется наружу.
+
+Production traffic проходит так:
+
+```text
+Internet
+   │
+   ├── HTTP :80 ── redirect to HTTPS
+   │
+   ▼
+Caddy :443 · automatic ACME TLS
+   │
+   ▼
+Nginx gateway :80 · internal Docker network
+   ├── React frontend
+   ├── /api/*       → Fastify API
+   ├── /ws/terminal → Terminal WebSocket
+   └── /ws/battle   → Battle WebSocket
+                         │
+                         ▼
+                 rootless Docker socket
+```
+
+Caddy автоматически выпускает и обновляет TLS-сертификат. Certificate data хранится в Docker volume `caddy_data`, не попадает в Git и переживает recreation контейнера. Nginx сохраняет существующую маршрутизацию, CSP и WebSocket Upgrade. Frontend строит API и `wss://` адреса от `window.location.host`, поэтому домен, localhost и IP не зашиты в React-код.
+
+## Первый production deployment
+
+1. Купите домен.
+2. Создайте DNS A record:
+
+```text
+clirace.example -> SERVER_PUBLIC_IP
+```
+
+При использовании IPv6 также можно создать AAAA record.
+
+3. Скопируйте production template:
+
+```bash
+cd /opt/clirace
+cp .env.production.example .env.production
+chmod 600 .env.production
+nano .env.production
+```
+
+Укажите как минимум:
+
+```env
+PUBLIC_HOST=clirace.example
+PUBLIC_SCHEME=https
+ACME_EMAIL=admin@clirace.example
+POSTGRES_PASSWORD=длинный_существующий_пароль
+REDIS_PASSWORD=другой_длинный_существующий_пароль
+```
+
+При обновлении существующего сервера перенесите реальные пароли из `/opt/clirace/.env`: смена только переменной окружения не меняет пароль уже созданной PostgreSQL role.
+
+4. Запустите одну команду:
+
+```bash
+sudo bash scripts/deploy-production.sh
+```
+
+Скрипт проверяет env, DNS, rootless daemon и Compose, собирает sandbox и application images до recreation, запускает миграции через API startup, ждёт health checks и проверяет HTTPS с настоящим сертификатом.
+
+Если DNS ещё не указывает на сервер, скрипт завершится до изменения работающего stack и напечатает:
+
+```text
+Point the domain to the server and run deployment again.
+```
+
+После исправления DNS просто повторите ту же deployment-команду.
+
+## Public ports и firewall
+
+Публично нужны только:
+
+```text
+80/tcp   HTTP redirect и ACME challenge
+443/tcp  HTTPS и WSS
+6222/tcp административный SSH на текущем сервере
+```
+
+Не открывайте наружу:
+
+```text
+3000  Fastify API
+5432  PostgreSQL
+6379  Redis
+8080  локальный gateway
+Docker API/socket
+/run/user/<UID>/docker.sock
+sandbox container ports
+```
+
+Deployment намеренно не меняет firewall и не рискует закрыть SSH. Если используется UFW, сначала подтвердите фактический SSH port, затем настройте правила вручную, например:
+
+```bash
+sudo ufw allow 6222/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw status verbose
+```
+
+Не выполняйте `ufw enable`, пока не проверен доступ по SSH во второй сессии.
+
+## Проверка production
+
+Основные endpoints:
+
+```bash
+curl -fsS https://clirace.example/healthz
+curl -fsS https://clirace.example/api/health
+curl -fsS https://clirace.example/api/sandbox/status
+```
+
+Проверить certificate и дату окончания:
+
+```bash
+openssl s_client -connect clirace.example:443 -servername clirace.example </dev/null 2>/dev/null \
+  | openssl x509 -noout -issuer -subject -dates
+```
+
+Полный smoke test создаёт временный аккаунт, проверяет register/logout/login, Secure cookie, authenticated session, `wss://` Terminal, выполнение shell-команды и cleanup:
+
+```bash
+CLIRACE_URL=https://clirace.example pnpm test:production-smoke
+```
+
+Private Battle проверяется существующим regression test:
+
+```bash
+CLIRACE_URL=https://clirace.example pnpm test:battle-e2e
+```
+
+Оба теста удаляют временные аккаунты после завершения.
+
+## Logs и диагностика
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.yml \
+  -f docker-compose.sandbox.yml \
+  -f docker-compose.production.yml \
+  ps
+
+docker compose --env-file .env.production \
+  -f docker-compose.yml \
+  -f docker-compose.sandbox.yml \
+  -f docker-compose.production.yml \
+  logs --tail=200 api gateway caddy
+```
+
+Rootless socket проверяется отдельно:
+
+```bash
+SANDBOX_UID=$(id -u clirace-sandbox)
+sudo -u clirace-sandbox env \
+  XDG_RUNTIME_DIR="/run/user/${SANDBOX_UID}" \
+  DOCKER_HOST="unix:///run/user/${SANDBOX_UID}/docker.sock" \
+  docker info
+```
+
+## Безопасное обновление
+
+Загрузите новую версию repository и повторите:
+
+```bash
+sudo bash scripts/deploy-production.sh
+```
+
+Скрипт сначала собирает новые images. PostgreSQL volume, аккаунты, результаты, Caddy certificates и idempotent migrations сохраняются. `.env.production` не перезаписывается.
+
+## PostgreSQL backup
+
+Создать consistent custom-format dump:
+
+```bash
+sudo bash scripts/backup-postgres.sh
+```
+
+Результат:
+
+```text
+backups/clirace-2026-08-18_030000.dump
+```
+
+Проверка архива:
+
+```bash
+pg_restore --list backups/clirace-2026-08-18_030000.dump | head
+```
+
+Backup на той же VM не является disaster recovery. Регулярно копируйте `.dump` на другой host, NAS или object storage и периодически проверяйте восстановление на отдельной PostgreSQL instance.
+
+---
+
+# Production security
+
+Не изменяйте локальный bind gateway с:
 
 ```text
 127.0.0.1
 ```
 
-на публичный интерфейс без проверки security model.
+на публичный интерфейс: внешний доступ должен идти только через Caddy на 80/443.
 
-Несмотря на наличие authentication и sandbox isolation, публичный shell-сервис требует отдельного security review перед production deployment.
+Production cookies имеют `HttpOnly`, `Secure`, `SameSite=Lax` и `Path=/`. Fastify ограничивает HTTP body до 64 KiB, WebSocket payload до 16 KiB, а чувствительные auth/game/sandbox/battle endpoints защищены отдельными rate limits. PostgreSQL constraint гарантирует одну live sandbox-сессию на аккаунт.
 
 ---
 
 # Текущая стадия
 
 ```text
-PHASE 8
+PHASE 9
 ```
 
 Основное ядро платформы уже работает:

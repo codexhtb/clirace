@@ -27,7 +27,7 @@ export async function registerSandboxRoutes(
 
   app.post('/api/sandbox/sessions', {
     config: {
-      rateLimit: { max: 20, timeWindow: '1 minute' },
+      rateLimit: { max: 8, timeWindow: '1 minute' },
     },
     preHandler: async (request, reply) => {
       if (!hasSameOrigin(request)) {

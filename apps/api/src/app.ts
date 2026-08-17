@@ -26,7 +26,7 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager }
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
     trustProxy: true,
-    bodyLimit: 1_048_576,
+    bodyLimit: config.HTTP_BODY_LIMIT_BYTES,
     requestTimeout: 10_000,
   });
 

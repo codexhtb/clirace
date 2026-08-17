@@ -79,7 +79,7 @@ export async function registerBattleRoutes(
   });
 
   app.post('/api/battles/:roomCode/terminal', {
-    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    config: { rateLimit: { max: 12, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     if (!hasSameOrigin(request)) return forbidden(reply);
     const user = await requireUser(auth, request, reply);

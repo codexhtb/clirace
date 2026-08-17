@@ -31,7 +31,7 @@ export class AuthService {
       this.config.AUTH_COOKIE_NAME,
       token,
       this.config.AUTH_SESSION_TTL_SECONDS,
-      request.protocol === 'https',
+      this.config.AUTH_COOKIE_SECURE || request.protocol === 'https',
     ));
   }
 
@@ -40,7 +40,7 @@ export class AuthService {
     if (token) await this.dependencies.redis.del(sessionKey(token));
     reply.header('set-cookie', clearSessionCookie(
       this.config.AUTH_COOKIE_NAME,
-      request.protocol === 'https',
+      this.config.AUTH_COOKIE_SECURE || request.protocol === 'https',
     ));
   }
 
