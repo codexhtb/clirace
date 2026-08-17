@@ -55,7 +55,7 @@ export function CategoryCatalog() {
       <div className="page-width py-20">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Каталог PHASE 2</p>
+            <p className="eyebrow">Каталог заданий</p>
             <h2>Шесть направлений. Двадцать девять задач.</h2>
           </div>
           <p>Категории и задания уже загружаются из PostgreSQL через публичный API, готовый для игрового режима.</p>

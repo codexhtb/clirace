@@ -2,6 +2,7 @@ import { ArrowLeft, Check, Clipboard, Clock3, Copy, Crown, Flame, LoaderCircle, 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { BattleTerminal } from './BattleTerminal';
 import { CommunityHeader } from './CommunityHeader';
+import { humanizeError } from './errors';
 
 interface AuthUser { id: string; username: string; email: string; }
 interface BattleOptions { categories: Array<{ slug: string; name: string; challengeCount: number }> }
@@ -61,7 +62,7 @@ export function BattleCreatePage() {
       if (!response.ok || !payload.battle) throw new Error(payload.message ?? 'Не удалось создать Battle.');
       window.location.assign(`/battle/${payload.battle.roomCode}`);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Не удалось создать Battle.');
+      setError(humanizeError(createError, 'Не удалось создать Battle. Попробуйте ещё раз.'));
       setBusy(false);
     }
   };
@@ -135,7 +136,6 @@ export function BattleRoomPage() {
   const [guest, setGuest] = useState(false);
   const [realtime, setRealtime] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [eventLabel, setEventLabel] = useState('battle:state');
 
   useEffect(() => { battleRef.current = battle; }, [battle]);
 
@@ -156,7 +156,7 @@ export function BattleRoomPage() {
         }
         if (active) setBattle(current);
       } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить Battle.');
+        if (active) setError(humanizeError(loadError, 'Не удалось загрузить Battle.'));
       } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -175,9 +175,8 @@ export function BattleRoomPage() {
       socket.onopen = () => { attempts = 0; setRealtime(true); setError(null); socket.send(JSON.stringify({ type: 'battle:state' })); };
       socket.onmessage = (event) => {
         const message = JSON.parse(String(event.data)) as { type: string; state?: BattleState; message?: string };
-        setEventLabel(message.type);
         if (message.state) setBattle(message.state);
-        if (message.type === 'battle:error') setError(message.message ?? 'Battle action failed.');
+        if (message.type === 'battle:error') setError(humanizeError(message.message, 'Действие не выполнено. Попробуйте ещё раз.'));
       };
       socket.onerror = () => setRealtime(false);
       socket.onclose = () => {
@@ -208,7 +207,7 @@ export function BattleRoomPage() {
       const payload = await response.json() as { battle?: BattleState; message?: string };
       if (!response.ok || !payload.battle) throw new Error(payload.message ?? 'Не удалось изменить Ready.');
       setBattle(payload.battle);
-    } catch (readyError) { setError(readyError instanceof Error ? readyError.message : 'Ready failed.'); }
+    } catch (readyError) { setError(humanizeError(readyError, 'Не удалось изменить готовность.')); }
   };
 
   return (
@@ -219,7 +218,7 @@ export function BattleRoomPage() {
       {!loading && !guest && error && !battle && <BattleError message={error} />}
       {battle && (
         <>
-          <BattleTopbar battle={battle} realtime={realtime} eventLabel={eventLabel} />
+          <BattleTopbar battle={battle} realtime={realtime} />
           {battle.status === 'finished' ? <BattleResults battle={battle} />
             : battle.status === 'cancelled' ? <BattleError message="Комната закрыта по таймауту." />
               : battle.preparing || battle.status === 'countdown' || battle.status === 'running'
@@ -231,15 +230,15 @@ export function BattleRoomPage() {
   );
 }
 
-function BattleTopbar({ battle, realtime, eventLabel }: { battle: BattleState; realtime: boolean; eventLabel: string }) {
+function BattleTopbar({ battle, realtime }: { battle: BattleState; realtime: boolean }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 100); return () => window.clearInterval(timer); }, []);
   const elapsed = battle.startedAt ? formatRaceTime(Math.max(0, (battle.finishedAt ? new Date(battle.finishedAt).getTime() : now) - new Date(battle.startedAt).getTime())) : '00:00.0';
   return (
     <header className="battle-topbar">
       <a href="/" className="flex items-center gap-2.5"><span className="logo-mark"><span>&gt;_</span></span><span className="font-mono text-sm font-bold tracking-[0.12em] text-white">CLIRACE</span></a>
-      <div className="battle-topbar-center"><span>BATTLE {battle.roomCode}</span><strong>{elapsed}</strong><span>{battle.status === 'waiting' ? 'LOBBY' : `ROUND ${Math.min(...battle.players.map((player) => player.currentRound))}/${battle.roundCount}`}</span></div>
-      <div className={`battle-live ${realtime ? 'is-online' : ''}`}>{realtime ? <Wifi size={13} /> : <WifiOff size={13} />} {realtime ? eventLabel : 'RECONNECTING'}</div>
+      <div className="battle-topbar-center"><span>BATTLE {battle.roomCode}</span><strong>{elapsed}</strong><span>{battle.status === 'waiting' ? 'ЛОББИ' : `РАУНД ${Math.min(...battle.players.map((player) => player.currentRound))}/${battle.roundCount}`}</span></div>
+      <div className={`battle-live ${realtime ? 'is-online' : ''}`}>{realtime ? <Wifi size={13} /> : <WifiOff size={13} />} {realtime ? 'СИНХРОНИЗИРОВАНО' : 'ПЕРЕПОДКЛЮЧЕНИЕ'}</div>
     </header>
   );
 }
@@ -253,17 +252,17 @@ function BattleLobby({ battle, realtime, error, onReady }: { battle: BattleState
     <main className="page-width relative z-10 py-10 sm:py-14">
       <section className="battle-lobby">
         <div className="battle-lobby-heading">
-          <div><p className="eyebrow">Private lobby</p><h1>BATTLE <span>{battle.roomCode}</span></h1><p>{battle.roundCount} раунда · {battle.category.name} · два независимых sandbox</p></div>
-          <div className="battle-invite"><span>Invite link</span><code>{invite}</code><button type="button" onClick={() => void copy()}>{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Скопировано' : 'Копировать'}</button></div>
+          <div><p className="eyebrow">Приватное лобби</p><h1>BATTLE <span>{battle.roomCode}</span></h1><p>{battle.roundCount} раунда · {battle.category.name} · отдельный sandbox для каждого</p></div>
+          <div className="battle-invite"><span>Код и ссылка для друга</span><code>{battle.roomCode}</code><button type="button" onClick={() => void copy()} aria-label="Скопировать ссылку-приглашение">{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Скопировано' : 'Копировать ссылку'}</button></div>
         </div>
         <div className="battle-player-grid">
           {[0, 1].map((index) => {
             const player = battle.players[index];
-            return player ? <LobbyPlayer key={player.id} player={player} isMe={player.userId === battle.me?.userId} /> : <div className="lobby-player lobby-player-empty" key="empty"><UserPlus size={24} /><strong>Ждём второго игрока</strong><span>Отправьте ему invite link</span></div>;
+            return player ? <LobbyPlayer key={player.id} player={player} isMe={player.userId === battle.me?.userId} /> : <div className="lobby-player lobby-player-empty" key="empty"><UserPlus size={24} /><strong>Ждём второго игрока</strong><span>Отправьте ему ссылку-приглашение</span></div>;
           })}
         </div>
         {error && <p className="play-error mt-5">{error}</p>}
-        <div className="battle-ready-row"><span><Radio size={14} className={realtime ? 'text-acid' : 'text-amber-300'} /> {realtime ? 'Realtime подключён' : 'Восстанавливаем соединение'}</span><button className={`battle-ready-button ${me.ready ? 'is-ready' : ''}`} type="button" onClick={onReady} disabled={!realtime || battle.players.length !== 2}>{me.ready ? <Check size={16} /> : <Zap size={16} />}{me.ready ? 'READY' : 'Я ГОТОВ'}</button></div>
+        <div className="battle-ready-row"><span><Radio size={14} className={realtime ? 'text-acid' : 'text-amber-300'} /> {realtime ? 'Соединение установлено' : 'Восстанавливаем соединение'}</span><button className={`battle-ready-button ${me.ready ? 'is-ready' : ''}`} type="button" onClick={onReady} disabled={!realtime || battle.players.length !== 2}>{me.ready ? <Check size={16} /> : <Zap size={16} />}{me.ready ? 'ГОТОВ' : 'Я ГОТОВ'}</button></div>
       </section>
     </main>
   );
@@ -275,25 +274,25 @@ function BattleArena({ battle, realtime, error }: { battle: BattleState; realtim
   const countdown = useCountdown(battle.countdownStartAt, battle.status);
   return (
     <main className="battle-arena relative z-10">
-      {battle.status === 'countdown' && <div className="battle-countdown" key={countdown}><span>{countdown}</span><small>server synchronized</small></div>}
+      {battle.status === 'countdown' && <div className="battle-countdown" key={countdown}><span>{countdown}</span><small>серверный отсчёт</small></div>}
       <div className="battle-workspace">
         <section className="battle-terminal-column">
-          <div className="battle-pane-label"><span>YOUR TERMINAL</span><span>{me.sandboxReady ? 'SANDBOX READY' : 'PROVISIONING'}</span></div>
+          <div className="battle-pane-label"><span>ВАШ ТЕРМИНАЛ</span><span>{me.sandboxReady ? 'ОКРУЖЕНИЕ ГОТОВО' : 'СОЗДАЁМ ОКРУЖЕНИЕ'}</span></div>
           <BattleTerminal key={`${battle.id}-${me.currentRound}-${me.completedRounds}`} roomCode={battle.roomCode} round={me.currentRound} locked={battle.status !== 'running'} />
         </section>
         <aside className="battle-sidebar">
           <section className="battle-challenge-card">
             <div className="flex items-center justify-between gap-3"><span className="challenge-category">{battle.challenge?.category.name ?? 'Shell'}</span><span className="difficulty">{battle.challenge?.difficulty ?? 'READY'}</span></div>
-            <p>ROUND {me.currentRound} / {battle.roundCount}</p>
+            <p>РАУНД {me.currentRound} / {battle.roundCount}</p>
             <h1>{battle.challenge?.title ?? 'Готовим задание'}</h1>
             <div>{battle.challenge?.description ?? 'Одинаковое окружение создаётся для обоих игроков.'}</div>
           </section>
           <section className="battle-progress-panel">
-            <ProgressPlayer player={me} total={battle.roundCount} label="YOU" />
+            <ProgressPlayer player={me} total={battle.roundCount} label="ВЫ" />
             <ProgressPlayer player={opponent} total={battle.roundCount} label={opponent.username.toUpperCase()} />
           </section>
           <div className="battle-privacy"><ShieldCheck size={14} /><span>Прогресс синхронизируется. Команды, stdout и решение соперника скрыты.</span></div>
-          {!realtime && <p className="play-error">Realtime переподключается. Ваш terminal продолжает работать.</p>}
+          {!realtime && <p className="play-error">Связь с Battle восстанавливается. Ваш терминал продолжает работать.</p>}
           {error && <p className="play-error">{error}</p>}
         </aside>
       </div>
@@ -303,13 +302,14 @@ function BattleArena({ battle, realtime, error }: { battle: BattleState; realtim
 
 function BattleResults({ battle }: { battle: BattleState }) {
   const winner = battle.players.find((player) => player.userId === battle.winnerUserId);
+  const victory = battle.me?.userId === battle.winnerUserId;
   const rows = Array.from({ length: battle.roundCount }, (_, index) => index + 1);
   return (
     <main className="page-width relative z-10 py-12 sm:py-16">
       <section className="battle-results">
-        <div className="battle-winner"><div className="battle-icon"><Crown size={28} /></div><p className="eyebrow">Battle complete</p><h1>ПОБЕДИТЕЛЬ<br /><span>{winner?.username ?? '—'}</span></h1><p>{battle.startedAt && battle.finishedAt ? formatCompactDuration(new Date(battle.finishedAt).getTime() - new Date(battle.startedAt).getTime()) : '—'}</p></div>
+        <div className="battle-winner"><div className="battle-icon"><Crown size={28} /></div><p className="eyebrow">Battle завершён</p><h1>{victory ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}<br /><span>{winner?.username ?? '—'}</span></h1><p>{battle.startedAt && battle.finishedAt ? formatCompactDuration(new Date(battle.finishedAt).getTime() - new Date(battle.startedAt).getTime()) : '—'}</p></div>
         <div className="battle-result-table">
-          <div className="battle-result-row battle-result-head"><span>ROUND</span>{battle.results?.map((result) => <strong key={result.userId}>{result.username}</strong>)}</div>
+          <div className="battle-result-row battle-result-head"><span>РАУНД</span>{battle.results?.map((result) => <strong key={result.userId}>{result.username}</strong>)}</div>
           {rows.map((round) => <div className="battle-result-row" key={round}><span>{String(round).padStart(2, '0')}</span>{battle.results?.map((result) => { const item = result.rounds.find((entry) => entry.round === round); return <strong className={item?.success ? 'text-white' : 'text-slate-600'} key={result.userId}>{item?.success && item.durationMs !== null ? formatCompactDuration(item.durationMs) : 'DNF'}</strong>; })}</div>)}
         </div>
         <div className="mt-8 flex flex-wrap justify-center gap-3"><a className="secondary-button" href="/"><ArrowLeft size={14} /> На главную</a><a className="primary-button" href="/battle"><RefreshCw size={14} /> Новый Battle</a></div>
@@ -319,12 +319,12 @@ function BattleResults({ battle }: { battle: BattleState }) {
 }
 
 function LobbyPlayer({ player, isMe }: { player: BattlePlayer; isMe: boolean }) {
-  return <div className={`lobby-player ${player.ready ? 'is-ready' : ''}`}><div className="flex items-center justify-between"><span className={`battle-presence ${player.connected ? 'is-online' : ''}`}>{player.connected ? '● ONLINE' : '○ OFFLINE'}</span>{player.isHost && <span className="battle-host">HOST</span>}</div><strong>{player.username}{isMe ? ' · YOU' : ''}</strong><span className="lobby-ready-state">{player.ready ? <Check size={16} /> : <Clock3 size={15} />}{player.ready ? 'READY' : 'NOT READY'}</span></div>;
+  return <div className={`lobby-player ${player.ready ? 'is-ready' : ''}`}><div className="flex items-center justify-between"><span className={`battle-presence ${player.connected ? 'is-online' : ''}`}>{player.connected ? '● В СЕТИ' : '○ НЕ В СЕТИ'}</span>{player.isHost && <span className="battle-host">СОЗДАТЕЛЬ</span>}</div><strong>{player.username}{isMe ? ' · ВЫ' : ''}</strong><span className="lobby-ready-state">{player.ready ? <Check size={16} /> : <Clock3 size={15} />}{player.ready ? 'ГОТОВ' : 'НЕ ГОТОВ'}</span></div>;
 }
 
 function ProgressPlayer({ player, total, label }: { player: BattlePlayer; total: number; label: string }) {
   const percent = Math.round((player.completedRounds / total) * 100);
-  return <div className="battle-progress-player"><div><strong>{label}</strong><span className={player.connected ? 'is-online' : ''}>{player.connected ? '● ONLINE' : '○ OFFLINE'}</span></div><div className="battle-progress-track"><i style={{ width: `${percent}%` }} /></div><p><span>{player.completedRounds} / {total}</span><span>{player.finishedAt ? 'FINISHED' : `ROUND ${player.currentRound}`}</span></p></div>;
+  return <div className="battle-progress-player"><div><strong>{label}</strong><span className={player.connected ? 'is-online' : ''}>{player.connected ? '● В СЕТИ' : '○ НЕ В СЕТИ'}</span></div><div className="battle-progress-track"><i style={{ width: `${percent}%` }} /></div><p><span>{player.completedRounds} / {total}</span><span>{player.finishedAt ? 'ФИНИШ' : `РАУНД ${player.currentRound}`}</span></p></div>;
 }
 
 function BattleFact({ icon: Icon, title, detail }: { icon: typeof Terminal; title: string; detail: string }) { return <div className="battle-fact"><Icon size={15} /><div><strong>{title}</strong><span>{detail}</span></div></div>; }

@@ -1,16 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Activity, ArrowRight, Check, Command, Gauge, Network, Server, Swords } from 'lucide-react';
-import { AuthControl } from './AuthControl';
+import { Activity, ArrowRight, Check, Command, Library, Swords, Terminal, Trophy } from 'lucide-react';
 import { LeaderboardPage } from './LeaderboardPage';
 import { DailyPage } from './DailyPage';
 import { PlayPage } from './PlayPage';
 import { ProfilePage } from './ProfilePage';
 import { QuickStartSection } from './QuickStartSection';
 import { InterviewPage } from './InterviewPage';
+import { CommunityHeader } from './CommunityHeader';
 
-const ShellTerminal = lazy(() => import('./ShellTerminal').then((module) => ({
-  default: module.ShellTerminal,
-})));
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleCreatePage,
 })));
@@ -35,10 +32,10 @@ const modes = [
 ];
 
 const stats = [
-  ['07', 'задача'],
-  ['1 840', 'очки'],
-  ['12', 'серия'],
-  ['98,4%', 'точность'],
+  ['REAL', 'Linux shell'],
+  ['ROOTLESS', 'изоляция'],
+  ['OFF', 'внешняя сеть'],
+  ['TTL', 'одноразовая сессия'],
 ];
 
 function SystemStatus() {
@@ -122,54 +119,39 @@ function HomePage() {
     <div className="min-h-screen overflow-hidden bg-ink text-slate-200">
       <div className="grid-noise fixed inset-0 pointer-events-none" />
 
-      <header className="relative z-10 border-b border-line/80">
-        <div className="page-width flex h-16 items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5" aria-label="Главная CLIRace">
-            <span className="logo-mark"><span>&gt;_</span></span>
-            <span className="font-mono text-sm font-bold tracking-[0.12em] text-white">CLIRACE</span>
-          </a>
-          <nav className="hidden items-center gap-7 text-xs font-medium text-slate-400 md:flex" aria-label="Основная навигация">
-            <a className="nav-link" href="#quick-start">Быстрый старт</a>
-            <a className="nav-link" href="#modes">Режимы</a>
-            <a className="nav-link" href="/daily">Daily</a>
-            <a className="nav-link" href="/interview">Interview 100</a>
-            <a className="nav-link" href="/battle">Battle</a>
-            <a className="nav-link" href="/leaderboard">Рейтинг</a>
-          </nav>
-          <div className="flex items-center gap-3 sm:gap-5">
-            <div className="hidden lg:block"><SystemStatus /></div>
-            <AuthControl />
-          </div>
-        </div>
-      </header>
+      <CommunityHeader />
 
       <main className="relative z-10">
-        <section className="page-width pb-20 pt-16 lg:pb-28 lg:pt-24">
-          <div className="mb-12 grid items-end gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="page-width pb-16 pt-12 sm:pt-16 lg:pb-20 lg:pt-20">
+          <div className="mb-10 grid items-center gap-9 lg:grid-cols-[1.04fr_0.96fr] lg:gap-14">
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.025] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">
                 <Activity size={12} className="text-acid" /> Измеримая мышечная память Linux
               </div>
-              <h1 className="max-w-4xl text-5xl font-semibold leading-[0.96] tracking-[-0.055em] text-white sm:text-6xl lg:text-[78px]">
-                Тренируйтесь в ритме <span className="text-acid">терминала.</span>
+              <h1 className="max-w-3xl text-4xl font-semibold leading-[1.02] tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
+                Соревновательная практика Linux и DevOps <span className="text-acid">в настоящем терминале.</span>
               </h1>
-            </div>
-            <div className="lg:pb-1">
-              <p className="max-w-xl text-base leading-7 text-slate-400 lg:text-lg">
-                Короткие соревновательные задачи по Linux и DevOps. Вводите настоящие команды, набирайте серии и развивайте навыки уверенной работы в терминале.
+              <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 lg:text-lg">
+                Не тест и не теория: получите задачу, откройте одноразовый Linux shell, выполните команду и сразу увидите результат.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
-                <a className="primary-button" href="/play">Начать забег <ArrowRight size={16} /></a>
-                <a className="secondary-button" href="/battle"><Swords size={15} /> Private Battle</a>
-                <span className="font-mono text-xs text-slate-500">Без настройки · задачи по 5–60 секунд</span>
+                <a className="primary-button" href="/play">Начать практику <ArrowRight size={16} /></a>
+                <a className="secondary-button" href="/battle"><Swords size={15} /> Сыграть с другом</a>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">
+                <SystemStatus /><span>Задачи по 30–180 секунд</span><span>Без настройки окружения</span>
               </div>
             </div>
+            <TerminalDemo />
           </div>
+        </section>
 
-          <div id="demo">
-            <Suspense fallback={<div className="terminal-shell h-[520px] animate-pulse bg-[#0b1016]" aria-label="Загрузка терминала" />}>
-              <ShellTerminal />
-            </Suspense>
+        <section className="page-width pb-16">
+          <div className="feature-strip">
+            <div className="feature-item"><strong>229</strong><span>практических задач, включая Interview 100</span></div>
+            <div className="feature-item"><strong>Real Shell</strong><span>одноразовая rootless Linux-песочница</span></div>
+            <div className="feature-item"><strong>Daily</strong><span>общее испытание и серия дней</span></div>
+            <div className="feature-item"><strong>Private Battle</strong><span>одинаковые задачи для двух игроков</span></div>
           </div>
         </section>
 
@@ -179,8 +161,8 @@ function HomePage() {
           <div className="page-width py-20">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Четыре режима тренировки</p>
-                <h2>Быстрые повторы. Настоящие CLI-навыки.</h2>
+                <p className="eyebrow">Форматы практики</p>
+                <h2>Один навык — несколько способов тренироваться.</h2>
               </div>
               <p>Переходите от точного синтаксиса к задачам на состояние Linux, не теряя темп.</p>
             </div>
@@ -197,22 +179,22 @@ function HomePage() {
           </div>
         </section>
 
-        <section id="architecture" className="page-width py-20 lg:py-28">
-          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+        <section id="how-it-works" className="page-width py-20">
+          <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16">
             <div>
-              <p className="eyebrow">Готово к настоящей практике</p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">Безопасный путь к реальному bash.</h2>
+              <p className="eyebrow">Как это работает</p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">От условия до результата — без настройки.</h2>
               <p className="mt-5 max-w-md leading-7 text-slate-400">
-                Архитектура разделяет публичную точку входа, аккаунты, закрытый слой данных и одноразовые rootless-песочницы, не открывая shell хост-системы.
+                CLIRace создаёт безопасное окружение только на время задания. Вы работаете с настоящими файлами и командами, а сервер проверяет итоговое состояние.
               </p>
             </div>
             <div className="architecture-flow">
               {[
-                [Network, 'Входной Nginx', 'единая публичная точка'],
-                [Gauge, 'Fastify API', 'состояние и готовность'],
-                [Server, 'Слой данных', 'Postgres · Redis'],
+                [Library, 'Получите задачу', 'короткое условие и понятная цель'],
+                [Terminal, 'Решите в Linux shell', 'настоящие команды без доступа к хосту'],
+                [Trophy, 'Получите результат', 'очки, время, серия и прогресс'],
               ].map(([Icon, label, detail], index) => {
-                const FlowIcon = Icon as typeof Network;
+                const FlowIcon = Icon as typeof Library;
                 return (
                   <div className="flow-node" key={String(label)}>
                     <div className="flow-number">0{index + 1}</div>
@@ -225,10 +207,10 @@ function HomePage() {
           </div>
         </section>
 
-        <section id="roadmap" className="border-t border-line">
-          <div className="page-width flex flex-col gap-5 py-8 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-mono uppercase tracking-[0.16em]">ЭТАП 5 · РЕЙТИНГИ И ПРОФИЛИ</span>
-            <span>История забегов · рейтинг категорий · глобальная таблица</span>
+        <section className="border-t border-line">
+          <div className="page-width flex flex-col gap-4 py-8 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-mono font-semibold tracking-[0.14em] text-slate-300">CLIRACE</span>
+            <span>Linux · DevOps · Shell · Interview · Battle</span>
           </div>
         </section>
       </main>
@@ -238,6 +220,18 @@ function HomePage() {
 
 export function App() {
   const path = window.location.pathname;
+  useEffect(() => {
+    const title = path === '/play' ? 'Играть — CLIRace'
+      : path === '/interview' ? 'Interview 100 — CLIRace'
+        : path === '/daily' ? 'Daily Challenge — CLIRace'
+          : path === '/leaderboard' ? 'Рейтинг — CLIRace'
+            : path.startsWith('/profile/') ? 'Профиль — CLIRace'
+              : path.startsWith('/battle') ? 'Private Battle — CLIRace'
+                : path === '/' || path === '/login' || path === '/register' ? 'CLIRace — практика Linux и DevOps в терминале'
+                  : 'Страница не найдена — CLIRace';
+    document.title = title;
+  }, [path]);
+  if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
   if (path === '/play') return <PlayPage />;
   if (path === '/daily') return <DailyPage />;
   if (path === '/interview') return <InterviewPage />;
@@ -245,5 +239,22 @@ export function App() {
   if (/^\/battle\/[A-HJ-NP-Z2-9]{5}$/i.test(path)) return <Suspense fallback={<BattlePageFallback />}><BattleRoomPage /></Suspense>;
   if (path === '/leaderboard') return <LeaderboardPage />;
   if (path.startsWith('/profile/')) return <ProfilePage />;
-  return <HomePage />;
+  return <NotFoundPage />;
+}
+
+function NotFoundPage() {
+  return (
+    <div className="min-h-screen bg-ink text-slate-200">
+      <div className="grid-noise pointer-events-none fixed inset-0" />
+      <CommunityHeader />
+      <main className="page-width relative z-10 flex min-h-[70vh] items-center justify-center py-16 text-center">
+        <section>
+          <p className="eyebrow">Ошибка 404</p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">Страница не найдена.</h1>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-slate-500">Возможно, ссылка устарела или в адресе есть опечатка.</p>
+          <a className="primary-button mt-8" href="/">Вернуться в CLIRace <ArrowRight size={15} /></a>
+        </section>
+      </main>
+    </div>
+  );
 }

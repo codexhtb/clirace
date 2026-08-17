@@ -1,6 +1,8 @@
-import { Crown, LoaderCircle, Medal, Trophy, Users } from 'lucide-react';
+import { Crown, Medal, Trophy, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { EmptyState, ErrorState, PageLoader } from './Ui';
+import { humanizeError } from './errors';
 
 interface Category { slug: string; name: string; challenge_count: number }
 interface AuthUser { username: string }
@@ -18,7 +20,6 @@ interface Leaderboard {
   total: number;
   entries: LeaderboardEntry[];
 }
-
 export function LeaderboardPage() {
   const initialCategory = new URLSearchParams(window.location.search).get('category') ?? 'overall';
   const [selected, setSelected] = useState(initialCategory);
@@ -52,7 +53,7 @@ export function LeaderboardPage() {
       .then(setBoard)
       .catch((requestError) => {
         if (requestError instanceof DOMException && requestError.name === 'AbortError') return;
-        setError(requestError instanceof Error ? requestError.message : 'Не удалось загрузить рейтинг.');
+        setError(humanizeError(requestError, 'Не удалось загрузить рейтинг.'));
       });
     return () => controller.abort();
   }, [selected]);
@@ -82,8 +83,8 @@ export function LeaderboardPage() {
           {categories.map((category) => <button className={`leaderboard-filter ${selected === category.slug ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory(category.slug)} type="button" key={category.slug}>{category.name}</button>)}
         </div>
 
-        {!board && !error && <div className="flex min-h-[360px] items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.14em] text-slate-500"><LoaderCircle size={17} className="animate-spin text-acid" /> Считаем позиции</div>}
-        {error && <p className="play-error mt-8">{error}</p>}
+        {!board && !error && <PageLoader label="Считаем позиции" />}
+        {error && <ErrorState title="Рейтинг временно недоступен" message={error} />}
         {board && <LeaderboardTable board={board} viewer={viewer} />}
       </main>
     </div>
@@ -99,11 +100,11 @@ function LeaderboardTable({ board, viewer }: { board: Leaderboard; viewer: strin
       </div>
       {board.entries.length ? (
         <div className="leaderboard-table">
-          <div className="leaderboard-head"><span>Место</span><span>Пользователь</span><span>Рейтинг</span><span>Точность</span><span>Забеги</span><span>Очки</span></div>
+          <div className="leaderboard-head"><span>Место</span><span>Игрок</span><span>Рейтинг</span><span>Результаты</span></div>
           {board.entries.map((entry) => <LeaderboardRow entry={entry} active={viewer?.toLowerCase() === entry.username.toLowerCase()} key={entry.username} />)}
         </div>
       ) : (
-        <div className="p-12 text-center"><Medal className="mx-auto text-slate-700" size={28} /><h3 className="mt-4 font-semibold text-white">Здесь пока свободно</h3><p className="mt-2 text-sm text-slate-500">Завершите забег в этой категории и займёте первую строчку.</p></div>
+        <div className="p-5"><EmptyState title="Здесь пока свободно" text="Завершите забег в этой категории и займёте первую строчку." action={{ href: '/play', label: 'Начать практику' }} /></div>
       )}
     </section>
   );
@@ -115,11 +116,7 @@ function LeaderboardRow({ entry, active }: { entry: LeaderboardEntry; active: bo
       <span className="rank-cell">{entry.rank === 1 ? <Crown size={16} /> : entry.rank <= 3 ? <Medal size={16} /> : `#${entry.rank}`}</span>
       <span className="min-w-0"><strong className="truncate">@{entry.username}</strong>{active && <small>это вы</small>}</span>
       <span><strong>{entry.rating}</strong><small>CLI</small></span>
-      <span><strong>{entry.accuracy}%</strong><small>верно</small></span>
-      <span><strong>{entry.gamesPlayed}</strong><small>забегов</small></span>
-      <span><strong>{formatNumber(entry.totalScore)}</strong><small>очков</small></span>
+      <span><strong>{entry.gamesPlayed} · {entry.accuracy}%</strong><small>забегов · точность</small></span>
     </a>
   );
 }
-
-function formatNumber(value: number) { return new Intl.NumberFormat('ru-RU').format(value); }

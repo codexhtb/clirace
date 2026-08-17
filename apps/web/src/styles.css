@@ -16,6 +16,9 @@
 html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 a { color: inherit; text-decoration: none; }
+button, input, select, summary { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid #b6f04a; outline-offset: 3px; }
 
 ::selection { background: rgba(182, 240, 74, 0.24); color: #fff; }
 
@@ -31,7 +34,12 @@ a { color: inherit; text-decoration: none; }
 }
 
 .logo-mark { @apply flex h-8 w-8 items-center justify-center rounded-md border border-acid/30 bg-acid/10 font-mono text-[11px] font-bold text-acid; }
-.nav-link { @apply transition-colors hover:text-white; }
+.product-header { @apply bg-ink/95 backdrop-blur; }
+.product-nav { @apply hidden items-center gap-5 text-xs font-medium text-slate-400 md:flex lg:gap-7; }
+.mobile-nav { @apply flex gap-5 overflow-x-auto border-t border-line/70 py-3 text-xs font-medium text-slate-400 md:hidden; scrollbar-width: none; }
+.mobile-nav::-webkit-scrollbar { display: none; }
+.nav-link { @apply shrink-0 border-b border-transparent py-1 transition-colors hover:text-white; }
+.nav-link-active { @apply border-acid text-white; }
 .eyebrow { @apply font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-acid; }
 
 .primary-button { @apply inline-flex items-center gap-2 rounded-md bg-acid px-5 py-3 text-sm font-semibold text-[#10150a] transition-all hover:-translate-y-0.5 hover:bg-[#c7ff5a] hover:shadow-[0_8px_30px_rgba(182,240,74,.16)] disabled:cursor-wait disabled:opacity-60; }
@@ -64,6 +72,20 @@ a { color: inherit; text-decoration: none; }
 .auth-field > span { @apply mb-2 block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500; }
 .auth-field input { @apply h-11 w-full rounded border border-line bg-[#070a0e] px-3 font-mono text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-700 focus:border-acid/50; }
 .auth-error { @apply rounded border border-rose-400/25 bg-rose-400/[0.06] px-3 py-2 text-xs leading-5 text-rose-300; }
+.skeleton-block { @apply animate-pulse rounded bg-white/[0.06]; }
+.state-panel { @apply mx-auto flex max-w-2xl flex-col items-center gap-5 rounded-lg border border-line bg-panel p-8 text-center shadow-2xl sm:p-10; }
+.state-panel h1, .state-panel h2 { @apply text-2xl font-semibold text-white; }
+.state-panel p { @apply mt-2 text-sm leading-6 text-slate-500; }
+.state-panel-compact { @apply max-w-none py-10; }
+.mode-card { @apply flex min-h-44 flex-col rounded-lg border border-line bg-panel p-5 transition-all hover:-translate-y-0.5 hover:border-acid/35 hover:bg-[#111820]; }
+.mode-card-icon { @apply flex h-9 w-9 items-center justify-center rounded border border-acid/25 bg-acid/[0.07] text-acid; }
+.mode-card strong { @apply mt-5 text-lg font-semibold text-white; }
+.mode-card p { @apply mt-2 text-sm leading-6 text-slate-500; }
+.mode-card span { @apply mt-auto pt-5 font-mono text-[9px] uppercase tracking-[0.12em] text-slate-600; }
+.feature-strip { @apply grid overflow-hidden rounded-lg border border-line bg-panel sm:grid-cols-2 lg:grid-cols-4; }
+.feature-item { @apply min-h-32 border-b border-line p-5 last:border-b-0 sm:border-r sm:[&:nth-child(2)]:border-r-0 lg:border-b-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0; }
+.feature-item strong { @apply block font-mono text-xl text-white; }
+.feature-item span { @apply mt-2 block text-xs leading-5 text-slate-500; }
 
 .catalog-filter { @apply inline-flex items-center gap-2 rounded border border-line bg-panel px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500 transition-colors hover:border-slate-600 hover:text-white; }
 .catalog-filter span { @apply text-slate-700; }
@@ -107,7 +129,9 @@ a { color: inherit; text-decoration: none; }
 .summary-metric strong { @apply font-mono text-2xl font-semibold text-white; }
 .summary-metric span { @apply mt-2 font-mono text-[9px] uppercase tracking-[0.14em] text-slate-600; }
 .game-shell { @apply overflow-hidden rounded-md border border-[#283441] bg-[#06090c] shadow-inner; }
-.game-shell-host { @apply h-[420px] w-full p-3 sm:p-4; }
+.game-shell-status { @apply flex min-h-10 items-center justify-between gap-3 border-b border-line bg-[#0b1016] px-4 font-mono text-[9px] uppercase tracking-[0.12em] text-slate-500; }
+.game-shell-status strong { @apply text-acid; }
+.game-shell-host { @apply h-[360px] w-full p-2 sm:h-[420px] sm:p-4; }
 .game-shell-host .xterm { @apply h-full; }
 .game-shell-host .xterm-viewport { scrollbar-color: #334155 #06090c; scrollbar-width: thin; }
 .game-shell-actions { @apply flex flex-col justify-between gap-3 border-t border-line bg-[#0b1016] px-4 py-3 text-xs sm:flex-row sm:items-center; }
@@ -133,8 +157,8 @@ a { color: inherit; text-decoration: none; }
 
 .leaderboard-filter { @apply shrink-0 rounded border border-line bg-panel px-4 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500 transition-colors hover:border-slate-600 hover:text-white; }
 .leaderboard-filter-active { @apply border-acid/40 bg-acid/[0.08] text-acid; }
-.leaderboard-table { @apply min-w-[700px]; }
-.leaderboard-head, .leaderboard-row { @apply grid grid-cols-[70px_minmax(180px,1fr)_100px_90px_90px_110px] items-center gap-3 px-5; }
+.leaderboard-table { @apply w-full; }
+.leaderboard-head, .leaderboard-row { @apply grid grid-cols-[58px_minmax(120px,1fr)_82px_120px] items-center gap-3 px-4 sm:grid-cols-[70px_minmax(180px,1fr)_100px_160px] sm:px-5; }
 .leaderboard-head { @apply h-10 border-b border-line bg-[#0a0f15] font-mono text-[9px] uppercase tracking-[0.12em] text-slate-600; }
 .leaderboard-row { @apply min-h-16 border-b border-line text-sm transition-colors last:border-b-0 hover:bg-white/[0.025]; }
 .leaderboard-row > span:not(:nth-child(2)) { @apply text-right; }
@@ -277,6 +301,11 @@ a { color: inherit; text-decoration: none; }
   .mode-row > :last-child { display: none; }
   .history-row { grid-template-columns: minmax(0, 1fr) 52px 56px; }
   .history-row > div:nth-child(3) { display: none; }
+  .xterm-host { height: 320px; }
+  .terminal-topbar { @apply px-3 tracking-[0.08em]; }
+  .terminal-topbar > span:nth-child(2) { display: none; }
+  .leaderboard-head, .leaderboard-row { grid-template-columns: 46px minmax(100px, 1fr) 70px; }
+  .leaderboard-head > :last-child, .leaderboard-row > :last-child { display: none; }
 }
 
 @media (max-width: 900px) {

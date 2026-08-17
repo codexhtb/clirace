@@ -1,6 +1,7 @@
 import { LogOut, UserRound, X } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { humanizeError } from './errors';
 
 interface AuthUser {
   id: string;
@@ -14,8 +15,8 @@ type AuthMode = 'login' | 'register';
 export function AuthControl() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get('auth') === '1');
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get('auth') === '1' || ['/login', '/register'].includes(window.location.pathname));
+  const [mode, setMode] = useState<AuthMode>(() => window.location.pathname === '/register' ? 'register' : 'login');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +66,7 @@ export function AuthControl() {
       const returnTo = new URLSearchParams(window.location.search).get('returnTo');
       if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) window.location.assign(returnTo);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Ошибка авторизации.');
+      setError(humanizeError(submitError, 'Не удалось выполнить вход. Попробуйте ещё раз.'));
     } finally {
       setSubmitting(false);
     }
@@ -110,11 +111,13 @@ export function AuthControl() {
               </button>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 border-b border-line">
+            <div className="mt-6 grid grid-cols-2 border-b border-line" role="tablist" aria-label="Режим авторизации">
               {(['login', 'register'] as const).map((value) => (
                 <button
                   type="button"
                   key={value}
+                  role="tab"
+                  aria-selected={mode === value}
                   className={`auth-tab ${mode === value ? 'auth-tab-active' : ''}`}
                   onClick={() => { setMode(value); setError(null); }}
                 >
@@ -123,11 +126,11 @@ export function AuthControl() {
               ))}
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={(event) => void submit(event)}>
+            <form className="mt-6 space-y-4" onSubmit={(event) => void submit(event)} aria-busy={submitting}>
               {mode === 'register' && (
                 <label className="auth-field">
                   <span>Имя пользователя</span>
-                  <input name="username" autoComplete="username" required minLength={3} maxLength={24} pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="terminal_runner" />
+                  <input name="username" autoComplete="username" autoFocus required minLength={3} maxLength={24} pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="terminal_runner" />
                 </label>
               )}
               <label className="auth-field">
@@ -137,6 +140,7 @@ export function AuthControl() {
                   type={mode === 'login' ? 'text' : 'email'}
                   autoComplete={mode === 'login' ? 'username' : 'email'}
                   required
+                  autoFocus={mode === 'login'}
                   placeholder={mode === 'login' ? 'terminal_runner' : 'you@example.com'}
                 />
               </label>
@@ -144,6 +148,7 @@ export function AuthControl() {
                 <span>Пароль</span>
                 <input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 10 : 1} maxLength={128} placeholder="••••••••••" />
               </label>
+              {mode === 'register' && <p className="-mt-2 text-[11px] leading-5 text-slate-600">Минимум 10 символов. Используйте уникальный пароль.</p>}
               {error && <p className="auth-error" role="alert">{error}</p>}
               <button type="submit" className="primary-button w-full justify-center" disabled={submitting}>
                 {submitting ? 'Проверяем…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}

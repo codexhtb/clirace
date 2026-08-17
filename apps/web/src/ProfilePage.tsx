@@ -1,6 +1,8 @@
-import { Activity, ArrowLeft, Award, CalendarDays, Flame, Gauge, LoaderCircle, Medal, Target, Terminal, Trophy } from 'lucide-react';
+import { Activity, Award, CalendarDays, Flame, Gauge, Medal, Target, Terminal, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { ErrorState, PageLoader } from './Ui';
+import { humanizeError } from './errors';
 
 interface RunHistory {
   id: string;
@@ -48,7 +50,7 @@ export function ProfilePage() {
       .then(setProfile)
       .catch((requestError) => {
         if (requestError instanceof DOMException && requestError.name === 'AbortError') return;
-        setError(requestError instanceof Error ? requestError.message : 'Не удалось загрузить профиль.');
+        setError(humanizeError(requestError, 'Не удалось загрузить профиль.'));
       });
     return () => controller.abort();
   }, [username]);
@@ -58,8 +60,8 @@ export function ProfilePage() {
       <div className="grid-noise fixed inset-0 pointer-events-none" />
       <CommunityHeader />
       <main className="page-width relative z-10 py-10 sm:py-16">
-        {!profile && !error && <Loading label="Загружаем профиль" />}
-        {error && <ErrorState message={error} />}
+        {!profile && !error && <PageLoader label="Загружаем профиль" />}
+        {error && <ErrorState title="Профиль не найден" message={error} retryHref="/leaderboard" />}
         {profile && <ProfileContent profile={profile} />}
       </main>
     </div>
@@ -164,13 +166,6 @@ function EmptyPanel({ text }: { text: string }) {
   return <div className="p-6 text-sm leading-6 text-slate-500">{text}</div>;
 }
 
-function Loading({ label }: { label: string }) {
-  return <div className="flex min-h-[55vh] items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.14em] text-slate-500"><LoaderCircle className="animate-spin text-acid" size={18} /> {label}</div>;
-}
-
-function ErrorState({ message }: { message: string }) {
-  return <section className="mx-auto max-w-xl py-20 text-center"><p className="eyebrow">Ошибка</p><h1 className="mt-4 text-3xl font-semibold text-white">{message}</h1><a className="secondary-button mt-8" href="/"><ArrowLeft size={14} /> На главную</a></section>;
-}
 
 function modeLabel(mode: string) {
   return ({ recall: 'Вспомни', quick: 'Быстро', mixed: 'Смешанный', real_shell: 'Shell', typing: 'Набор' } as Record<string, string>)[mode] ?? mode;

@@ -1,6 +1,8 @@
 import { CalendarCheck, CheckCircle2, Clock3, Flame, LoaderCircle, Send, Sparkles, Target, Trophy, Users } from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { ErrorState, PageLoader } from './Ui';
+import { humanizeError } from './errors';
 
 interface DailyPayload {
   authenticated: boolean;
@@ -36,7 +38,7 @@ export function DailyPage() {
   }, []);
 
   useEffect(() => {
-    void loadDaily().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить испытание.'));
+    void loadDaily().catch((loadError) => setError(humanizeError(loadError, 'Не удалось загрузить испытание дня.')));
     const timer = window.setInterval(() => setRemaining(formatRemaining()), 1_000);
     return () => window.clearInterval(timer);
   }, [loadDaily]);
@@ -52,7 +54,7 @@ export function DailyPage() {
         progress: { gameSessionId: result.gameSessionId!, status: result.status ?? 'active', completed: false, score: 0, ratingDelta: 0 },
       } : current);
     } catch (startError) {
-      setError(startError instanceof Error ? startError.message : 'Не удалось начать испытание.');
+      setError(humanizeError(startError, 'Не удалось начать испытание. Попробуйте ещё раз.'));
     } finally { setBusy(false); }
   };
 
@@ -76,7 +78,7 @@ export function DailyPage() {
         await loadDaily();
       }
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Не удалось проверить команду.');
+      setError(humanizeError(submitError, 'Не удалось проверить команду. Попробуйте ещё раз.'));
     } finally { setBusy(false); }
   };
 
@@ -85,8 +87,8 @@ export function DailyPage() {
       <div className="grid-noise fixed inset-0 pointer-events-none" />
       <CommunityHeader />
       <main className="page-width relative z-10 py-10 sm:py-16">
-        {!payload && !error && <div className="flex min-h-[55vh] items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.14em] text-slate-500"><LoaderCircle size={18} className="animate-spin text-acid" /> Выбираем испытание дня</div>}
-        {error && !payload && <p className="play-error mx-auto mt-20 max-w-xl">{error}</p>}
+        {!payload && !error && <PageLoader label="Выбираем испытание дня" />}
+        {error && !payload && <ErrorState title="Daily временно недоступен" message={error} />}
         {payload && <DailyContent payload={payload} answer={answer} setAnswer={setAnswer} busy={busy} feedback={feedback} error={error} remaining={remaining} start={() => void start()} submit={submit} />}
       </main>
     </div>

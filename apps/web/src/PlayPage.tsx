@@ -1,9 +1,10 @@
-import { ArrowLeft, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, RotateCcw, Send, SkipForward, Terminal, Trophy } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
 import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'react';
+import { CommunityHeader } from './CommunityHeader';
+import { humanizeError } from './errors';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
-interface AuthUser { id: string; username: string; email: string; }
 interface Category { slug: string; name: string; description: string; challenge_count: number; }
 interface GameSession {
   id: string;
@@ -41,7 +42,6 @@ const modeOptions = [
 
 export function PlayPage() {
   const [auth, setAuth] = useState<'loading' | 'guest' | 'ready'>('loading');
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [shellEnabled, setShellEnabled] = useState(false);
   const [game, setGame] = useState<GameState | null>(null);
@@ -52,11 +52,10 @@ export function PlayPage() {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: AuthUser | null }>),
+      fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: { id: string } | null }>),
       fetch('/api/categories', { signal: controller.signal }).then((response) => response.json() as Promise<{ categories: Category[] }>),
       fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean }>),
     ]).then(([authPayload, categoryPayload, sandboxPayload]) => {
-      setUser(authPayload.user);
       setAuth(authPayload.user ? 'ready' : 'guest');
       setCategories(categoryPayload.categories ?? []);
       setShellEnabled(sandboxPayload.enabled === true);
@@ -78,7 +77,7 @@ export function PlayPage() {
         if (!response.ok) throw new Error(payload.message ?? 'Забег не найден.');
         setGame(payload);
       })
-      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message); })
+      .catch((reason) => { if (reason.name !== 'AbortError') setError(humanizeError(reason, 'Не удалось открыть забег.')); })
       .finally(() => setBusy(false));
     return () => controller.abort();
   }, [auth, game]);
@@ -104,7 +103,7 @@ export function PlayPage() {
       setGame(payload);
       setFeedback(null);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Не удалось создать забег.');
+      setError(humanizeError(createError, 'Не удалось создать забег. Попробуйте ещё раз.'));
     } finally {
       setBusy(false);
     }
@@ -119,22 +118,7 @@ export function PlayPage() {
   return (
     <div className="play-page min-h-screen bg-ink text-slate-200">
       <div className="grid-noise fixed inset-0 pointer-events-none" />
-      <header className="relative z-10 border-b border-line/80">
-        <div className="page-width flex h-16 items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5" aria-label="На главную CLIRace">
-            <span className="logo-mark"><span>&gt;_</span></span>
-            <span className="font-mono text-sm font-bold tracking-[0.12em] text-white">CLIRACE</span>
-          </a>
-          <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
-            <a className="transition-colors hover:text-white" href="/daily">Daily</a>
-            <a className="transition-colors hover:text-white" href="/interview">Interview 100</a>
-            <a className="transition-colors hover:text-white" href="/battle">Battle</a>
-            <a className="transition-colors hover:text-white" href="/leaderboard">Рейтинг</a>
-            <span>PHASE 5 / GAME</span>
-            {user && <a className="text-acid hover:text-white" href={`/profile/${encodeURIComponent(user.username)}`}>@{user.username}</a>}
-          </div>
-        </div>
-      </header>
+      <CommunityHeader />
 
       <main className="page-width relative z-10 py-10 sm:py-16">
         {auth === 'loading' && <LoadingState label="Проверяем аккаунт" />}
@@ -163,14 +147,21 @@ function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
     : requestedDefaults;
   return (
     <section className="mx-auto max-w-4xl">
-      <a href="/" className="mb-8 inline-flex items-center gap-2 text-xs text-slate-500 transition-colors hover:text-white"><ArrowLeft size={14} /> На главную</a>
       <div className="mb-10">
-        <p className="eyebrow">Новый забег</p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Настройте тренировку.</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Выберите направление и режим. Команды проверяет сервер, а очки и результаты сохраняются в вашем профиле.</p>
+        <p className="eyebrow">Играть</p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Выберите формат.</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Быстрая практика, собеседование, задача дня или соревнование с другом — каждый режим использует реальные серверные результаты.</p>
       </div>
 
-      <form className="play-panel p-5 sm:p-8" onSubmit={onSubmit}>
+      <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <a className="mode-card border-acid/40 bg-acid/[0.045]" href="#practice"><span className="mode-card-icon"><Terminal size={17} /></span><strong>Практика</strong><p>Короткий одиночный забег с выбранной сложностью.</p><span>2–5 минут · Shell по выбору</span></a>
+        <a className="mode-card" href="/interview"><span className="mode-card-icon"><BookOpenCheck size={17} /></span><strong>Interview 100</strong><p>Подготовка к Linux и DevOps собеседованию.</p><span>10 / 25 / 50 задач</span></a>
+        <a className="mode-card" href="/daily"><span className="mode-card-icon"><CalendarDays size={17} /></span><strong>Daily</strong><p>Одна общая задача дня и серия прохождений.</p><span>1 задача · бонусные очки</span></a>
+        <a className="mode-card" href="/battle"><span className="mode-card-icon"><Swords size={17} /></span><strong>Private Battle</strong><p>Одинаковые Shell-задачи для двух игроков.</p><span>3 / 5 / 10 раундов</span></a>
+      </div>
+
+      <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>
+        <div className="mb-7 border-b border-line pb-6"><p className="eyebrow">Настройка практики</p><h2 className="mt-2 text-2xl font-semibold text-white">Соберите свой забег</h2></div>
         <div className="grid gap-7 sm:grid-cols-2">
           <label className="play-field">
             <span>Категория</span>
@@ -254,6 +245,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
   const task = game.task!;
   const [answer, setAnswer] = useState('');
   const [elapsed, setElapsed] = useState(() => Date.now() - new Date(task.presentedAt).getTime());
+  const [pendingGame, setPendingGame] = useState<GameState | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -265,7 +257,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
   }, [task.slug, task.presentedAt]);
 
   const request = async (action: 'submit' | 'skip') => {
-    if (busy || (action === 'submit' && task.type !== 'real_shell' && !answer.trim())) return;
+    if (busy || pendingGame || (action === 'submit' && task.type !== 'real_shell' && !answer.trim())) return;
     setBusy(true);
     setError(null);
     try {
@@ -276,16 +268,19 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
       const payload = await response.json() as GameState & { correct?: boolean; skipped?: boolean; feedback?: string; scoreAwarded?: number; message?: string };
       if (!response.ok) throw new Error(payload.message ?? 'Не удалось отправить ответ.');
       if (action === 'skip') setFeedback({ kind: 'skip', text: payload.feedback ?? 'Задание пропущено.' });
-      else if (payload.correct) setFeedback({
-        kind: 'correct',
-        text: payload.feedback ?? 'Верно.',
-        ...(payload.scoreAwarded === undefined ? {} : { score: payload.scoreAwarded }),
-      });
-      else setFeedback({ kind: 'wrong', text: payload.feedback ?? 'Попробуйте ещё раз.' });
-      setGame({ session: payload.session, task: payload.task, ...(payload.summary ? { summary: payload.summary } : {}) });
+      else if (payload.correct) {
+        setFeedback({
+          kind: 'correct',
+          text: payload.feedback ?? 'Задача решена.',
+          ...(payload.scoreAwarded === undefined ? {} : { score: payload.scoreAwarded }),
+        });
+        setPendingGame({ session: payload.session, task: payload.task, ...(payload.summary ? { summary: payload.summary } : {}) });
+      }
+      else setFeedback({ kind: 'wrong', text: 'Пока не выполнено. Проверьте команду и попробуйте ещё раз.' });
+      if (!payload.correct) setGame({ session: payload.session, task: payload.task, ...(payload.summary ? { summary: payload.summary } : {}) });
       if (!payload.correct && !payload.skipped) inputRef.current?.select();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Ошибка соединения.');
+      setError(humanizeError(requestError, 'Не удалось проверить ответ. Попробуйте ещё раз.'));
     } finally {
       setBusy(false);
     }
@@ -293,11 +288,11 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && task.type !== 'real_shell') void request('skip');
+      if (event.key === 'Escape' && task.type !== 'real_shell' && !pendingGame) void request('skip');
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  });
+  }, [pendingGame, task.type]);
 
   const progress = Math.round(((task.position - 1) / task.total) * 100);
   const refreshAfterShell = async (scoreAwarded: number) => {
@@ -307,9 +302,9 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
       const state = await response.json() as GameState & { message?: string };
       if (!response.ok) throw new Error(state.message ?? 'Не удалось продолжить забег.');
       setFeedback({ kind: 'correct', text: 'Состояние песочницы проверено сервером.', score: scoreAwarded });
-      setGame(state);
+      setPendingGame(state);
     } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError.message : 'Ошибка продолжения забега.');
+      setError(humanizeError(refreshError, 'Задача решена, но следующий шаг не загрузился. Обновите страницу.'));
     } finally {
       setBusy(false);
     }
@@ -318,7 +313,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
     <section className="mx-auto max-w-5xl">
       <div className="mb-5 flex items-center justify-between">
         <a href="/" className="inline-flex items-center gap-2 text-xs text-slate-500 transition-colors hover:text-white"><ArrowLeft size={14} /> Выйти</a>
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Забег {game.session.id.slice(0, 8)}</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Задание {game.task?.position ?? 0} из {game.task?.total ?? 0}</span>
       </div>
       <div className="play-panel overflow-hidden">
         <div className="grid border-b border-line sm:grid-cols-4">
@@ -339,15 +334,17 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-400">{task.description}</p>
 
           {task.type === 'real_shell' ? (
-            <Suspense fallback={<div className="game-shell mt-8 flex h-[480px] items-center justify-center"><LoaderCircle size={20} className="animate-spin text-acid" /></div>}>
-              <GameShellTerminal gameSessionId={game.session.id} {...(task.hint ? { hint: task.hint } : {})} onCompleted={(score) => void refreshAfterShell(score)} onSkip={() => void request('skip')} />
-            </Suspense>
+            <div className={pendingGame ? 'pointer-events-none' : ''} aria-disabled={pendingGame !== null}>
+              <Suspense fallback={<div className="game-shell mt-8 flex h-[480px] items-center justify-center"><LoaderCircle size={20} className="animate-spin text-acid" /></div>}>
+                <GameShellTerminal gameSessionId={game.session.id} {...(task.hint ? { hint: task.hint } : {})} onCompleted={(score) => void refreshAfterShell(score)} onSkip={() => void request('skip')} />
+              </Suspense>
+            </div>
           ) : (
             <form className="game-terminal mt-9" onSubmit={(event) => { event.preventDefault(); void request('submit'); }}>
               <div className="game-terminal-bar"><span>clirace@runner:~</span><span>semantic-check / ready</span></div>
               <label className="game-command-line">
                 <span className="select-none text-acid">$</span>
-                <input ref={inputRef} value={answer} onChange={(event) => { setAnswer(event.target.value); setFeedback(null); }} autoComplete="off" spellCheck={false} placeholder="введите команду…" disabled={busy} aria-label="Команда" />
+                <input ref={inputRef} value={answer} onChange={(event) => { setAnswer(event.target.value); setFeedback(null); }} autoComplete="off" spellCheck={false} placeholder="введите команду…" disabled={busy || pendingGame !== null} aria-label="Команда" />
               </label>
             </form>
           )}
@@ -357,14 +354,15 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
               {feedback.kind === 'correct' ? <CheckCircle2 size={16} /> : feedback.kind === 'skip' ? <SkipForward size={16} /> : <Terminal size={16} />}
               <span>{feedback.text}</span>
               {feedback.score ? <strong>+{feedback.score}</strong> : null}
+              {pendingGame && <button type="button" className="terminal-action ml-auto" onClick={() => { setGame(pendingGame); setPendingGame(null); setFeedback(null); }}>Продолжить <ChevronRight size={13} /></button>}
             </div>
           )}
 
           {task.type !== 'real_shell' && <div className="mt-6 flex flex-col-reverse justify-between gap-4 sm:flex-row sm:items-center">
             <span className="font-mono text-[10px] text-slate-600">Enter — проверить · Esc — пропустить</span>
             <div className="flex gap-3">
-              <button type="button" className="secondary-button" disabled={busy} onClick={() => void request('skip')}><SkipForward size={14} /> Пропустить</button>
-              <button type="button" className="primary-button" disabled={busy || !answer.trim()} onClick={() => void request('submit')}>
+              <button type="button" className="secondary-button" disabled={busy || pendingGame !== null} onClick={() => void request('skip')}><SkipForward size={14} /> Пропустить</button>
+              <button type="button" className="primary-button" disabled={busy || pendingGame !== null || !answer.trim()} onClick={() => void request('submit')}>
                 {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Send size={15} />} Проверить
               </button>
             </div>

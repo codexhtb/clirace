@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { CheckCircle2, Lightbulb, LoaderCircle, Play, ShieldCheck, SkipForward, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { humanizeError } from './errors';
 
 type TerminalStatus = 'idle' | 'connecting' | 'ready' | 'closed' | 'error';
 type CheckStatus = 'idle' | 'checking' | 'passed' | 'failed';
@@ -28,6 +29,13 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
   const [status, setStatus] = useState<TerminalStatus>('idle');
   const [checkStatus, setCheckStatus] = useState<CheckStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (status !== 'ready' || remainingSeconds === null) return;
+    const timer = window.setInterval(() => setRemainingSeconds((current) => current === null ? null : Math.max(0, current - 1)), 1_000);
+    return () => window.clearInterval(timer);
+  }, [status, remainingSeconds === null]);
 
   const sendResize = useCallback(() => {
     const terminal = terminalRef.current;
@@ -88,6 +96,7 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
     setStatus('connecting');
     setCheckStatus('idle');
     setError(null);
+    setRemainingSeconds(null);
     passedRef.current = false;
     scoreRef.current = 0;
     terminalRef.current?.clear();
@@ -111,9 +120,10 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
           terminalRef.current?.write(new Uint8Array(event.data as ArrayBuffer));
           return;
         }
-        const message = JSON.parse(event.data) as { type: string; passed?: boolean; message?: string; scoreAwarded?: number; reason?: string };
+        const message = JSON.parse(event.data) as { type: string; passed?: boolean; message?: string; scoreAwarded?: number; reason?: string; expiresInSeconds?: number };
         if (message.type === 'ready') {
           setStatus('ready');
+          setRemainingSeconds(message.expiresInSeconds ?? null);
           fitRef.current?.fit();
           sendResize();
         }
@@ -122,7 +132,8 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
           passedRef.current = passed;
           scoreRef.current = message.scoreAwarded ?? 0;
           setCheckStatus(passed ? 'passed' : 'failed');
-          terminalRef.current?.writeln(`\r\n\x1b[${passed ? '38;2;182;240;74' : '33'}m${passed ? '✓' : '○'} ${message.message ?? 'Проверка завершена.'}${message.scoreAwarded ? `  +${message.scoreAwarded}` : ''}\x1b[0m`);
+          const feedback = passed ? (message.message ?? 'Задача решена.') : 'Пока не выполнено. Состояние песочницы ещё не соответствует условию.';
+          terminalRef.current?.writeln(`\r\n\x1b[${passed ? '38;2;182;240;74' : '33'}m${passed ? '✓' : '○'} ${feedback}${message.scoreAwarded ? `  +${message.scoreAwarded}` : ''}\x1b[0m`);
         }
         if (message.type === 'closed' && !passedRef.current && message.reason !== 'challenge_completed') {
           terminalRef.current?.writeln(`\r\n\x1b[33mСессия завершена: ${message.reason ?? 'закрыта'}\x1b[0m`);
@@ -130,7 +141,7 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
       };
       socket.onerror = () => {
         setStatus('error');
-        setError('Не удалось подключиться к игровому shell.');
+        setError('Shell временно недоступен. Попробуйте снова через несколько секунд.');
       };
       socket.onclose = () => {
         socketRef.current = null;
@@ -139,7 +150,7 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
       };
     } catch (startError) {
       setStatus('error');
-      const message = startError instanceof Error ? startError.message : 'Ошибка запуска shell.';
+      const message = humanizeError(startError, 'Shell временно недоступен. Попробуйте снова через несколько секунд.');
       setError(message);
       terminalRef.current?.writeln(`\r\n\x1b[31m${message}\x1b[0m`);
     }
@@ -156,8 +167,13 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
   return (
     <div className="game-shell mt-8">
       {hint && <details className="challenge-hint px-4 pt-4 sm:px-5"><summary><Lightbulb size={13} /> Подсказка</summary><p>{hint}</p></details>}
+      <div className="game-shell-status" role="status" aria-live="polite">
+        <span>{status === 'idle' ? 'Окружение ещё не запущено' : status === 'connecting' ? 'Создаём окружение…' : status === 'ready' ? 'Окружение готово' : status === 'error' ? 'Shell временно недоступен' : 'Сессия завершена'}</span>
+        {remainingSeconds !== null && status === 'ready' && <strong className={remainingSeconds < 120 ? 'text-amber-300' : ''}>Сессия {formatRemaining(remainingSeconds)}</strong>}
+      </div>
       <div className="game-shell-host" ref={hostRef} />
       {error && <p className="play-error mx-4 mb-3 sm:mx-5" role="alert">{error}</p>}
+      <p className="border-t border-line px-4 py-2 text-[11px] leading-5 text-slate-600 sm:hidden">Для работы с терминалом удобнее использовать компьютер, но основные команды доступны и здесь.</p>
       <div className="game-shell-actions">
         <span className="flex items-center gap-2 text-slate-500"><ShieldCheck size={14} className="text-acid" /> rootless · без сети · без доступа к хосту</span>
         <div className="flex flex-wrap gap-2">
@@ -172,4 +188,8 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
       </div>
     </div>
   );
+}
+
+function formatRemaining(seconds: number) {
+  return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 }

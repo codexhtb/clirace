@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { CheckCircle2, LoaderCircle, ShieldCheck, Wifi, WifiOff } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { humanizeError } from './errors';
 
 interface SessionTicket {
   sessionId: string;
@@ -108,7 +109,7 @@ export function BattleTerminal({ roomCode, round, locked }: {
       </div>
       <div className="battle-terminal-host" ref={hostRef} />
       {locked && status === 'ready' && (
-        <div className="battle-terminal-lock"><strong>TERMINAL LOCKED</strong><span>Ожидаем общий серверный GO</span></div>
+      <div className="battle-terminal-lock"><strong>ТЕРМИНАЛ ЗАБЛОКИРОВАН</strong><span>Ждём общий серверный старт</span></div>
       )}
       <div className="battle-terminal-actions">
         <span><ShieldCheck size={13} className="text-acid" /> отдельный sandbox · ввод сопернику не виден</span>
@@ -150,7 +151,7 @@ async function connectTerminal(
       continue;
     }
     actions.setStatus('error');
-    actions.setError(payload?.message ?? 'Не удалось подготовить Battle sandbox.');
+    actions.setError(humanizeError(payload?.message, 'Shell временно недоступен. Попробуйте снова через несколько секунд.'));
     return;
   }
   if (!ticket || !mountedRef.current) return;
@@ -174,7 +175,7 @@ async function connectTerminal(
     if (message.type === 'ready') {
       lockedRef.current = message.inputLocked === true;
       actions.setStatus('ready');
-      terminal.writeln(message.reconnected ? '\x1b[36mСессия восстановлена.\x1b[0m\r\n' : '\x1b[36mSandbox готов.\x1b[0m\r\n');
+      terminal.writeln(message.reconnected ? '\x1b[36mСессия восстановлена.\x1b[0m\r\n' : '\x1b[36mОкружение готово.\x1b[0m\r\n');
       fit.fit();
       actions.sendResize();
     } else if (message.type === 'battle_unlocked') {
@@ -184,7 +185,8 @@ async function connectTerminal(
     } else if (message.type === 'check_result') {
       actions.setChecking(false);
       actions.setPassed(message.passed === true);
-      terminal.writeln(`\r\n\x1b[${message.passed ? '38;2;182;240;74' : '33'}m${message.passed ? '✓' : '○'} ${message.message ?? 'Проверка завершена.'}\x1b[0m`);
+      const feedback = message.passed ? (message.message ?? 'Раунд выполнен.') : 'Пока не выполнено. Состояние песочницы ещё не соответствует условию.';
+      terminal.writeln(`\r\n\x1b[${message.passed ? '38;2;182;240;74' : '33'}m${message.passed ? '✓' : '○'} ${feedback}\x1b[0m`);
     } else if (message.type === 'closed' && message.reason !== 'challenge_completed') {
       terminal.writeln(`\r\n\x1b[33mСессия закрыта: ${message.reason ?? 'завершена'}\x1b[0m`);
     }
@@ -203,10 +205,10 @@ async function connectTerminal(
 
 function terminalStatusLabel(status: TerminalStatus) {
   return ({
-    connecting: 'создаём sandbox',
-    ready: 'terminal connected',
+    connecting: 'создаём окружение',
+    ready: 'терминал подключён',
     reconnecting: 'ждём предыдущий раунд',
-    error: 'ошибка соединения',
+    error: 'shell недоступен',
     closed: 'сессия завершена',
   } as const)[status];
 }

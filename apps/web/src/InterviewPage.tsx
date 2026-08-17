@@ -1,5 +1,7 @@
-import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, Play, TerminalSquare } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { CheckCircle2, ChevronDown, LoaderCircle, Play, RotateCcw, TerminalSquare } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AppPage, EmptyState, ErrorState, PageLoader } from './Ui';
+import { humanizeError } from './errors';
 
 interface Task {
   slug: string; title: string; description: string; difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -29,7 +31,7 @@ export function InterviewPage() {
         if (!response.ok) throw new Error(body.message ?? 'Коллекция временно недоступна.');
         setPayload(body);
       })
-      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message); });
+      .catch((reason) => { if (reason.name !== 'AbortError') setError(humanizeError(reason, 'Коллекция временно недоступна.')); });
     return () => controller.abort();
   }, []);
 
@@ -52,17 +54,21 @@ export function InterviewPage() {
       if (!response.ok || !body.session) throw new Error(body.message ?? 'Не удалось начать Interview Run.');
       window.location.href = `/play?session=${encodeURIComponent(body.session.id)}`;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Не удалось начать Interview Run.');
+      setError(humanizeError(reason, 'Не удалось начать Interview Run. Попробуйте ещё раз.'));
       setBusy(null);
     }
   };
 
-  if (!payload && !error) return <Page><div className="flex min-h-[60vh] items-center justify-center text-slate-500"><LoaderCircle className="animate-spin" /></div></Page>;
-  if (!payload) return <Page><p className="play-error mt-16">{error}</p></Page>;
+  if (!payload && !error) return <AppPage><PageLoader label="Загружаем Interview 100" /></AppPage>;
+  if (!payload) return <AppPage><ErrorState title="Interview 100 временно недоступен" message={error ?? 'Попробуйте ещё раз через несколько секунд.'} /></AppPage>;
   const percent = Math.round((payload.summary.solved / payload.summary.total) * 100);
+  const solvedByDifficulty = {
+    Easy: payload.tasks.filter((task) => task.difficulty === 'Easy' && task.solved).length,
+    Medium: payload.tasks.filter((task) => task.difficulty === 'Medium' && task.solved).length,
+    Hard: payload.tasks.filter((task) => task.difficulty === 'Hard' && task.solved).length,
+  };
 
-  return <Page>
-    <a href="/" className="mb-8 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-white"><ArrowLeft size={14} /> На главную</a>
+  return <AppPage>
     <section className="grid gap-10 lg:grid-cols-[1fr_0.75fr] lg:items-end">
       <div>
         <p className="eyebrow">Коллекция · Linux / DevOps</p>
@@ -73,12 +79,15 @@ export function InterviewPage() {
         <div className="flex items-end justify-between"><span className="font-mono text-xs uppercase tracking-[.14em] text-slate-500">Прогресс</span><strong className="text-3xl text-white">{payload.summary.solved}<span className="text-slate-600">/100</span></strong></div>
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-black"><div className="h-full bg-acid transition-all" style={{ width: `${percent}%` }} /></div>
         <div className="mt-3 font-mono text-[10px] text-slate-500">{percent}% коллекции завершено</div>
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
+          {([['Easy', 30], ['Medium', 50], ['Hard', 20]] as const).map(([level, total]) => <div key={level}><span className="block font-mono text-[9px] uppercase text-slate-600">{difficultyLabel(level)}</span><strong className="mt-1 block font-mono text-sm text-slate-200">{solvedByDifficulty[level]} / {total}</strong></div>)}
+        </div>
       </div>
     </section>
 
     <section className="mt-10 grid gap-3 sm:grid-cols-3">
       {([10, 25, 50] as const).map((count) => <button key={count} type="button" disabled={busy !== null} onClick={() => void startRun(count)} className="group flex items-center justify-between rounded-md border border-line bg-[#0b1016] p-5 text-left transition hover:border-acid/50 disabled:opacity-50">
-        <span><strong className="block text-xl text-white">{count} задач</strong><small className="mt-1 block font-mono text-[10px] uppercase tracking-[.12em] text-slate-500">Interview Run</small></span>
+        <span><strong className="block text-xl text-white">{count} задач</strong><small className="mt-1 block font-mono text-[10px] uppercase tracking-[.12em] text-slate-500">≈ {count === 10 ? '10–20' : count === 25 ? '25–45' : '50–90'} минут</small></span>
         {busy === count ? <LoaderCircle className="animate-spin text-acid" size={20} /> : <Play className="text-acid" size={20} />}
       </button>)}
     </section>
@@ -90,19 +99,20 @@ export function InterviewPage() {
         <Filter value={difficulty} onChange={setDifficulty} label="Сложность" options={[['all','Любая'],['Easy','Easy · 30'],['Medium','Medium · 50'],['Hard','Hard · 20']]} />
         <Filter value={topic} onChange={setTopic} label="Тема" options={[['all','Все темы'], ...payload.topics.map((item) => [item.slug, item.name])]} />
         <span className="ml-auto self-center font-mono text-[10px] uppercase tracking-[.14em] text-slate-500">Показано: {tasks.length}</span>
+        {(status !== 'all' || difficulty !== 'all' || topic !== 'all') && <button type="button" className="inline-flex items-center gap-1.5 self-center font-mono text-[10px] uppercase tracking-[.12em] text-slate-500 hover:text-white" onClick={() => { setStatus('all'); setDifficulty('all'); setTopic('all'); }}><RotateCcw size={12} /> Сбросить</button>}
       </div>
       <div className="mt-6 grid gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-2 lg:grid-cols-3">
         {tasks.map((task) => <TaskCard key={task.slug} task={task} topicName={payload.topics.find((item) => item.slug === task.topic)?.name ?? task.topic} />)}
       </div>
-      {tasks.length === 0 && <div className="py-16 text-center text-sm text-slate-500">По этим фильтрам задач нет.</div>}
+      {tasks.length === 0 && <div className="mt-6"><EmptyState title="Задач не найдено" text="Измените фильтры или вернитесь ко всей коллекции." /></div>}
     </section>
-  </Page>;
+  </AppPage>;
 }
 
 function TaskCard({ task, topicName }: { task: Task; topicName: string }) {
   return <details className="group min-h-64 bg-panel p-6 open:bg-[#101720]">
     <summary className="flex h-full cursor-pointer list-none flex-col">
-      <div className="flex items-center justify-between"><span className="font-mono text-[10px] uppercase tracking-[.13em] text-cyan">{String(task.position).padStart(3, '0')} · {topicName}</span><span className="difficulty">{task.difficulty}</span></div>
+      <div className="flex items-center justify-between"><span className="font-mono text-[10px] uppercase tracking-[.13em] text-cyan">{String(task.position).padStart(3, '0')} · {topicName}</span><span className="difficulty">{difficultyLabel(task.difficulty)}</span></div>
       <h2 className="mt-5 text-lg font-semibold text-white">{task.title}</h2>
       <p className="mt-3 text-sm leading-6 text-slate-400">{task.description}</p>
       <div className="mt-auto flex items-center justify-between border-t border-line pt-5 font-mono text-[10px] uppercase tracking-[.12em] text-slate-600">
@@ -125,6 +135,6 @@ function Filter({ value, onChange, label, options }: { value: string; onChange: 
   return <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.12em] text-slate-500"><span>{label}</span><select className="rounded border border-line bg-panel px-3 py-2 text-xs normal-case tracking-normal text-slate-200" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>;
 }
 
-function Page({ children }: { children: ReactNode }) {
-  return <div className="min-h-screen bg-ink text-slate-200"><div className="grid-noise fixed inset-0 pointer-events-none" /><header className="relative z-10 border-b border-line"><div className="page-width flex h-16 items-center justify-between"><a href="/" className="flex items-center gap-2.5"><span className="logo-mark"><span>&gt;_</span></span><span className="font-mono text-sm font-bold tracking-[.12em] text-white">CLIRACE</span></a><nav className="flex gap-5 font-mono text-[10px] uppercase tracking-[.12em] text-slate-500"><a href="/play" className="hover:text-white">Играть</a><a href="/daily" className="hover:text-white">Daily</a><a href="/battle" className="hover:text-white">Battle</a></nav></div></header><main className="page-width relative z-10 py-10 sm:py-16">{children}</main></div>;
+function difficultyLabel(value: Task['difficulty']) {
+  return ({ Easy: 'Легко', Medium: 'Средне', Hard: 'Сложно' } as const)[value];
 }
