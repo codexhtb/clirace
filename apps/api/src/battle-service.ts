@@ -99,6 +99,11 @@ export class BattleManager implements BattleSandboxHooks {
       FROM categories
       JOIN challenges ON challenges.category_id = categories.id
         AND challenges.enabled AND challenges.type = 'real_shell'
+        AND NOT EXISTS (
+          SELECT 1 FROM challenge_collection_items ci
+          JOIN challenge_collections cc ON cc.id = ci.collection_id
+          WHERE ci.challenge_id = challenges.id AND cc.slug = 'interview-100'
+        )
       WHERE categories.enabled
       GROUP BY categories.id
       HAVING count(challenges.id) >= 3
@@ -126,6 +131,11 @@ export class BattleManager implements BattleSandboxHooks {
         SELECT id FROM challenges
         WHERE enabled AND type = 'real_shell'
           AND ($1::smallint IS NULL OR category_id = $1)
+          AND NOT EXISTS (
+            SELECT 1 FROM challenge_collection_items ci
+            JOIN challenge_collections cc ON cc.id = ci.collection_id
+            WHERE ci.challenge_id = challenges.id AND cc.slug = 'interview-100'
+          )
         ORDER BY random()
         LIMIT $2
       `, [category?.id ?? null, rounds]);

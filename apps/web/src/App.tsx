@@ -6,6 +6,7 @@ import { DailyPage } from './DailyPage';
 import { PlayPage } from './PlayPage';
 import { ProfilePage } from './ProfilePage';
 import { QuickStartSection } from './QuickStartSection';
+import { InterviewPage } from './InterviewPage';
 
 const ShellTerminal = lazy(() => import('./ShellTerminal').then((module) => ({
   default: module.ShellTerminal,
@@ -131,6 +132,7 @@ function HomePage() {
             <a className="nav-link" href="#quick-start">Быстрый старт</a>
             <a className="nav-link" href="#modes">Режимы</a>
             <a className="nav-link" href="/daily">Daily</a>
+            <a className="nav-link" href="/interview">Interview 100</a>
             <a className="nav-link" href="/battle">Battle</a>
             <a className="nav-link" href="/leaderboard">Рейтинг</a>
           </nav>
@@ -238,6 +240,7 @@ export function App() {
   const path = window.location.pathname;
   if (path === '/play') return <PlayPage />;
   if (path === '/daily') return <DailyPage />;
+  if (path === '/interview') return <InterviewPage />;
   if (path === '/battle') return <Suspense fallback={<BattlePageFallback />}><BattleCreatePage /></Suspense>;
   if (/^\/battle\/[A-HJ-NP-Z2-9]{5}$/i.test(path)) return <Suspense fallback={<BattlePageFallback />}><BattleRoomPage /></Suspense>;
   if (path === '/leaderboard') return <LeaderboardPage />;

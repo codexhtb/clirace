@@ -20,7 +20,7 @@ export function validateChallengeAnswer(answer: string, config: ValidationConfig
   }
 
   return correct
-    ? { correct: true, feedback: 'Верно. Команда решает задачу.' }
+    ? { correct: true, feedback: stringValue(config.successFeedback) || 'Верно. Команда решает задачу.' }
     : invalid('Команда пока не подходит. Проверьте программу, аргументы и порядок операций.');
 }
 

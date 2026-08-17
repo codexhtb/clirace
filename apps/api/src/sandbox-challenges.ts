@@ -17,7 +17,7 @@ export type PublicSandboxChallenge = Pick<
   'id' | 'title' | 'description' | 'category' | 'difficulty' | 'hint'
 >;
 
-const challenges: readonly SandboxChallenge[] = [
+const baseChallenges: readonly SandboxChallenge[] = [
   {
     id: 'build-castle',
     title: 'Постройте башню замка',
@@ -574,6 +574,22 @@ const challenges: readonly SandboxChallenge[] = [
   },
 ];
 
+const interviewChallenges: readonly SandboxChallenge[] = INTERVIEW_100
+  .filter((task) => task.sandbox)
+  .map((task) => ({
+    id: task.slug,
+    title: task.title,
+    description: task.description,
+    category: INTERVIEW_TOPIC_LABELS[task.topic],
+    difficulty: task.difficulty,
+    hint: task.sandbox!.hint,
+    successMessage: task.explanation,
+    setupScript: task.sandbox!.setupScript,
+    checkScript: task.sandbox!.checkScript,
+  }));
+
+const challenges: readonly SandboxChallenge[] = [...baseChallenges, ...interviewChallenges];
+
 export function pickSandboxChallenge(excludeId?: string): SandboxChallenge {
   const candidates = excludeId
     ? challenges.filter((challenge) => challenge.id !== excludeId)
@@ -589,3 +605,4 @@ export function toPublicChallenge(challenge: SandboxChallenge): PublicSandboxCha
   const { id, title, description, category, difficulty, hint } = challenge;
   return { id, title, description, category, difficulty, hint };
 }
+import { INTERVIEW_100, INTERVIEW_TOPIC_LABELS } from './interview-data.js';

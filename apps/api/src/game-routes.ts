@@ -303,7 +303,7 @@ async function activateNextOrComplete(client: PoolClient, sessionId: string, use
   await finalizeCompletedSession(client, sessionId, userId);
 }
 
-async function loadGameState(pool: Dependencies['postgres'], sessionId: string, userId: string): Promise<Record<string, unknown> | null> {
+export async function loadGameState(pool: Dependencies['postgres'], sessionId: string, userId: string): Promise<Record<string, unknown> | null> {
   const sessionResult = await pool.query<SessionRow>(`
     SELECT id, status, score, streak, best_streak, rating_delta, mode, started_at, completed_at
     FROM game_sessions WHERE id = $1 AND user_id = $2

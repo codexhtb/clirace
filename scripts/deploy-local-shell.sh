@@ -65,7 +65,7 @@ docker compose \
   -f docker-compose.sandbox.yml \
   up --build -d
 
-# Compose does not track the contents of bind-mounted files. Recreate only the
+# Compose does not track bind-mounted file contents. Recreate only the
 # lightweight edge container so every deployment reloads the current nginx config.
 docker compose \
   -f docker-compose.yml \

@@ -11,6 +11,7 @@ export function CommunityHeader() {
         <nav className="hidden items-center gap-6 text-xs font-medium text-slate-400 sm:flex" aria-label="Навигация">
           <a className="nav-link" href="/play">Играть</a>
           <a className="nav-link" href="/daily">Daily</a>
+          <a className="nav-link" href="/interview">Interview 100</a>
           <a className="nav-link" href="/battle">Battle</a>
           <a className="nav-link" href="/leaderboard">Рейтинг</a>
         </nav>

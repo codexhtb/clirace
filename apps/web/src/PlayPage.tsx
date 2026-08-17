@@ -67,6 +67,22 @@ export function PlayPage() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get('session');
+    if (auth !== 'ready' || !sessionId || game) return;
+    const controller = new AbortController();
+    setBusy(true);
+    fetch(`/api/game/sessions/${encodeURIComponent(sessionId)}`, { signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json() as GameState & { message?: string };
+        if (!response.ok) throw new Error(payload.message ?? 'Забег не найден.');
+        setGame(payload);
+      })
+      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message); })
+      .finally(() => setBusy(false));
+    return () => controller.abort();
+  }, [auth, game]);
+
   const createGame = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
@@ -111,6 +127,7 @@ export function PlayPage() {
           </a>
           <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
             <a className="transition-colors hover:text-white" href="/daily">Daily</a>
+            <a className="transition-colors hover:text-white" href="/interview">Interview 100</a>
             <a className="transition-colors hover:text-white" href="/battle">Battle</a>
             <a className="transition-colors hover:text-white" href="/leaderboard">Рейтинг</a>
             <span>PHASE 5 / GAME</span>

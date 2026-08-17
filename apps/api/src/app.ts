@@ -10,6 +10,7 @@ import { registerCommunityRoutes } from './community-routes.js';
 import type { AppConfig } from './config.js';
 import { registerDailyRoutes } from './daily-routes.js';
 import { registerGameRoutes } from './game-routes.js';
+import { registerInterviewRoutes } from './interview-routes.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { registerSandboxRoutes } from './sandbox-routes.js';
 import { checkDependencies, type Dependencies } from './services.js';
@@ -104,6 +105,10 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager }
 
   void app.register(async (gameApp) => {
     await registerGameRoutes(gameApp, config, dependencies);
+  });
+
+  void app.register(async (interviewApp) => {
+    await registerInterviewRoutes(interviewApp, config, dependencies);
   });
 
   app.addHook('onClose', async () => {
