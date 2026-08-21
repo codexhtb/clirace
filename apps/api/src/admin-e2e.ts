@@ -39,7 +39,8 @@ async function main(): Promise<void> {
     const passwordHash = await hashPassword(password);
     const inserted = await dependencies.postgres.query<{ id: string; username: string }>(`
       INSERT INTO users (username, username_normalized, email, email_normalized, password_hash)
-      VALUES ($1, lower($1), $2, lower($2), $3), ($4, lower($4), $5, lower($5), $3)
+      VALUES ($1::varchar, lower($1::text), $2::varchar, lower($2::text), $3),
+             ($4::varchar, lower($4::text), $5::varchar, lower($5::text), $3)
       RETURNING id, username
     `, [adminName, adminEmail, passwordHash, userName, userEmail]);
     adminId = inserted.rows.find((row) => row.username === adminName)?.id;
