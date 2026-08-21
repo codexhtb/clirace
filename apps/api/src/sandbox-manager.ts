@@ -246,6 +246,8 @@ export class SandboxManager {
     const requestedBattle = options.battle;
     if (requestedBattle) {
       const existing = [...this.sessions.values()].find((session) =>
+        !session.closing
+        &&
         session.userId === options.userId
         && session.battle?.battleId === requestedBattle.battleId
         && session.battle?.battlePlayerId === requestedBattle.battlePlayerId
@@ -1071,7 +1073,6 @@ export class SandboxManager {
     session.closing = true;
     await this.transitionLifecycle(sessionId, session.lifecycleState, 'terminating').catch(() => undefined);
     session.lifecycleState = 'terminating';
-    this.sessions.delete(sessionId);
     clearTimeout(session.lifetimeTimer);
     clearTimeout(session.idleTimer);
     if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
@@ -1092,6 +1093,7 @@ export class SandboxManager {
           status_changed_at = now(), destroyed_at = COALESCE(destroyed_at, now())
       WHERE id = $3 AND lifecycle_state = ANY($4::varchar[])
     `, [legacyStatus, reason.slice(0, 64), sessionId, LIVE_SANDBOX_STATES]).catch(() => undefined);
+    this.sessions.delete(sessionId);
   }
 
   private async markSessionFailed(sessionId: string, code: SandboxFailureCode): Promise<void> {
