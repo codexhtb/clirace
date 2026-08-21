@@ -134,6 +134,7 @@ export interface SandboxReconciliationResult {
 export class SandboxManager {
   private readonly docker: Docker;
   private readonly sessions = new Map<string, ActiveSession>();
+  private readonly closingSessions = new Map<string, Promise<void>>();
   private readonly metrics = new SandboxMetrics();
   private battleHooks: BattleSandboxHooks | undefined;
   private maintenanceTimer: NodeJS.Timeout | undefined;
@@ -1049,8 +1050,24 @@ export class SandboxManager {
   }
 
   private async destroySession(sessionId: string, reason: string): Promise<void> {
+    const pendingCleanup = this.closingSessions.get(sessionId);
+    if (pendingCleanup) {
+      await pendingCleanup;
+      return;
+    }
     const session = this.sessions.get(sessionId);
-    if (!session || session.closing) return;
+    if (!session) return;
+    const cleanup = this.performDestroySession(session, reason);
+    this.closingSessions.set(sessionId, cleanup);
+    try {
+      await cleanup;
+    } finally {
+      this.closingSessions.delete(sessionId);
+    }
+  }
+
+  private async performDestroySession(session: ActiveSession, reason: string): Promise<void> {
+    const sessionId = session.id;
     session.closing = true;
     await this.transitionLifecycle(sessionId, session.lifecycleState, 'terminating').catch(() => undefined);
     session.lifecycleState = 'terminating';

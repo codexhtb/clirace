@@ -87,9 +87,14 @@ async function openSocket(path, user, authMessage) {
 }
 
 async function getTerminal(user, roomCode) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
     const { response, body } = await user.request(`/api/battles/${roomCode}/terminal`, { method: 'POST' });
     if (response.ok) return body;
+    if (response.status === 429) {
+      const retryAfterSeconds = Number.parseInt(response.headers.get('retry-after') ?? '1', 10);
+      await delay(Math.max(1, Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : 1) * 1_000);
+      continue;
+    }
     if (response.status !== 409) throw new Error(`terminal ticket: ${response.status} ${body.message ?? ''}`);
     await delay(350);
   }
@@ -113,11 +118,29 @@ async function solveRound(terminal, slug) {
 }
 
 const commands = {
+  'linux-directory-mode': 'mkdir -p /workspace/app && chmod 750 /workspace/app',
+  'shell-move-largest-file': 'find /workspace/data -type f -size +5M -exec mv {} /workspace/archive/ \\;',
+  'shell-secure-secret': 'chmod 600 /workspace/secret.env',
+  'shell-log-investigation': "awk '$5 == 503 { print $1 }' /workspace/access.log > /workspace/answer.txt",
+  'shell-release-symlink': 'ln -s /workspace/versions/app-v2.conf /workspace/current.conf',
+  'shell-stop-worker': 'kill "$(cat /workspace/worker.pid)" && sleep 0.1',
+  'shell-restore-git-file': 'cd /workspace/repo && git restore README.md',
+  'shell-local-http': 'curl -fsS http://127.0.0.1:8081/status.txt -o /workspace/response.txt',
+  'shell-hello-terminal': "printf 'Привет, терминал!\\n' > /workspace/hello.txt",
+  'shell-cat-house': 'mkdir -p /workspace/cat-house && touch /workspace/cat-house/meow.txt',
+  'shell-copy-treasure': 'mkdir -p /workspace/backpack && cp /workspace/chest/treasure.txt /workspace/backpack/',
+  'shell-rename-duck': 'mv /workspace/duck.tmp /workspace/duck.txt',
   'shell-first-story-line': 'head -n 1 /workspace/story.txt > /workspace/answer.txt',
   'shell-banana-count': "grep -c '^banana$' /workspace/fruits.txt > /workspace/answer.txt",
   'shell-sort-pets': 'sort /workspace/pets.txt > /workspace/sorted.txt',
+  'shell-hidden-gem': 'touch /workspace/.gem',
+  'shell-delete-junk': 'rm /workspace/junk.txt',
   'shell-rainbow-files': 'cat /workspace/red.txt /workspace/blue.txt > /workspace/rainbow.txt',
+  'shell-build-castle': 'mkdir -p /workspace/castle/tower',
   'shell-name-robot': "echo 'BEEP-42' > /workspace/robot.txt",
+  'shell-launch-rocket': 'mv /workspace/hangar/rocket.txt /workspace/launchpad/',
+  'shell-copy-map': 'mkdir -p /workspace/traveler && cp /workspace/map.txt /workspace/traveler/map.txt',
+  'shell-remove-crumbs': 'rm /workspace/crumbs.txt',
   'shell-feed-dragon': "echo 'pizza' >> /workspace/dragon-menu.txt",
   'shell-make-playlist': 'cat /workspace/song-a.txt /workspace/song-b.txt > /workspace/playlist.txt',
   'shell-count-stars': 'wc -l < /workspace/stars.txt > /workspace/answer.txt',
@@ -127,7 +150,12 @@ const commands = {
   'shell-first-planets': 'head -n 3 /workspace/planets.txt > /workspace/first.txt',
   'shell-csv-names': "cut -d',' -f1 /workspace/players.csv > /workspace/names.txt",
   'shell-unique-colors': 'sort -u /workspace/colors.txt > /workspace/unique.txt',
+  'shell-create-planets': 'touch /workspace/earth.txt /workspace/mars.txt /workspace/venus.txt',
+  'shell-executable-spell': 'chmod 755 /workspace/spell.sh',
+  'shell-readonly-scroll': 'chmod 444 /workspace/scroll.txt',
+  'shell-portal-shortcut': 'ln -s /workspace/worlds/mars /workspace/portal',
   'shell-replace-moon': "sed -i 's/moon/mars/' /workspace/sky.txt",
+  'shell-backup-note': 'cp /workspace/note.txt /workspace/note.txt.bak',
   'shell-archive-logs': 'cd /workspace && tar -czf logs.tar.gz logs',
   'shell-production-config': "sed -i 's/debug=true/debug=false/' /workspace/app.conf",
   'shell-filter-json': "jq -r '.[] | select(.enabled) | .name' /workspace/services.json > /workspace/enabled.txt",
