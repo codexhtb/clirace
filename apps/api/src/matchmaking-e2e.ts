@@ -38,10 +38,10 @@ async function main(): Promise<void> {
   const stores = [new MatchmakingStore(dependencies.redis, prefix), new MatchmakingStore(dependencies.redis, lowPrefix)];
 
   try {
-    const users = await createUsers(app, dependencies, suffix, password, 9);
+    const users = await createUsers(app, dependencies, suffix, password, 8);
     createdUserIds.push(...users.map((user) => user.id));
-    const [a, b, c, d, e, f, g, h, i] = users;
-    assert(a && b && c && d && e && f && g && h && i, 'temporary users missing');
+    const [a, b, c, d, e, f, g, h] = users;
+    assert(a && b && c && d && e && f && g && h, 'temporary users missing');
 
     equal((await inject(app, 'POST', '/api/matchmaking/queue')).statusCode, 401, 'unauthenticated enqueue');
 
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     const lowSandbox = new SandboxManager(lowConfig, dependencies);
     const lowMatchmaking = new MatchmakingManager(lowConfig, dependencies, lowSandbox, battleManager, { redisPrefix: lowPrefix });
     await lowMatchmaking.enqueue(e);
-    const lowStatus = await lowMatchmaking.enqueue(i);
+    const lowStatus = await lowMatchmaking.enqueue(f);
     equal(lowStatus.status, 'searching', 'capacity shortage keeps user searching');
     assert(lowStatus.status === 'searching' && lowStatus.waitingCapacity, 'capacity state is machine-readable');
     await lowMatchmaking.close();
