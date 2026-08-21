@@ -50,12 +50,14 @@ SANDBOX_HOME=$(getent passwd clirace-sandbox | cut -d: -f6)
 configured_socket=$(env_value SANDBOX_DOCKER_SOCKET_HOST)
 SANDBOX_DOCKER_SOCKET_HOST=${configured_socket:-/run/user/${SANDBOX_UID}/docker.sock}
 [[ -S "$SANDBOX_DOCKER_SOCKET_HOST" ]] || die "Rootless Docker socket недоступен: $SANDBOX_DOCKER_SOCKET_HOST"
-configured_gid=$(env_value SANDBOX_SOCKET_GID)
 configured_image=$(env_value SANDBOX_IMAGE)
-SANDBOX_SOCKET_GID=${configured_gid:-$(stat -c '%g' "$SANDBOX_DOCKER_SOCKET_HOST")}
+SANDBOX_SOCKET_GID=$(stat -c '%g' "$SANDBOX_DOCKER_SOCKET_HOST")
 SANDBOX_IMAGE=${configured_image:-clirace-sandbox:0.2.0}
 export SANDBOX_DOCKER_SOCKET_HOST SANDBOX_SOCKET_GID SANDBOX_IMAGE
-ok 'Rootless sandbox available'
+curl --fail --silent --show-error --max-time 3 \
+  --unix-socket "$SANDBOX_DOCKER_SOCKET_HOST" http://localhost/_ping | grep -qx 'OK' \
+  || die 'Rootless Docker socket exists but /_ping failed.'
+ok "Rootless sandbox available (socket gid=$SANDBOX_SOCKET_GID)"
 
 mapfile -t dns_addresses < <(getent ahosts "$PUBLIC_HOST" 2>/dev/null | awk '{print $1}' | sort -u)
 if (( ${#dns_addresses[@]} == 0 )); then

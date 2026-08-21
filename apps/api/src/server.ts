@@ -25,6 +25,7 @@ process.once('SIGTERM', () => void shutdown('SIGTERM'));
 try {
   await connectDependencies(dependencies);
   await runMigrations(dependencies.postgres);
+  await sandboxManager.start();
   await battleManager.start();
   await app.listen({ host: config.HOST, port: config.PORT });
 } catch (error) {

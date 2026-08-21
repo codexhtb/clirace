@@ -25,7 +25,9 @@ interface BuildAppOptions {
 export function buildApp({ config, dependencies, sandboxManager, battleManager }: BuildAppOptions): FastifyInstance {
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
-    trustProxy: true,
+    // Caddy is the only public proxy in front of the Docker nginx gateway.
+    // Trust exactly one proxy hop so rate limiting uses nginx's verified client IP.
+    trustProxy: 1,
     bodyLimit: config.HTTP_BODY_LIMIT_BYTES,
     requestTimeout: 10_000,
   });

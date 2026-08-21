@@ -6,7 +6,7 @@ export function CommunityHeader() {
     ['/play', 'Играть'],
     ['/interview', 'Interview 100'],
     ['/daily', 'Daily'],
-    ['/leaderboard', 'Рейтинг'],
+    ['/rating', 'Рейтинг'],
     ['/battle', 'Battle'],
   ];
   return (

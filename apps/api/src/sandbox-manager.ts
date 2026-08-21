@@ -12,6 +12,15 @@ import {
 } from './sandbox-challenges.js';
 import type { Dependencies } from './services.js';
 import { completeShellTask, recordFailedShellCheck } from './shell-game-service.js';
+import {
+  LIVE_SANDBOX_STATES,
+  SANDBOX_LIFECYCLE_STATES,
+  SandboxMetrics,
+  assertSandboxTransition,
+  evaluateSandboxCapacity,
+  type SandboxCapacitySnapshot,
+  type SandboxLifecycleState,
+} from './sandbox-platform.js';
 
 const SESSION_PREFIX = 'clirace:sandbox:session:';
 const INPUT_BYTES_PER_SECOND = 32 * 1024;
@@ -51,6 +60,8 @@ interface ActiveSession {
   inputLocked: boolean;
   checking: boolean;
   closing: boolean;
+  lifecycleState: SandboxLifecycleState;
+  lastActivityPersistedAt: number;
 }
 
 interface TerminalMessage {
@@ -81,14 +92,41 @@ export interface CreateSandboxTicketOptions {
   battle?: BattleSandboxMetadata;
 }
 
-export class SandboxUnavailableError extends Error {}
-export class SandboxCapacityError extends Error {}
+export type SandboxFailureCode =
+  | 'feature_disabled'
+  | 'socket_unavailable'
+  | 'permission_denied'
+  | 'daemon_unavailable'
+  | 'daemon_not_rootless'
+  | 'image_missing'
+  | 'capacity_full'
+  | 'user_capacity_full'
+  | 'container_start_failed';
+
+export class SandboxUnavailableError extends Error {
+  constructor(message: string, readonly code: SandboxFailureCode = 'daemon_unavailable') { super(message); }
+}
+export class SandboxCapacityError extends Error {
+  readonly code = 'capacity_full';
+  readonly queued = false;
+}
 export class SandboxUserSessionError extends Error {}
+
+export interface SandboxPlatformStatus {
+  enabled: boolean;
+  healthy: boolean;
+  code: 'ok' | SandboxFailureCode;
+  capacity: SandboxCapacitySnapshot;
+  lifecycle: readonly SandboxLifecycleState[];
+  warmPool: { configured: number; ready: number; enabled: boolean };
+}
 
 export class SandboxManager {
   private readonly docker: Docker;
   private readonly sessions = new Map<string, ActiveSession>();
+  private readonly metrics = new SandboxMetrics();
   private battleHooks: BattleSandboxHooks | undefined;
+  private maintenanceTimer: NodeJS.Timeout | undefined;
 
   constructor(
     private readonly config: AppConfig,
@@ -101,13 +139,69 @@ export class SandboxManager {
     return this.config.SANDBOX_ENABLED;
   }
 
+  async start(): Promise<void> {
+    if (!this.enabled) return;
+    try {
+      await this.inspectDaemon();
+      await this.reconcileAfterRestart();
+      this.maintenanceTimer = setInterval(() => void this.sweepExpiredTickets(), 30_000);
+      this.maintenanceTimer.unref();
+    } catch (error) {
+      // Sandbox is a degradable subsystem. The API remains available and the
+      // status endpoint exposes the precise failure until Docker recovers.
+      this.metrics.recordFailure();
+      console.error('Sandbox startup reconciliation deferred', {
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
+    }
+  }
+
+  async getPlatformStatus(): Promise<SandboxPlatformStatus> {
+    const capacity = await this.getCapacitySnapshot();
+    if (!this.enabled) {
+      return {
+        enabled: false,
+        healthy: false,
+        code: 'feature_disabled',
+        capacity,
+        lifecycle: SANDBOX_LIFECYCLE_STATES,
+        warmPool: { configured: this.config.SANDBOX_WARM_POOL_SIZE, ready: 0, enabled: false },
+      };
+    }
+    try {
+      await this.inspectDaemon();
+      return {
+        enabled: true,
+        healthy: true,
+        code: 'ok',
+        capacity,
+        lifecycle: SANDBOX_LIFECYCLE_STATES,
+        warmPool: { configured: this.config.SANDBOX_WARM_POOL_SIZE, ready: 0, enabled: false },
+      };
+    } catch (error) {
+      const failure = toSandboxUnavailable(error);
+      return {
+        enabled: true,
+        healthy: false,
+        code: failure.code,
+        capacity,
+        lifecycle: SANDBOX_LIFECYCLE_STATES,
+        warmPool: { configured: this.config.SANDBOX_WARM_POOL_SIZE, ready: 0, enabled: false },
+      };
+    }
+  }
+
+  async prometheusMetrics(): Promise<string> {
+    return this.metrics.render(await this.getCapacitySnapshot());
+  }
+
   setBattleHooks(hooks: BattleSandboxHooks): void {
     this.battleHooks = hooks;
   }
 
   async createTicket(options: CreateSandboxTicketOptions): Promise<SessionTicket> {
     if (!this.enabled) {
-      throw new SandboxUnavailableError('Sandbox terminal is disabled.');
+      throw new SandboxUnavailableError('Sandbox terminal is disabled.', 'feature_disabled');
     }
 
     const requestedBattle = options.battle;
@@ -131,23 +225,7 @@ export class SandboxManager {
       }
     }
 
-    if (this.sessions.size >= this.config.SANDBOX_MAX_SESSIONS) {
-      throw new SandboxCapacityError('Sandbox capacity is exhausted.');
-    }
-
     await this.assertDaemonReady();
-
-    await this.dependencies.postgres.query(`
-      UPDATE sandbox_sessions
-      SET status = 'expired', destroyed_at = COALESCE(destroyed_at, now())
-      WHERE status IN ('pending', 'active') AND expires_at <= now()
-    `);
-    const liveSessions = await this.dependencies.postgres.query<{ count: number }>(`
-      SELECT count(*)::int AS count FROM sandbox_sessions WHERE status IN ('pending', 'active')
-    `);
-    if ((liveSessions.rows[0]?.count ?? 0) >= this.config.SANDBOX_MAX_SESSIONS) {
-      throw new SandboxCapacityError('Sandbox capacity is exhausted.');
-    }
 
     const challenge = options.game
       ? getSandboxChallenge(options.game.sandboxChallengeId)
@@ -171,11 +249,72 @@ export class SandboxManager {
     };
 
     try {
+      await this.reserveCapacity(sessionId, options, expiresAt);
+      await this.dependencies.redis.set(
+        `${SESSION_PREFIX}${sessionId}`,
+        JSON.stringify(pending),
+        { EX: 30 },
+      );
+    } catch (error) {
       await this.dependencies.postgres.query(`
+        UPDATE sandbox_sessions
+        SET status = 'failed', lifecycle_state = 'failed', failure_code = 'reservation_failed',
+            status_changed_at = now(), destroyed_at = COALESCE(destroyed_at, now())
+        WHERE id = $1 AND lifecycle_state = 'requested'
+      `, [sessionId]).catch(() => undefined);
+      throw error;
+    }
+
+    return {
+      sessionId,
+      token,
+      expiresAt: new Date(expiresAt).toISOString(),
+      websocketPath: `/ws/terminal/${sessionId}`,
+      challenge: toPublicChallenge(challenge),
+    };
+  }
+
+  private async reserveCapacity(
+    sessionId: string,
+    options: CreateSandboxTicketOptions,
+    expiresAt: number,
+  ): Promise<void> {
+    const client = await this.dependencies.postgres.connect();
+    try {
+      await client.query('BEGIN');
+      // One global transaction lock makes the count-and-reserve operation
+      // atomic across concurrent requests and future API replicas.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('clirace:sandbox:capacity'))");
+      await client.query(`
+        UPDATE sandbox_sessions
+        SET status = 'expired', lifecycle_state = 'terminated',
+            termination_reason = 'ticket_expired', status_changed_at = now(),
+            destroyed_at = COALESCE(destroyed_at, now())
+        WHERE lifecycle_state IN ('requested', 'queued') AND expires_at <= now()
+      `);
+      const counts = await client.query<{ global_live: number; user_live: number }>(`
+        SELECT
+          count(*) FILTER (WHERE lifecycle_state = ANY($1::varchar[]))::int AS global_live,
+          count(*) FILTER (WHERE lifecycle_state = ANY($1::varchar[]) AND user_id = $2)::int AS user_live
+        FROM sandbox_sessions
+      `, [LIVE_SANDBOX_STATES, options.userId]);
+      const decision = evaluateSandboxCapacity({
+        maxCapacity: this.config.SANDBOX_MAX_SESSIONS,
+        perUserCapacity: this.config.SANDBOX_MAX_SESSIONS_PER_USER,
+        globalLive: counts.rows[0]?.global_live ?? 0,
+        userLive: counts.rows[0]?.user_live ?? 0,
+      });
+      if (!decision.allowed) {
+        if (decision.code === 'user_capacity_full') {
+          throw new SandboxUserSessionError('User sandbox capacity is exhausted.');
+        }
+        throw new SandboxCapacityError('Sandbox capacity is exhausted.');
+      }
+      await client.query(`
         INSERT INTO sandbox_sessions (
           id, user_id, game_session_id, challenge_id, battle_id, battle_player_id,
-          battle_round_number, status, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)
+          battle_round_number, status, lifecycle_state, status_changed_at, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'requested', now(), $8)
       `, [
         sessionId,
         options.userId,
@@ -186,23 +325,47 @@ export class SandboxManager {
         options.battle?.roundNumber ?? null,
         new Date(expiresAt),
       ]);
-      await this.dependencies.redis.set(
-        `${SESSION_PREFIX}${sessionId}`,
-        JSON.stringify(pending),
-        { EX: 30 },
-      );
+      await client.query('COMMIT');
     } catch (error) {
-      await this.dependencies.postgres.query('DELETE FROM sandbox_sessions WHERE id = $1 AND status = \'pending\'', [sessionId]).catch(() => undefined);
-      if (isUniqueViolation(error)) throw new SandboxUserSessionError('User already has an active sandbox.');
+      await client.query('ROLLBACK').catch(() => undefined);
       throw error;
+    } finally {
+      client.release();
     }
+  }
 
+  private async getCapacitySnapshot(): Promise<SandboxCapacitySnapshot> {
+    if (!this.enabled) {
+      return {
+        maxCapacity: this.config.SANDBOX_MAX_SESSIONS,
+        perUserCapacity: this.config.SANDBOX_MAX_SESSIONS_PER_USER,
+        running: 0,
+        starting: 0,
+        warm: 0,
+        available: this.config.SANDBOX_MAX_SESSIONS,
+        failed: 0,
+      };
+    }
+    const result = await this.dependencies.postgres.query<{
+      running: number; starting: number; failed: number; live: number;
+    }>(`
+      SELECT
+        count(*) FILTER (WHERE lifecycle_state IN ('ready', 'attached', 'idle'))::int AS running,
+        count(*) FILTER (WHERE lifecycle_state IN ('requested', 'queued', 'starting'))::int AS starting,
+        count(*) FILTER (WHERE lifecycle_state = 'failed' AND status_changed_at > now() - interval '1 hour')::int AS failed,
+        count(*) FILTER (WHERE lifecycle_state = ANY($1::varchar[]))::int AS live
+      FROM sandbox_sessions
+    `, [LIVE_SANDBOX_STATES]);
+    const row = result.rows[0];
+    const live = row?.live ?? 0;
     return {
-      sessionId,
-      token,
-      expiresAt: new Date(expiresAt).toISOString(),
-      websocketPath: `/ws/terminal/${sessionId}`,
-      challenge: toPublicChallenge(challenge),
+      maxCapacity: this.config.SANDBOX_MAX_SESSIONS,
+      perUserCapacity: this.config.SANDBOX_MAX_SESSIONS_PER_USER,
+      running: row?.running ?? 0,
+      starting: row?.starting ?? 0,
+      warm: 0,
+      available: Math.max(0, this.config.SANDBOX_MAX_SESSIONS - live),
+      failed: row?.failed ?? 0,
     };
   }
 
@@ -269,7 +432,7 @@ export class SandboxManager {
           })
           .catch((error: unknown) => {
             clearTimeout(authTimer);
-            void this.markSessionStatus(sessionId, 'failed');
+            void this.markSessionFailed(sessionId, 'container_start_failed');
             const reason = error instanceof Error ? error.message : 'Session startup failed';
             console.error('Sandbox session startup failed', { sessionId, reason });
             socket.close(1011, `Sandbox startup failed: ${reason}`.slice(0, 120));
@@ -294,6 +457,7 @@ export class SandboxManager {
   }
 
   async close(): Promise<void> {
+    if (this.maintenanceTimer) clearInterval(this.maintenanceTimer);
     await Promise.allSettled(
       [...this.sessions.keys()].map((sessionId) => this.destroySession(sessionId, 'api_shutdown')),
     );
@@ -313,8 +477,8 @@ export class SandboxManager {
   async destroyBattleSessions(battleId: string, reason: string): Promise<void> {
     const pending = await this.dependencies.postgres.query<{ id: string }>(`
       SELECT id FROM sandbox_sessions
-      WHERE battle_id = $1 AND status IN ('pending', 'active')
-    `, [battleId]);
+      WHERE battle_id = $1 AND lifecycle_state = ANY($2::varchar[])
+    `, [battleId, LIVE_SANDBOX_STATES]);
     await Promise.allSettled(pending.rows.map((row) => this.dependencies.redis.del(`${SESSION_PREFIX}${row.id}`)));
     await Promise.allSettled(
       [...this.sessions.values()]
@@ -322,9 +486,12 @@ export class SandboxManager {
         .map((session) => this.destroySession(session.id, reason)),
     );
     await this.dependencies.postgres.query(`
-      UPDATE sandbox_sessions SET status = 'expired', destroyed_at = COALESCE(destroyed_at, now())
-      WHERE battle_id = $1 AND status IN ('pending', 'active')
-    `, [battleId]).catch(() => undefined);
+      UPDATE sandbox_sessions
+      SET status = 'expired', lifecycle_state = 'terminated',
+          termination_reason = $2, status_changed_at = now(),
+          destroyed_at = COALESCE(destroyed_at, now())
+      WHERE battle_id = $1 AND lifecycle_state = ANY($3::varchar[])
+    `, [battleId, reason.slice(0, 64), LIVE_SANDBOX_STATES]).catch(() => undefined);
   }
 
   private async handleSocketClosed(sessionId: string, socket: WebSocket, reason: string): Promise<void> {
@@ -335,6 +502,8 @@ export class SandboxManager {
       return;
     }
     session.socket = null;
+    await this.transitionLifecycle(sessionId, session.lifecycleState, 'idle').catch(() => undefined);
+    session.lifecycleState = 'idle';
     if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
     session.reconnectTimer = setTimeout(
       () => void this.destroySession(sessionId, 'reconnect_timeout'),
@@ -345,16 +514,63 @@ export class SandboxManager {
 
   private async assertDaemonReady(): Promise<void> {
     try {
-      const info = await this.docker.info();
-      if (!info.SecurityOptions?.some((option: string) => option.includes('rootless'))) {
-        throw new Error('Sandbox Docker daemon is not rootless.');
-      }
+      await this.inspectDaemon();
+    } catch (error) {
+      throw toSandboxUnavailable(error);
+    }
+  }
+
+  private async inspectDaemon(): Promise<void> {
+    await this.docker.ping();
+    const info = await this.docker.info();
+    if (!info.SecurityOptions?.some((option: string) => option.includes('rootless'))) {
+      throw new SandboxUnavailableError('Sandbox Docker daemon is not rootless.', 'daemon_not_rootless');
+    }
+    try {
       await this.docker.getImage(this.config.SANDBOX_IMAGE).inspect();
     } catch (error) {
-      throw new SandboxUnavailableError(
-        error instanceof Error ? error.message : 'Sandbox daemon is unavailable.',
-      );
+      if (dockerStatusCode(error) === 404) {
+        throw new SandboxUnavailableError(`Sandbox image is missing: ${this.config.SANDBOX_IMAGE}`, 'image_missing');
+      }
+      throw error;
     }
+  }
+
+  private async reconcileAfterRestart(): Promise<void> {
+    const containers = await this.docker.listContainers({
+      all: true,
+      filters: { label: ['com.clirace.sandbox=true'] },
+    });
+    if (containers.length > 0) {
+      this.metrics.recordOrphan(containers.length);
+      const removals = await Promise.allSettled(
+        containers.map((entry) => this.docker.getContainer(entry.Id).remove({ force: true, v: true })),
+      );
+      this.metrics.recordCleanup(removals.filter((result) => result.status === 'fulfilled').length);
+    }
+    const live = await this.dependencies.postgres.query<{ id: string }>(`
+      SELECT id FROM sandbox_sessions WHERE lifecycle_state = ANY($1::varchar[])
+    `, [LIVE_SANDBOX_STATES]);
+    await Promise.allSettled(live.rows.map((row) => this.dependencies.redis.del(`${SESSION_PREFIX}${row.id}`)));
+    await this.dependencies.postgres.query(`
+      UPDATE sandbox_sessions
+      SET status = 'expired', lifecycle_state = 'terminated',
+          termination_reason = 'api_restart_reconciliation', status_changed_at = now(),
+          destroyed_at = COALESCE(destroyed_at, now())
+      WHERE lifecycle_state = ANY($1::varchar[])
+    `, [LIVE_SANDBOX_STATES]);
+  }
+
+  private async sweepExpiredTickets(): Promise<void> {
+    const expired = await this.dependencies.postgres.query<{ id: string }>(`
+      UPDATE sandbox_sessions
+      SET status = 'expired', lifecycle_state = 'terminated',
+          termination_reason = 'ticket_expired', status_changed_at = now(),
+          destroyed_at = COALESCE(destroyed_at, now())
+      WHERE lifecycle_state IN ('requested', 'queued') AND expires_at <= now()
+      RETURNING id
+    `);
+    await Promise.allSettled(expired.rows.map((row) => this.dependencies.redis.del(`${SESSION_PREFIX}${row.id}`)));
   }
 
   private async authenticateAndStart(
@@ -388,6 +604,8 @@ export class SandboxManager {
       }
       const previous = reconnecting.socket;
       reconnecting.socket = socket;
+      await this.transitionLifecycle(sessionId, reconnecting.lifecycleState, 'attached');
+      reconnecting.lifecycleState = 'attached';
       if (previous && previous !== socket && previous.readyState === previous.OPEN) {
         previous.close(1000, 'reconnected_elsewhere');
       }
@@ -401,12 +619,12 @@ export class SandboxManager {
       return;
     }
 
-    if (this.sessions.size >= this.config.SANDBOX_MAX_SESSIONS) {
-      throw new Error('Sandbox capacity is exhausted.');
-    }
-
+    await this.transitionLifecycle(sessionId, 'requested', 'starting');
+    const startupStartedAt = performance.now();
     let startupStage = 'create_container';
-    const container = await this.docker.createContainer({
+    let container: Container;
+    try {
+      container = await this.docker.createContainer({
       Image: this.config.SANDBOX_IMAGE,
       Cmd: ['/bin/bash', '-lc', buildSandboxBootstrap(challenge.setupScript)],
       Tty: true,
@@ -418,6 +636,7 @@ export class SandboxManager {
       StopTimeout: 1,
       Labels: {
         'com.clirace.sandbox': 'true',
+        'com.clirace.namespace': 'sandbox-v2',
         'com.clirace.session': sessionId,
         ...(pending.battle ? {
           'com.clirace.battle': pending.battle.battleId,
@@ -449,7 +668,15 @@ export class SandboxManager {
           { Name: 'fsize', Soft: 268_435_456, Hard: 268_435_456 },
         ],
       },
-    });
+      });
+    } catch (error) {
+      this.metrics.recordFailure();
+      await this.markSessionFailed(sessionId, 'container_start_failed');
+      throw new SandboxUnavailableError(
+        error instanceof Error ? error.message : 'Container creation failed.',
+        'container_start_failed',
+      );
+    }
 
     const startupChunks: Buffer[] = [];
     let startupBytes = 0;
@@ -497,10 +724,12 @@ export class SandboxManager {
       startupStage = 'activate_session';
       await this.dependencies.postgres.query(`
         UPDATE sandbox_sessions
-        SET status = 'active', container_id = $1, expires_at = $2
-        WHERE id = $3 AND status = 'pending'
+        SET status = 'active', lifecycle_state = 'ready', container_id = $1,
+            status_changed_at = now(), last_activity_at = now(), expires_at = $2
+        WHERE id = $3 AND lifecycle_state = 'starting'
       `, [container.id, new Date(Date.now() + this.config.SANDBOX_MAX_LIFETIME_SECONDS * 1_000), sessionId]);
 
+      await this.transitionLifecycle(sessionId, 'ready', 'attached');
       const now = Date.now();
       const session: ActiveSession = {
         id: sessionId,
@@ -528,21 +757,24 @@ export class SandboxManager {
         reconnectTimer: undefined,
         checking: false,
         closing: false,
+        lifecycleState: 'attached',
+        lastActivityPersistedAt: now,
       };
 
-      this.sessions.set(sessionId, session);
       stream.off('data', captureStartup);
       stream.on('data', (chunk: Buffer) => this.forwardOutput(session, chunk));
       stream.once('end', () => void this.destroySession(sessionId, 'shell_exited'));
       stream.once('error', () => void this.destroySession(sessionId, 'stream_error'));
       void container.wait().then(() => this.destroySession(sessionId, 'container_stopped')).catch(() => undefined);
 
+      this.sessions.set(sessionId, session);
       socket.send(JSON.stringify({
         type: 'ready',
         sessionId,
         expiresInSeconds: this.config.SANDBOX_MAX_LIFETIME_SECONDS,
         inputLocked: session.inputLocked,
       }));
+      this.metrics.recordCreateDuration((performance.now() - startupStartedAt) / 1_000);
       const startupOutput = Buffer.concat(startupChunks);
       if (startupOutput.length > 0) this.forwardOutput(session, startupOutput);
       startupStage = 'notify_battle_ready';
@@ -552,8 +784,10 @@ export class SandboxManager {
       const inspection = await container.inspect().catch(() => undefined);
       const state = inspection?.State;
       const output = Buffer.concat(startupChunks).toString('utf8').trim().slice(-1_000);
+      this.sessions.delete(sessionId);
       await container.remove({ force: true }).catch(() => undefined);
-      await this.markSessionStatus(sessionId, 'failed');
+      this.metrics.recordFailure();
+      await this.markSessionFailed(sessionId, 'container_start_failed');
       const reason = error instanceof Error ? error.message : 'Unknown sandbox startup error.';
       const diagnostics = [
         `exit=${state?.ExitCode ?? 'unknown'}`,
@@ -672,12 +906,21 @@ export class SandboxManager {
       () => void this.destroySession(session.id, 'idle_timeout'),
       this.config.SANDBOX_IDLE_TIMEOUT_SECONDS * 1_000,
     );
+    const now = Date.now();
+    if (now - session.lastActivityPersistedAt >= 15_000) {
+      session.lastActivityPersistedAt = now;
+      void this.dependencies.postgres.query(`
+        UPDATE sandbox_sessions SET last_activity_at = now() WHERE id = $1
+      `, [session.id]).catch(() => undefined);
+    }
   }
 
   private async destroySession(sessionId: string, reason: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session || session.closing) return;
     session.closing = true;
+    await this.transitionLifecycle(sessionId, session.lifecycleState, 'terminating').catch(() => undefined);
+    session.lifecycleState = 'terminating';
     this.sessions.delete(sessionId);
     clearTimeout(session.lifetimeTimer);
     clearTimeout(session.idleTimer);
@@ -690,16 +933,39 @@ export class SandboxManager {
       socket.close(1000, reason.slice(0, 120));
     }
 
-    await this.markSessionStatus(sessionId, reason === 'challenge_completed' ? 'completed' : terminalStatusForReason(reason));
-    await session.container.remove({ force: true, v: true }).catch(() => undefined);
-  }
-
-  private async markSessionStatus(sessionId: string, status: 'completed' | 'expired' | 'failed'): Promise<void> {
+    const legacyStatus = reason === 'challenge_completed' ? 'completed' : terminalStatusForReason(reason);
+    const removal = await session.container.remove({ force: true, v: true }).then(() => true).catch(() => false);
+    if (removal) this.metrics.recordCleanup();
     await this.dependencies.postgres.query(`
       UPDATE sandbox_sessions
-      SET status = $1, destroyed_at = COALESCE(destroyed_at, now())
-      WHERE id = $2 AND status IN ('pending', 'active')
-    `, [status, sessionId]).catch(() => undefined);
+      SET status = $1, lifecycle_state = 'terminated', termination_reason = $2,
+          status_changed_at = now(), destroyed_at = COALESCE(destroyed_at, now())
+      WHERE id = $3 AND lifecycle_state = ANY($4::varchar[])
+    `, [legacyStatus, reason.slice(0, 64), sessionId, LIVE_SANDBOX_STATES]).catch(() => undefined);
+  }
+
+  private async markSessionFailed(sessionId: string, code: SandboxFailureCode): Promise<void> {
+    await this.dependencies.postgres.query(`
+      UPDATE sandbox_sessions
+      SET status = 'failed', lifecycle_state = 'failed', failure_code = $1,
+          status_changed_at = now(), destroyed_at = COALESCE(destroyed_at, now())
+      WHERE id = $2 AND lifecycle_state = ANY($3::varchar[])
+    `, [code, sessionId, LIVE_SANDBOX_STATES]).catch(() => undefined);
+  }
+
+  private async transitionLifecycle(
+    sessionId: string,
+    from: SandboxLifecycleState,
+    to: SandboxLifecycleState,
+  ): Promise<void> {
+    assertSandboxTransition(from, to);
+    const result = await this.dependencies.postgres.query(`
+      UPDATE sandbox_sessions
+      SET lifecycle_state = $1, status_changed_at = now()
+      WHERE id = $2 AND lifecycle_state = $3
+      RETURNING id
+    `, [to, sessionId, from]);
+    if (result.rowCount !== 1) throw new Error(`Sandbox lifecycle state changed concurrently for ${sessionId}.`);
   }
 }
 
@@ -767,6 +1033,25 @@ function terminalStatusForReason(reason: string): 'expired' | 'failed' {
     : 'failed';
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
+function toSandboxUnavailable(error: unknown): SandboxUnavailableError {
+  if (error instanceof SandboxUnavailableError) return error;
+  const code = dockerErrorCode(error);
+  const message = error instanceof Error ? error.message : 'Sandbox daemon is unavailable.';
+  if (code === 'EACCES' || code === 'EPERM' || /permission denied/i.test(message)) {
+    return new SandboxUnavailableError(message, 'permission_denied');
+  }
+  if (code === 'ENOENT' || /no such file|connect enoent/i.test(message)) {
+    return new SandboxUnavailableError(message, 'socket_unavailable');
+  }
+  return new SandboxUnavailableError(message, 'daemon_unavailable');
+}
+
+function dockerErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined;
+  return typeof error.code === 'string' ? error.code : undefined;
+}
+
+function dockerStatusCode(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null || !('statusCode' in error)) return undefined;
+  return typeof error.statusCode === 'number' ? error.statusCode : undefined;
 }

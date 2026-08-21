@@ -10,14 +10,18 @@ export interface SandboxChallenge {
   successMessage: string;
   setupScript: string;
   checkScript: string;
+  /** Executed only by integrity tests; never sent to the browser. */
+  referenceSolution: string;
 }
+
+type SandboxChallengeDefinition = Omit<SandboxChallenge, 'referenceSolution'>;
 
 export type PublicSandboxChallenge = Pick<
   SandboxChallenge,
   'id' | 'title' | 'description' | 'category' | 'difficulty' | 'hint'
 >;
 
-const baseChallenges: readonly SandboxChallenge[] = [
+const baseChallengeDefinitions: readonly SandboxChallengeDefinition[] = [
   {
     id: 'build-castle',
     title: 'Постройте башню замка',
@@ -574,6 +578,27 @@ const baseChallenges: readonly SandboxChallenge[] = [
   },
 ];
 
+const baseReferenceSolutions: Readonly<Record<string, string>> = {
+  'hello-terminal': "printf 'Привет, терминал!\\n' > /workspace/hello.txt",
+  'directory-mode': 'mkdir -p /workspace/app && chmod 750 /workspace/app',
+  'move-largest-file': 'find /workspace/data -type f -size +5M -exec mv {} /workspace/archive/ \\;',
+  'secure-secret': 'chmod 600 /workspace/secret.env',
+  'log-investigation': "awk '$5 == 503 { print $1 }' /workspace/access.log > /workspace/answer.txt",
+  'archive-logs': 'tar -czf /workspace/logs.tar.gz -C /workspace/logs .',
+  'release-symlink': 'ln -s /workspace/versions/app-v2.conf /workspace/current.conf',
+  'production-config': "sed -i 's/debug=true/debug=false/' /workspace/app.conf",
+  'stop-worker': 'kill "$(cat /workspace/worker.pid)" && sleep 0.1',
+  'restore-git-file': 'cd /workspace/repo && git restore README.md',
+  'filter-json': "jq -r '.[] | select(.enabled) | .name' /workspace/services.json > /workspace/enabled.txt",
+  'local-http': 'curl -fsS http://127.0.0.1:8081/status.txt -o /workspace/response.txt',
+  'rename-backups': "for file in /workspace/backups/*.conf.bak; do mv \"$file\" \"${file%.bak}\"; done",
+};
+
+const baseChallenges: readonly SandboxChallenge[] = baseChallengeDefinitions.map((challenge) => ({
+  ...challenge,
+  referenceSolution: baseReferenceSolutions[challenge.id] ?? challenge.hint,
+}));
+
 const interviewChallenges: readonly SandboxChallenge[] = INTERVIEW_100
   .filter((task) => task.sandbox)
   .map((task) => ({
@@ -586,6 +611,7 @@ const interviewChallenges: readonly SandboxChallenge[] = INTERVIEW_100
     successMessage: task.explanation,
     setupScript: task.sandbox!.setupScript,
     checkScript: task.sandbox!.checkScript,
+    referenceSolution: task.solution,
   }));
 
 const challenges: readonly SandboxChallenge[] = [...baseChallenges, ...interviewChallenges];
@@ -604,5 +630,9 @@ export function getSandboxChallenge(id: string): SandboxChallenge | undefined {
 export function toPublicChallenge(challenge: SandboxChallenge): PublicSandboxChallenge {
   const { id, title, description, category, difficulty, hint } = challenge;
   return { id, title, description, category, difficulty, hint };
+}
+
+export function listSandboxChallenges(): readonly SandboxChallenge[] {
+  return challenges;
 }
 import { INTERVIEW_100, INTERVIEW_TOPIC_LABELS } from './interview-data.js';

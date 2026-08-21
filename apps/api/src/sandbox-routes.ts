@@ -20,10 +20,18 @@ export async function registerSandboxRoutes(
 ): Promise<void> {
   const auth = new AuthService(config, dependencies);
 
-  app.get('/api/sandbox/status', async (_request, reply) => reply.header('cache-control', 'no-store').send({
-    enabled: sandboxManager.enabled,
-    authenticatedGameSessions: true,
-  }));
+  app.get('/api/sandbox/status', { config: { rateLimit: false } }, async (_request, reply) => {
+    const status = await sandboxManager.getPlatformStatus();
+    return reply.header('cache-control', 'no-store').send({
+      ...status,
+      authenticatedGameSessions: true,
+    });
+  });
+
+  app.get('/api/sandbox/metrics', { config: { rateLimit: false } }, async (_request, reply) => {
+    const metrics = await sandboxManager.prometheusMetrics();
+    return reply.header('cache-control', 'no-store').type('text/plain; version=0.0.4; charset=utf-8').send(metrics);
+  });
 
   app.post('/api/sandbox/sessions', {
     config: {
@@ -91,22 +99,27 @@ export async function registerSandboxRoutes(
       return reply.header('cache-control', 'no-store').code(201).send(ticket);
     } catch (error) {
       if (error instanceof SandboxCapacityError) {
-        return reply.code(429).send({
-          error: 'Sandbox capacity reached',
-          message: 'Все локальные терминалы заняты. Попробуйте через минуту.',
+        return reply.header('retry-after', '15').code(429).send({
+          error: 'capacity_full',
+          code: error.code,
+          queued: error.queued,
+          retryAfterSeconds: 15,
+          message: 'Все терминалы заняты. Подождите несколько секунд и попробуйте снова.',
         });
       }
       if (error instanceof SandboxUnavailableError) {
         app.log.warn({ error }, 'Sandbox is unavailable');
         return reply.code(503).send({
-          error: 'Sandbox unavailable',
-          message: 'Локальный shell временно недоступен.',
+          error: error.code,
+          code: error.code,
+          message: sandboxUnavailableMessage(error.code),
         });
       }
       if (error instanceof SandboxUserSessionError) {
         return reply.code(409).send({
-          error: 'Sandbox already active',
-          message: 'У вас уже есть активная shell-сессия. Закройте её или подождите завершения.',
+          error: 'user_capacity_full',
+          code: 'user_capacity_full',
+          message: 'Достигнут лимит shell-сессий для аккаунта. Завершите текущую сессию.',
         });
       }
       throw error;
@@ -125,4 +138,13 @@ export async function registerSandboxRoutes(
     }
     sandboxManager.bindSocket(sessionId, socket);
   });
+}
+
+function sandboxUnavailableMessage(code: string): string {
+  if (code === 'feature_disabled') return 'Shell отключён на этом сервере.';
+  if (code === 'socket_unavailable') return 'Сервис запуска терминалов временно не отвечает.';
+  if (code === 'permission_denied') return 'Сервис запуска терминалов восстанавливает доступ к окружению.';
+  if (code === 'image_missing') return 'Окружение терминала обновляется. Попробуйте немного позже.';
+  if (code === 'daemon_not_rootless') return 'Безопасный режим терминала недоступен.';
+  return 'Локальный shell временно недоступен.';
 }

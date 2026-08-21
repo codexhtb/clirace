@@ -54,11 +54,11 @@ export function PlayPage() {
     Promise.all([
       fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: { id: string } | null }>),
       fetch('/api/categories', { signal: controller.signal }).then((response) => response.json() as Promise<{ categories: Category[] }>),
-      fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean }>),
+      fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean; healthy?: boolean }>),
     ]).then(([authPayload, categoryPayload, sandboxPayload]) => {
       setAuth(authPayload.user ? 'ready' : 'guest');
       setCategories(categoryPayload.categories ?? []);
-      setShellEnabled(sandboxPayload.enabled === true);
+      setShellEnabled(sandboxPayload.enabled === true && sandboxPayload.healthy !== false);
     }).catch(() => {
       setAuth('guest');
       setCategories([]);

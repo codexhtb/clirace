@@ -224,7 +224,7 @@ export function App() {
     const title = path === '/play' ? 'Играть — CLIRace'
       : path === '/interview' ? 'Interview 100 — CLIRace'
         : path === '/daily' ? 'Daily Challenge — CLIRace'
-          : path === '/leaderboard' ? 'Рейтинг — CLIRace'
+          : path === '/leaderboard' || path === '/rating' ? 'Рейтинг — CLIRace'
             : path.startsWith('/profile/') ? 'Профиль — CLIRace'
               : path.startsWith('/battle') ? 'Private Battle — CLIRace'
                 : path === '/' || path === '/login' || path === '/register' ? 'CLIRace — практика Linux и DevOps в терминале'
@@ -237,7 +237,7 @@ export function App() {
   if (path === '/interview') return <InterviewPage />;
   if (path === '/battle') return <Suspense fallback={<BattlePageFallback />}><BattleCreatePage /></Suspense>;
   if (/^\/battle\/[A-HJ-NP-Z2-9]{5}$/i.test(path)) return <Suspense fallback={<BattlePageFallback />}><BattleRoomPage /></Suspense>;
-  if (path === '/leaderboard') return <LeaderboardPage />;
+  if (path === '/leaderboard' || path === '/rating') return <LeaderboardPage />;
   if (path.startsWith('/profile/')) return <ProfilePage />;
   return <NotFoundPage />;
 }

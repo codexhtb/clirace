@@ -1181,7 +1181,50 @@ Backup на той же VM не является disaster recovery. Регуля
 
 на публичный интерфейс: внешний доступ должен идти только через Caddy на 80/443.
 
-Production cookies имеют `HttpOnly`, `Secure`, `SameSite=Lax` и `Path=/`. Fastify ограничивает HTTP body до 64 KiB, WebSocket payload до 16 KiB, а чувствительные auth/game/sandbox/battle endpoints защищены отдельными rate limits. PostgreSQL constraint гарантирует одну live sandbox-сессию на аккаунт.
+Production cookies имеют `HttpOnly`, `Secure`, `SameSite=Lax` и `Path=/`. Fastify ограничивает HTTP body до 64 KiB, WebSocket payload до 16 KiB, а чувствительные auth/game/sandbox/battle endpoints защищены отдельными rate limits. Sandbox capacity резервируется атомарно в PostgreSQL; глобальный и пользовательский лимиты задаются независимо.
+
+## Sandbox Platform V2
+
+Authoritative lifecycle: `requested → starting → ready → attached`, с отдельными состояниями `queued`, `idle`, `terminating`, `terminated` и `failed`. Старое поле `status` сохранено для совместимости отчётов, а актуальное состояние хранится в `lifecycle_state`.
+
+Основные параметры:
+
+```text
+SANDBOX_MAX_SESSIONS=25
+SANDBOX_MAX_SESSIONS_PER_USER=1
+SANDBOX_WARM_POOL_SIZE=0
+```
+
+На production-хосте с 8 CPU и 10 GiB RAM первая проверяемая граница — 25 одновременных сессий. `SANDBOX_WARM_POOL_SIZE` зарезервирован для следующей ступени и остаётся `0`, пока concurrency/load tests не подтвердят запас ресурсов.
+
+Deployment всегда получает supplemental GID из фактического socket:
+
+```bash
+SANDBOX_SOCKET_GID=$(stat -c '%g' /run/user/1001/docker.sock)
+curl --unix-socket /run/user/1001/docker.sock http://localhost/_ping
+```
+
+Не храните числовой GID в `.env`: subordinate ID rootless Docker может измениться. Запускайте Compose через deployment script, который экспортирует вычисленное значение.
+
+Диагностика и Prometheus-метрики:
+
+```bash
+curl -fsS https://clirace.fun/api/sandbox/status
+curl -fsS https://clirace.fun/api/sandbox/metrics
+```
+
+Reconciliation при старте API удаляет контейнеры namespace `com.clirace.sandbox=true`, которые остались после аварийного завершения, очищает одноразовые Redis tickets и завершает соответствующие DB sessions. Security invariants остаются обязательными: rootless daemon, `network=none`, без host mounts, ports, devices и capabilities, с memory/CPU/PID/TTL/idle limits.
+
+Проверки V2:
+
+```bash
+pnpm test:sandbox-platform
+# Выполняются внутри API container, где доступен rootless socket:
+docker compose exec -T api node apps/api/dist/sandbox-load-test.js
+docker compose exec -T api node apps/api/dist/sandbox-integrity.js
+```
+
+Reference host-level Caddy configuration находится в `infra/caddy/Caddyfile.host.example`. Файл `/etc/caddy/Caddyfile` не перезаписывается deployment автоматически.
 
 ---
 

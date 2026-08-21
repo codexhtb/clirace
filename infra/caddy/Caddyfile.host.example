@@ -1,0 +1,32 @@
+{
+  email admin@clirace.fun
+  admin off
+}
+
+clirace.fun {
+  encode zstd gzip
+
+  header {
+    -Server
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "no-referrer"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  }
+
+  reverse_proxy 127.0.0.1:8080 {
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+
+  log {
+    output file /var/log/caddy/clirace-access.log {
+      roll_size 50MiB
+      roll_keep 10
+      roll_keep_for 720h
+    }
+    format json
+  }
+}

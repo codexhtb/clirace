@@ -40,11 +40,11 @@ export function BattleCreatePage() {
     Promise.all([
       fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: AuthUser | null }>),
       fetch('/api/battles/options', { signal: controller.signal }).then((response) => response.json() as Promise<BattleOptions>),
-      fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean }>),
+      fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean; healthy?: boolean }>),
     ]).then(([me, battleOptions, sandbox]) => {
       setAuth(me.user ? 'ready' : 'guest');
       setOptions(battleOptions);
-      setSandboxEnabled(sandbox.enabled === true);
+      setSandboxEnabled(sandbox.enabled === true && sandbox.healthy !== false);
     }).catch(() => setAuth('guest'));
     return () => controller.abort();
   }, []);
