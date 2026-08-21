@@ -485,7 +485,8 @@ const baseChallengeDefinitions: readonly SandboxChallengeDefinition[] = [
     `,
     checkScript: `
       [ -s /workspace/worker.pid ] &&
-      ! kill -0 "$(cat /workspace/worker.pid)" 2>/dev/null
+      pid="$(cat /workspace/worker.pid)" &&
+      { [ ! -r "/proc/$pid/stat" ] || [ "$(awk '{print $3}' "/proc/$pid/stat")" = Z ]; }
     `,
   },
   {

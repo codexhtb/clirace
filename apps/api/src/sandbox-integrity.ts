@@ -104,8 +104,17 @@ async function exec(container: Container, script: string): Promise<{ exitCode: n
     stream.once('end', resolve);
     stream.once('error', reject);
   });
-  const state = await execution.inspect();
+  const state = await waitForExecution(execution);
   return { exitCode: state.ExitCode ?? 1, output: Buffer.concat(chunks).toString('utf8').slice(-2_000) };
+}
+
+async function waitForExecution(execution: Docker.Exec): Promise<Docker.ExecInspectInfo> {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const inspection = await execution.inspect();
+    if (!inspection.Running && inspection.ExitCode !== null) return inspection;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return execution.inspect();
 }
 
 function assertSecurityInvariants(host: Docker.ContainerInspectInfo['HostConfig']): void {

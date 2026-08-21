@@ -41,7 +41,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && (find / -xdev -type f -perm /6000 -exec chmod a-s {} + 2>/dev/null || true)
 
-COPY bashrc /root/.bashrc
+COPY bashrc /tmp/clirace-bashrc
+
+# Deployment may originate on Windows. Normalize again inside the image so a
+# stale CRLF working tree can never break the interactive prompt.
+RUN tr -d '\r' < /tmp/clirace-bashrc > /root/.bashrc \
+    && rm /tmp/clirace-bashrc
 
 RUN mkdir -p /workspace
 

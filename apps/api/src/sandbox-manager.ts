@@ -1020,7 +1020,7 @@ async function runContainerCommand(
     stream.once('error', reject);
   });
 
-  const inspection = await execution.inspect();
+  const inspection = await waitForExecution(execution);
   return {
     exitCode: inspection.ExitCode ?? 1,
     output: Buffer.concat(chunks).toString('utf8').trim().slice(0, 2_000),
@@ -1044,6 +1044,15 @@ function toSandboxUnavailable(error: unknown): SandboxUnavailableError {
     return new SandboxUnavailableError(message, 'socket_unavailable');
   }
   return new SandboxUnavailableError(message, 'daemon_unavailable');
+}
+
+async function waitForExecution(execution: Docker.Exec): Promise<Docker.ExecInspectInfo> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const inspection = await execution.inspect();
+    if (!inspection.Running && inspection.ExitCode !== null) return inspection;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return execution.inspect();
 }
 
 function dockerErrorCode(error: unknown): string | undefined {
