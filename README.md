@@ -38,6 +38,28 @@
 * серверное определение победителя;
 * сохранение результатов матчей.
 
+## Operations Console
+
+Закрытая операционная консоль доступна по адресу `/admin`. Она показывает состояние PostgreSQL, Redis и rootless sandbox runtime, продуктовые метрики, пользователей, sandbox-сессии, задания, Battles и журнал административных действий.
+
+Администратор не создаётся автоматически: в проекте нет стандартного логина или пароля. Сначала зарегистрируйте обычный аккаунт через сайт, затем на production-сервере явно выдайте ему роль по email:
+
+```bash
+cd /opt/clirace
+sudo docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+  node apps/api/dist/admin-role-cli.js grant --email owner@example.com
+```
+
+Отозвать роль можно без изменения пароля и пользовательских сессий:
+
+```bash
+cd /opt/clirace
+sudo docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+  node apps/api/dist/admin-role-cli.js revoke --email owner@example.com
+```
+
+Обе операции выводят выбранного пользователя и сохраняют audit event. Веб-консоль намеренно не умеет менять роли, выполнять произвольные SQL-запросы, Docker-команды или shell-команды.
+
 ## Interview 100
 
 Страница `/interview` содержит отдельную коллекцию из ровно 100 практических задач для подготовки к Linux/DevOps-собеседованию. Старые задания остаются в общем каталоге и не изменяются.

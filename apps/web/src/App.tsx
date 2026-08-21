@@ -7,6 +7,7 @@ import { ProfilePage } from './ProfilePage';
 import { QuickStartSection } from './QuickStartSection';
 import { InterviewPage } from './InterviewPage';
 import { CommunityHeader } from './CommunityHeader';
+import { AdminConsole } from './AdminConsole';
 
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleCreatePage,
@@ -221,7 +222,8 @@ function HomePage() {
 export function App() {
   const path = window.location.pathname;
   useEffect(() => {
-    const title = path === '/play' ? 'Играть — CLIRace'
+    const title = path.startsWith('/admin') ? 'Operations Console — CLIRace'
+      : path === '/play' ? 'Играть — CLIRace'
       : path === '/interview' ? 'Interview 100 — CLIRace'
         : path === '/daily' ? 'Daily Challenge — CLIRace'
           : path === '/leaderboard' || path === '/rating' ? 'Рейтинг — CLIRace'
@@ -232,6 +234,7 @@ export function App() {
     document.title = title;
   }, [path]);
   if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
+  if (path === '/admin' || path.startsWith('/admin/')) return <AdminConsole />;
   if (path === '/play') return <PlayPage />;
   if (path === '/daily') return <DailyPage />;
   if (path === '/interview') return <InterviewPage />;

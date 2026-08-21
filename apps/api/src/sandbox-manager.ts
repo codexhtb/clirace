@@ -119,6 +119,16 @@ export interface SandboxPlatformStatus {
   capacity: SandboxCapacitySnapshot;
   lifecycle: readonly SandboxLifecycleState[];
   warmPool: { configured: number; ready: number; enabled: boolean };
+  runtime: { socketPath: string; image: string; rootless: boolean };
+}
+
+export interface SandboxReconciliationResult {
+  containersDiscovered: number;
+  sessionsMatched: number;
+  orphansRemoved: number;
+  staleSessionsTerminated: number;
+  recentContainersProtected: number;
+  errors: number;
 }
 
 export class SandboxManager {
@@ -166,6 +176,7 @@ export class SandboxManager {
         capacity,
         lifecycle: SANDBOX_LIFECYCLE_STATES,
         warmPool: { configured: this.config.SANDBOX_WARM_POOL_SIZE, ready: 0, enabled: false },
+        runtime: { socketPath: this.config.SANDBOX_DOCKER_SOCKET, image: this.config.SANDBOX_IMAGE, rootless: false },
       };
     }
     try {
@@ -177,6 +188,7 @@ export class SandboxManager {
         capacity,
         lifecycle: SANDBOX_LIFECYCLE_STATES,
         warmPool: { configured: this.config.SANDBOX_WARM_POOL_SIZE, ready: 0, enabled: false },
+        runtime: { socketPath: this.config.SANDBOX_DOCKER_SOCKET, image: this.config.SANDBOX_IMAGE, rootless: true },
       };
     } catch (error) {
       const failure = toSandboxUnavailable(error);
@@ -187,12 +199,28 @@ export class SandboxManager {
         capacity,
         lifecycle: SANDBOX_LIFECYCLE_STATES,
         warmPool: { configured: this.config.SANDBOX_WARM_POOL_SIZE, ready: 0, enabled: false },
+        runtime: { socketPath: this.config.SANDBOX_DOCKER_SOCKET, image: this.config.SANDBOX_IMAGE, rootless: false },
       };
     }
   }
 
   async prometheusMetrics(): Promise<string> {
     return this.metrics.render(await this.getCapacitySnapshot());
+  }
+
+  async getOperationsSnapshot(): Promise<{
+    platform: SandboxPlatformStatus;
+    metrics: ReturnType<SandboxMetrics['snapshot']>;
+    lifecycleCounts: Record<SandboxLifecycleState, number>;
+  }> {
+    const counts = await this.dependencies.postgres.query<{ lifecycle_state: SandboxLifecycleState; count: number }>(`
+      SELECT lifecycle_state, count(*)::int AS count
+      FROM sandbox_sessions GROUP BY lifecycle_state
+    `);
+    const lifecycleCounts = Object.fromEntries(
+      SANDBOX_LIFECYCLE_STATES.map((state) => [state, counts.rows.find((row) => row.lifecycle_state === state)?.count ?? 0]),
+    ) as Record<SandboxLifecycleState, number>;
+    return { platform: await this.getPlatformStatus(), metrics: this.metrics.snapshot(), lifecycleCounts };
   }
 
   setBattleHooks(hooks: BattleSandboxHooks): void {
@@ -518,6 +546,101 @@ export class SandboxManager {
     } catch (error) {
       throw toSandboxUnavailable(error);
     }
+  }
+
+  async terminateSession(sessionId: string, reason = 'admin_terminated'): Promise<boolean> {
+    const existing = await this.dependencies.postgres.query<{ id: string; container_id: string | null }>(`
+      SELECT id, container_id FROM sandbox_sessions
+      WHERE id = $1 AND lifecycle_state = ANY($2::varchar[])
+    `, [sessionId, LIVE_SANDBOX_STATES]);
+    if (!existing.rows[0]) return false;
+    await this.dependencies.redis.del(`${SESSION_PREFIX}${sessionId}`);
+    if (this.sessions.has(sessionId)) {
+      await this.destroySession(sessionId, reason);
+      return true;
+    }
+    const containerId = existing.rows[0].container_id;
+    if (containerId) {
+      const removed = await this.docker.getContainer(containerId).remove({ force: true, v: true })
+        .then(() => true)
+        .catch((error: unknown) => dockerStatusCode(error) === 404);
+      if (!removed) throw new Error('Sandbox container could not be removed safely.');
+      this.metrics.recordCleanup();
+    }
+    await this.dependencies.postgres.query(`
+      UPDATE sandbox_sessions
+      SET status = 'expired', lifecycle_state = 'terminated', termination_reason = $2,
+          status_changed_at = now(), destroyed_at = COALESCE(destroyed_at, now())
+      WHERE id = $1 AND lifecycle_state = ANY($3::varchar[])
+    `, [sessionId, reason.slice(0, 64), LIVE_SANDBOX_STATES]);
+    return true;
+  }
+
+  async destroyUserSessions(userId: string, reason = 'account_suspended'): Promise<number> {
+    const pending = await this.dependencies.postgres.query<{ id: string }>(`
+      SELECT id FROM sandbox_sessions
+      WHERE user_id = $1 AND lifecycle_state = ANY($2::varchar[])
+    `, [userId, LIVE_SANDBOX_STATES]);
+    await Promise.allSettled(pending.rows.map((row) => this.terminateSession(row.id, reason)));
+    return pending.rows.length;
+  }
+
+  async runReconciliation(): Promise<SandboxReconciliationResult> {
+    await this.inspectDaemon();
+    const [containers, live] = await Promise.all([
+      this.docker.listContainers({ all: true, filters: { label: ['com.clirace.sandbox=true'] } }),
+      this.dependencies.postgres.query<{ id: string; container_id: string | null }>(`
+        SELECT id, container_id FROM sandbox_sessions
+        WHERE lifecycle_state = ANY($1::varchar[])
+      `, [LIVE_SANDBOX_STATES]),
+    ]);
+    const knownContainerIds = new Set([
+      ...live.rows.map((row) => row.container_id).filter((id): id is string => Boolean(id)),
+      ...[...this.sessions.values()].map((session) => session.container.id),
+    ]);
+    const discoveredIds = new Set(containers.map((entry) => entry.Id));
+    // A container may be visible before its ID is persisted during startup.
+    // The grace window prevents reconciliation from racing that legitimate flow.
+    const recentCutoffSeconds = Math.floor(Date.now() / 1_000) - 120;
+    const unknown = containers.filter((entry) => !knownContainerIds.has(entry.Id));
+    const recentContainersProtected = unknown.filter((entry) => entry.Created >= recentCutoffSeconds).length;
+    const orphans = unknown.filter((entry) => entry.Created < recentCutoffSeconds);
+    const activeContainerIds = new Set([...this.sessions.values()].map((session) => session.container.id));
+    const stoppedKnown = containers.filter((entry) =>
+      knownContainerIds.has(entry.Id) && entry.State !== 'running' && !activeContainerIds.has(entry.Id),
+    );
+    const removals = await Promise.allSettled(
+      [...orphans, ...stoppedKnown].map((entry) => this.docker.getContainer(entry.Id).remove({ force: true, v: true })),
+    );
+    const orphansRemoved = removals.slice(0, orphans.length).filter((result) => result.status === 'fulfilled').length;
+    const cleanupCount = removals.filter((result) => result.status === 'fulfilled').length;
+    const errors = removals.length - cleanupCount;
+    if (orphans.length) this.metrics.recordOrphan(orphans.length);
+    if (cleanupCount) this.metrics.recordCleanup(cleanupCount);
+
+    const stoppedIds = new Set(stoppedKnown.map((entry) => entry.Id));
+    const staleIds = live.rows
+      .filter((row) => row.container_id && (!discoveredIds.has(row.container_id) || stoppedIds.has(row.container_id)) && !this.sessions.has(row.id))
+      .map((row) => row.id);
+    let staleSessionsTerminated = 0;
+    if (staleIds.length > 0) {
+      const stale = await this.dependencies.postgres.query(`
+        UPDATE sandbox_sessions
+        SET status = 'expired', lifecycle_state = 'terminated',
+            termination_reason = 'admin_reconciliation', status_changed_at = now(),
+            destroyed_at = COALESCE(destroyed_at, now())
+        WHERE id = ANY($1::uuid[]) AND lifecycle_state = ANY($2::varchar[])
+      `, [staleIds, LIVE_SANDBOX_STATES]);
+      staleSessionsTerminated = stale.rowCount ?? 0;
+    }
+    return {
+      containersDiscovered: containers.length,
+      sessionsMatched: containers.filter((entry) => knownContainerIds.has(entry.Id)).length,
+      orphansRemoved,
+      staleSessionsTerminated,
+      recentContainersProtected,
+      errors,
+    };
   }
 
   private async inspectDaemon(): Promise<void> {

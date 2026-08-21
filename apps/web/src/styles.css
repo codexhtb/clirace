@@ -198,6 +198,66 @@ button { cursor: pointer; }
 
 /* Phase 8 · Private Battle */
 .battle-page { min-height: 100vh; }
+
+/* Operations Console V1 */
+.admin-shell { @apply min-h-screen bg-[#070a0e] text-slate-300 lg:grid lg:grid-cols-[230px_minmax(0,1fr)]; }
+.admin-sidebar { @apply sticky top-0 z-20 flex min-h-16 items-center border-b border-line bg-[#0b1016] px-4 lg:h-screen lg:flex-col lg:items-stretch lg:border-b-0 lg:border-r lg:px-3 lg:py-4; }
+.admin-brand { @apply flex shrink-0 items-center gap-3 px-2; }
+.admin-brand > span { @apply flex h-9 w-9 items-center justify-center rounded border border-acid/30 bg-acid/[0.08] font-mono text-xs font-bold text-acid; }
+.admin-brand strong, .admin-brand small { @apply block font-mono uppercase; }
+.admin-brand strong { @apply text-[11px] tracking-[0.16em] text-slate-200; }
+.admin-brand small { @apply mt-0.5 text-[8px] tracking-[0.1em] text-slate-600; }
+.admin-nav { @apply ml-5 flex min-w-0 flex-1 gap-1 overflow-x-auto lg:ml-0 lg:mt-8 lg:block lg:space-y-1 lg:overflow-visible; scrollbar-width: none; }
+.admin-nav::-webkit-scrollbar { display: none; }
+.admin-nav a { @apply flex shrink-0 items-center gap-2.5 rounded px-3 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 transition-colors hover:bg-white/[0.025] hover:text-slate-200; }
+.admin-nav a.active { @apply bg-acid/[0.08] text-acid; }
+.admin-identity { @apply hidden items-center gap-3 border-t border-line px-3 pt-4 text-slate-500 lg:flex; }
+.admin-identity strong, .admin-identity small { @apply block font-mono; }
+.admin-identity strong { @apply text-[10px] text-slate-300; }.admin-identity small { @apply mt-0.5 text-[8px] uppercase tracking-[0.1em] text-slate-600; }
+.admin-main { @apply min-w-0; }
+.admin-topbar { @apply flex min-h-20 items-center justify-between border-b border-line bg-[#090d12] px-5 sm:px-7 lg:px-9; }
+.admin-topbar p { @apply font-mono text-[8px] font-semibold tracking-[0.16em] text-slate-600; }
+.admin-topbar h1 { @apply mt-1 text-lg font-semibold text-white; }
+.admin-live { @apply inline-flex items-center gap-2 rounded border border-line px-2.5 py-2 font-mono text-[8px] font-semibold tracking-[0.12em] text-slate-500; }
+.admin-live i { @apply h-1.5 w-1.5 rounded-full bg-acid shadow-[0_0_9px_#b6f04a]; }
+.admin-icon-link { @apply flex h-8 w-8 items-center justify-center rounded border border-line text-slate-500 hover:text-white; }
+.admin-content { @apply p-5 sm:p-7 lg:p-9; }
+.admin-heading h2 { @apply text-base font-semibold text-slate-100; }.admin-heading p { @apply mt-1 text-xs leading-5 text-slate-600; }
+.admin-health-grid { @apply mt-4 grid overflow-hidden rounded border border-line bg-[#0c1117] sm:grid-cols-2 xl:grid-cols-5; }
+.admin-health { @apply flex min-h-20 items-center gap-3 border-b border-line px-4 last:border-b-0 sm:border-r xl:border-b-0; }
+.admin-health > span { @apply flex h-8 w-8 items-center justify-center rounded border; }.admin-health svg { @apply h-4 w-4; }
+.admin-health span.ok { @apply border-acid/20 bg-acid/[0.06] text-acid; }.admin-health span.bad { @apply border-rose-400/20 bg-rose-400/[0.06] text-rose-300; }
+.admin-health strong, .admin-health small { @apply block; }.admin-health strong { @apply text-xs text-slate-200; }.admin-health small { @apply mt-1 font-mono text-[9px] text-slate-600; }
+.admin-health > i { @apply ml-auto h-1.5 w-1.5 rounded-full; }.admin-health > i.ok { @apply bg-acid; }.admin-health > i.bad { @apply bg-rose-400; }
+.admin-stat-grid { @apply mt-4 grid overflow-hidden rounded border border-line bg-[#0c1117] sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7; }
+.admin-stat { @apply min-h-28 border-b border-r border-line p-4; }.admin-stat span, .admin-stat small { @apply block font-mono; }.admin-stat span { @apply text-[8px] uppercase tracking-[0.1em] text-slate-600; }.admin-stat strong { @apply mt-4 block font-mono text-2xl font-semibold text-white; }.admin-stat small { @apply mt-1 text-[9px] text-slate-600; }
+.admin-panel { @apply rounded border border-line bg-[#0c1117] p-5; }
+.admin-capacity { @apply mt-5 h-2 overflow-hidden rounded-full bg-[#070a0e]; }.admin-capacity > div { @apply h-full rounded-full bg-acid; }
+.admin-mini { @apply rounded border border-line bg-[#090d12] p-3; }.admin-mini span { @apply block font-mono text-[8px] uppercase text-slate-600; }.admin-mini strong { @apply mt-1 block font-mono text-lg text-slate-200; }
+.admin-kv { @apply divide-y divide-line border-y border-line; }.admin-kv div { @apply flex items-start justify-between gap-4 py-2.5; }.admin-kv dt { @apply font-mono text-[9px] uppercase tracking-[0.08em] text-slate-600; }.admin-kv dd { @apply break-all text-right font-mono text-[10px] text-slate-400; }
+.admin-integrity { @apply mt-5 flex items-center gap-4 rounded border p-4; }.admin-integrity.ok { @apply border-acid/20 bg-acid/[0.05] text-acid; }.admin-integrity.bad { @apply border-rose-400/20 bg-rose-400/[0.05] text-rose-300; }.admin-integrity strong, .admin-integrity span { @apply block; }.admin-integrity strong { @apply font-mono text-xl; }.admin-integrity span { @apply mt-1 text-xs; }
+.admin-section-head { @apply mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end; }
+.admin-button { @apply inline-flex min-h-9 items-center justify-center gap-2 rounded border border-line bg-white/[0.025] px-3 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition-colors hover:border-slate-500 hover:text-white disabled:opacity-50; }
+.admin-button.warning { @apply border-amber-400/25 bg-amber-400/[0.06] text-amber-300 hover:border-amber-300/50; }
+.admin-filters { @apply mb-4 flex flex-wrap gap-2 rounded border border-line bg-[#0c1117] p-3; }
+.admin-ops-strip { @apply mb-4 grid overflow-hidden rounded border border-line bg-[#0c1117] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6; }.admin-ops-strip > div { @apply min-h-16 border-b border-r border-line px-4 py-3; }.admin-ops-strip strong, .admin-ops-strip small { @apply block; }.admin-ops-strip strong { @apply font-mono text-xs text-slate-200; }.admin-ops-strip small { @apply mt-1 font-mono text-[8px] uppercase tracking-[0.07em] text-slate-600; }.admin-ops-strip span { @apply mr-2 inline-block h-1.5 w-1.5 rounded-full; }.admin-ops-strip span.ok { @apply bg-acid; }.admin-ops-strip span.bad { @apply bg-rose-400; }
+.admin-filters label { @apply flex min-w-48 flex-1 items-center gap-2 rounded border border-line bg-[#070a0e] px-3 text-slate-600; }.admin-filters label input { @apply h-9 min-w-0 flex-1 border-0 bg-transparent font-mono text-[10px] text-slate-200 outline-none; }
+.admin-filters select, .admin-filter-input { @apply h-9 rounded border border-line bg-[#070a0e] px-3 font-mono text-[9px] text-slate-400 outline-none focus:border-acid/40; }
+.admin-table-wrap { @apply overflow-x-auto rounded border border-line bg-[#0c1117]; }
+.admin-table { @apply w-full min-w-[900px] border-collapse; }.admin-table th { @apply h-10 border-b border-line bg-[#090d12] px-4 text-left font-mono text-[8px] uppercase tracking-[0.1em] text-slate-600; }.admin-table td { @apply border-b border-line px-4 py-3 text-xs text-slate-400; }.admin-table tbody tr:last-child td { @apply border-b-0; }.admin-table tbody tr { @apply transition-colors hover:bg-white/[0.018]; }
+.admin-table td strong, .admin-table td small { @apply block; }.admin-table td strong { @apply text-xs font-medium text-slate-200; }.admin-table td small { @apply mt-1 font-mono text-[8px] text-slate-600; }
+.admin-badge { @apply mr-1 inline-flex rounded border border-line bg-white/[0.025] px-2 py-1 font-mono text-[8px] font-semibold uppercase tracking-[0.06em] text-slate-400; }
+.badge-admin, .badge-enabled, .badge-active, .badge-ready, .badge-attached, .badge-running, .badge-ok { @apply border-acid/20 bg-acid/[0.06] text-acid; }
+.badge-suspended, .badge-disabled, .badge-failed, .badge-cancelled, .badge-terminated { @apply border-rose-400/20 bg-rose-400/[0.06] text-rose-300; }
+.badge-starting, .badge-countdown, .badge-waiting, .badge-idle { @apply border-amber-400/20 bg-amber-400/[0.06] text-amber-300; }
+.admin-row-actions { @apply flex items-center gap-1; }.admin-row-actions button, .admin-danger, .admin-success { @apply rounded border border-line px-2 py-1.5 font-mono text-[8px] uppercase text-slate-500 hover:text-white; }.admin-danger { @apply border-rose-400/20 text-rose-300 hover:border-rose-300/50; }.admin-success { @apply border-acid/20 text-acid hover:border-acid/50; }
+.admin-json { @apply block max-w-xs truncate font-mono text-[9px] text-slate-500; }
+.admin-pagination { @apply mt-4 flex items-center justify-between font-mono text-[9px] text-slate-600; }.admin-pagination div { @apply flex gap-2; }.admin-pagination a { @apply rounded border border-line px-3 py-2 text-slate-400 hover:text-white; }
+.admin-alert { @apply mb-4 rounded border border-rose-400/20 bg-rose-400/[0.05] px-4 py-3 text-xs text-rose-300; }
+.admin-loading, .admin-error { @apply flex min-h-44 items-center justify-center gap-3 rounded border border-line bg-[#0c1117] p-5 text-xs text-slate-500; }.admin-error { @apply text-rose-300; }.admin-error strong { @apply block text-sm; }.admin-error p { @apply mt-1 text-xs text-slate-500; }.admin-error button { @apply ml-auto; }
+.admin-empty { @apply py-10 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-slate-600; }
+.admin-modal-backdrop { @apply fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm; }.admin-modal { @apply w-full max-w-md rounded border border-[#2a3542] bg-[#0d131a] p-6 text-amber-300 shadow-2xl; }.admin-modal h2 { @apply mt-5 text-xl font-semibold text-white; }.admin-modal p { @apply mt-2 text-sm leading-6 text-slate-500; }.admin-modal > div { @apply mt-6 flex justify-end gap-2; }
+.admin-state { @apply flex min-h-screen flex-col items-center justify-center bg-[#070a0e] p-6 text-center text-slate-400; }.admin-state > div:first-child { @apply mb-5 flex h-14 w-14 items-center justify-center rounded border border-acid/20 bg-acid/[0.05] text-acid; }.admin-state > p { @apply font-mono text-[9px] font-semibold tracking-[0.18em] text-acid; }.admin-state h1 { @apply mt-3 text-3xl font-semibold text-white; }.admin-state > span { @apply mt-3 max-w-lg text-sm text-slate-500; }.admin-state > a { @apply mt-7; }
 .battle-icon { @apply flex h-16 w-16 items-center justify-center rounded-lg border border-acid/30 bg-acid/[0.08] text-acid shadow-glow; }
 .battle-create-panel { @apply rounded-lg border border-line bg-panel p-5 shadow-2xl sm:p-8; }
 .battle-create-panel legend { @apply mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500; }

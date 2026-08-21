@@ -2,6 +2,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { registerAdminRoutes } from './admin-routes.js';
 import { registerBattleRoutes } from './battle-routes.js';
 import type { BattleManager } from './battle-service.js';
 import { registerAuthRoutes } from './auth-routes.js';
@@ -111,6 +112,10 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager }
 
   void app.register(async (interviewApp) => {
     await registerInterviewRoutes(interviewApp, config, dependencies);
+  });
+
+  void app.register(async (adminApp) => {
+    await registerAdminRoutes(adminApp, config, dependencies, sandboxManager, battleManager);
   });
 
   app.addHook('onClose', async () => {

@@ -78,6 +78,25 @@ export class SandboxMetrics {
   recordCleanup(count = 1): void { this.cleanupTotal += count; }
   recordOrphan(count = 1): void { this.orphanTotal += count; }
 
+  snapshot(): {
+    failedTotal: number;
+    cleanupTotal: number;
+    orphanTotal: number;
+    createP50Seconds: number;
+    createP95Seconds: number;
+    createCount: number;
+  } {
+    const durations = [...this.createDurations].sort((a, b) => a - b);
+    return {
+      failedTotal: this.failedTotal,
+      cleanupTotal: this.cleanupTotal,
+      orphanTotal: this.orphanTotal,
+      createP50Seconds: numericQuantile(durations, 0.5),
+      createP95Seconds: numericQuantile(durations, 0.95),
+      createCount: durations.length,
+    };
+  }
+
   render(snapshot: SandboxCapacitySnapshot): string {
     const durations = [...this.createDurations].sort((a, b) => a - b);
     const sum = durations.reduce((total, value) => total + value, 0);
@@ -110,6 +129,10 @@ function counter(name: string, value: number, help: string): string {
 }
 
 function quantile(sorted: readonly number[], ratio: number): string {
-  if (sorted.length === 0) return '0';
-  return (sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * ratio))] ?? 0).toFixed(6);
+  return numericQuantile(sorted, ratio).toFixed(6);
+}
+
+function numericQuantile(sorted: readonly number[], ratio: number): number {
+  if (sorted.length === 0) return 0;
+  return sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * ratio))] ?? 0;
 }

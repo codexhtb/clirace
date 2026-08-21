@@ -93,6 +93,22 @@ export class BattleManager implements BattleSandboxHooks {
     this.sockets.clear();
   }
 
+  async terminateBattle(battleId: string): Promise<boolean> {
+    const result = await this.dependencies.postgres.query<{ id: string }>(`
+      UPDATE battles
+      SET status = 'cancelled', finished_at = now(), updated_at = now()
+      WHERE id = $1 AND status IN ('waiting', 'countdown', 'running')
+      RETURNING id
+    `, [battleId]);
+    if (!result.rows[0]) return false;
+    const timer = this.countdownTimers.get(battleId);
+    if (timer) clearTimeout(timer);
+    this.countdownTimers.delete(battleId);
+    await this.broadcast(battleId, 'match:finished', { cancelled: true, reason: 'admin_terminated' });
+    await this.sandboxManager.destroyBattleSessions(battleId, 'battle_admin_terminated');
+    return true;
+  }
+
   async options(): Promise<{ categories: Array<{ slug: string; name: string; challengeCount: number }> }> {
     const result = await this.dependencies.postgres.query<{ slug: string; name: string; challenge_count: number }>(`
       SELECT categories.slug, categories.name, count(challenges.id)::int AS challenge_count

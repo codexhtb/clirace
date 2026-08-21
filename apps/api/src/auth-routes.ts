@@ -49,10 +49,12 @@ export async function registerAuthRoutes(
         username: string;
         email: string;
         created_at: Date;
+        role: 'user';
+        account_status: 'active';
       }>(`
         INSERT INTO users (username, username_normalized, email, email_normalized, password_hash)
         VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, username, email, created_at
+        RETURNING id, username, email, created_at, role, account_status
       `, [parsed.data.username, usernameNormalized, parsed.data.email, emailNormalized, passwordHash]);
       const user = result.rows[0]!;
       await dependencies.postgres.query(
@@ -70,6 +72,8 @@ export async function registerAuthRoutes(
           username: user.username,
           email: user.email,
           createdAt: user.created_at.toISOString(),
+          role: user.role,
+          accountStatus: user.account_status,
         },
       });
     } catch (error) {
@@ -97,8 +101,10 @@ export async function registerAuthRoutes(
       email: string;
       password_hash: string;
       created_at: Date;
+      account_status: 'active' | 'suspended';
+      role: 'user' | 'admin';
     }>(`
-      SELECT id, username, email, password_hash, created_at
+      SELECT id, username, email, password_hash, created_at, account_status, role
       FROM users
       WHERE username_normalized = $1 OR email_normalized = $1
       LIMIT 1
@@ -108,6 +114,14 @@ export async function registerAuthRoutes(
       ? await verifyPassword(parsed.data.password, user.password_hash)
       : await hashPassword(parsed.data.password).then(() => false);
     if (!user || !passwordValid) return invalidCredentials(reply);
+    if (user.account_status !== 'active') {
+      await auth.revokeAllSessions(user.id);
+      return reply.code(403).send({
+        error: 'Account suspended',
+        code: 'account_suspended',
+        message: 'Аккаунт приостановлен. Обратитесь к администратору CLIRace.',
+      });
+    }
 
     await dependencies.postgres.query('UPDATE users SET last_login_at = now() WHERE id = $1', [user.id]);
     await auth.startSession(user.id, request, reply);
@@ -117,6 +131,8 @@ export async function registerAuthRoutes(
         username: user.username,
         email: user.email,
         createdAt: user.created_at.toISOString(),
+        role: user.role,
+        accountStatus: user.account_status,
       },
     });
   });

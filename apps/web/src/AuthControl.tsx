@@ -1,4 +1,4 @@
-import { LogOut, UserRound, X } from 'lucide-react';
+import { LogOut, ShieldCheck, UserRound, X } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { humanizeError } from './errors';
@@ -8,6 +8,7 @@ interface AuthUser {
   username: string;
   email: string;
   createdAt: string;
+  role?: 'user' | 'admin';
 }
 
 type AuthMode = 'login' | 'register';
@@ -83,6 +84,7 @@ export function AuthControl() {
     <>
       {user ? (
         <div className="flex items-center gap-2">
+          {user.role === 'admin' && <a className="header-action" href="/admin"><ShieldCheck size={14} /><span className="hidden lg:inline">Admin</span></a>}
           <a className="hidden font-mono text-[11px] text-slate-300 transition-colors hover:text-acid sm:inline" href={`/profile/${encodeURIComponent(user.username)}`}>@{user.username}</a>
           <button type="button" className="header-action" onClick={() => void logout()} aria-label="Выйти">
             <LogOut size={14} /> <span className="hidden sm:inline">Выйти</span>

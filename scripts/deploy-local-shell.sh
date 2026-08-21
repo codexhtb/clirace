@@ -108,6 +108,18 @@ for attempt in $(seq 1 30); do
       echo 'Sandbox Platform V2 production validation passed.'
     fi
 
+    admin_validation_marker=/var/lib/clirace/admin-console-v1-validated
+    if [[ ! -f "$admin_validation_marker" ]]; then
+      echo 'Running one-time Operations Console V1 production validation...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/sandbox-integrity.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/admin-e2e.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$admin_validation_marker"
+      echo 'Operations Console V1 production validation passed.'
+    fi
+
     # The legacy archive runner may have populated a real Git checkout. Verify
     # every deployed tracked file byte-for-byte before advancing HEAD/index;
     # this also handles files that are new relative to the old local index.

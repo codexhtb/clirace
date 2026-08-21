@@ -15,6 +15,8 @@ export interface AuthUser {
   username: string;
   email: string;
   createdAt: string;
+  role: 'user' | 'admin';
+  accountStatus: 'active' | 'suspended';
 }
 
 export class AuthService {
@@ -55,13 +57,15 @@ export class AuthService {
       username: string;
       email: string;
       created_at: Date;
+      role: 'user' | 'admin';
+      account_status: 'active' | 'suspended';
     }>(`
-      SELECT id, username, email, created_at
+      SELECT id, username, email, created_at, role, account_status
       FROM users
       WHERE id = $1
     `, [userId]);
     const row = result.rows[0];
-    if (!row) {
+    if (!row || row.account_status !== 'active') {
       await this.dependencies.redis.del(sessionKey(token));
       return null;
     }
@@ -70,7 +74,24 @@ export class AuthService {
       username: row.username,
       email: row.email,
       createdAt: row.created_at.toISOString(),
+      role: row.role,
+      accountStatus: row.account_status,
     };
+  }
+
+  async revokeAllSessions(userId: string): Promise<number> {
+    let revoked = 0;
+    for await (const entry of this.dependencies.redis.scanIterator({
+      MATCH: `${SESSION_PREFIX}*`,
+      COUNT: 100,
+    })) {
+      const keys = Array.isArray(entry) ? entry : [entry];
+      if (keys.length === 0) continue;
+      const values = await this.dependencies.redis.mGet(keys);
+      const matching = keys.filter((_key, index) => values[index] === userId);
+      if (matching.length > 0) revoked += await this.dependencies.redis.del(matching);
+    }
+    return revoked;
   }
 
   private readSessionToken(request: FastifyRequest): string | undefined {
