@@ -10,7 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "admin:grant": "node dist/admin-role-cli.js grant",
     "admin:revoke": "node dist/admin-role-cli.js revoke",
-    "test:admin-e2e": "node dist/admin-e2e.js"
+    "test:admin-e2e": "node dist/admin-e2e.js",
+    "test:matchmaking": "node dist/matchmaking-test.js",
+    "test:matchmaking-e2e": "node dist/matchmaking-e2e.js"
   },
   "dependencies": {
     "@fastify/helmet": "^13.0.1",

@@ -2,6 +2,7 @@ import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clo
 import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { humanizeError } from './errors';
+import { QuickMatchPanel } from './QuickMatchPanel';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
@@ -151,6 +152,13 @@ function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
         <p className="eyebrow">Играть</p>
         <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Выберите формат.</h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Быстрая практика, собеседование, задача дня или соревнование с другом — каждый режим использует реальные серверные результаты.</p>
+      </div>
+
+      <QuickMatchPanel />
+
+      <div className="mb-4 mt-10 flex items-center justify-between gap-4">
+        <p className="eyebrow">Другие режимы</p>
+        <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-slate-600">solo / private</span>
       </div>
 
       <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

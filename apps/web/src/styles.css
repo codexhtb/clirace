@@ -97,6 +97,20 @@ button { cursor: pointer; }
 .quick-start-tag { @apply rounded border border-line bg-[#090d12] px-2 py-1 font-mono text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-600; }
 
 .play-panel { @apply rounded-lg border border-[#2a3542] bg-[#0b1016] shadow-2xl; }
+.matchmaking-panel { @apply relative grid scroll-mt-28 gap-5 overflow-hidden rounded-lg border border-[#334052] bg-[#0b1016] p-5 shadow-2xl sm:p-7 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center; }
+.matchmaking-panel::before { content: ''; @apply absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-acid/50 to-transparent; }
+.matchmaking-panel h2 { @apply mt-2 text-2xl font-semibold tracking-[-0.025em] text-white sm:text-3xl; }
+.matchmaking-panel p:not(.eyebrow):not(.matchmaking-error) { @apply mt-2 max-w-2xl text-sm leading-6 text-slate-400; }
+.matchmaking-radar { @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-acid/25 bg-acid/[0.07] text-acid; }
+.matchmaking-found { @apply border-acid/40 bg-acid/[0.035]; }
+.matchmaking-found .matchmaking-radar { @apply shadow-[0_0_28px_rgba(182,240,74,.12)]; }
+.matchmaking-loading { @apply min-h-36 grid-cols-none place-content-center font-mono text-xs uppercase tracking-[0.13em] text-slate-500; }
+.matchmaking-trust { @apply mt-4 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[0.1em] text-slate-600; }
+.matchmaking-trust span { @apply inline-flex items-center gap-1.5; }
+.matchmaking-search-meta { @apply min-w-24 rounded border border-line bg-black/20 px-4 py-3 text-center font-mono; }
+.matchmaking-search-meta strong { @apply block text-xl text-white; }
+.matchmaking-search-meta span { @apply mt-1 block text-[8px] uppercase tracking-[0.14em] text-slate-600; }
+.matchmaking-error { @apply rounded border border-rose-400/25 bg-rose-400/[0.06] px-3 py-2 text-xs leading-5 text-rose-300 lg:col-start-2 lg:col-span-2; }
 .play-field > span { @apply mb-2 block font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500; }
 .play-field select { @apply h-12 w-full appearance-none rounded border border-line bg-[#070a0e] px-4 font-mono text-sm text-slate-200 outline-none transition-colors focus:border-acid/50; }
 .play-choice { @apply relative cursor-pointer; }

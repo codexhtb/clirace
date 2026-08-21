@@ -12,6 +12,8 @@ import type { AppConfig } from './config.js';
 import { registerDailyRoutes } from './daily-routes.js';
 import { registerGameRoutes } from './game-routes.js';
 import { registerInterviewRoutes } from './interview-routes.js';
+import { registerMatchmakingRoutes } from './matchmaking-routes.js';
+import type { MatchmakingManager } from './matchmaking-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { registerSandboxRoutes } from './sandbox-routes.js';
 import { checkDependencies, type Dependencies } from './services.js';
@@ -21,9 +23,10 @@ interface BuildAppOptions {
   dependencies: Dependencies;
   sandboxManager: SandboxManager;
   battleManager: BattleManager;
+  matchmakingManager: MatchmakingManager;
 }
 
-export function buildApp({ config, dependencies, sandboxManager, battleManager }: BuildAppOptions): FastifyInstance {
+export function buildApp({ config, dependencies, sandboxManager, battleManager, matchmakingManager }: BuildAppOptions): FastifyInstance {
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
     // Caddy is the only public proxy in front of the Docker nginx gateway.
@@ -103,7 +106,11 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager }
   });
 
   void app.register(async (battleApp) => {
-    await registerBattleRoutes(battleApp, config, dependencies, battleManager);
+    await registerBattleRoutes(battleApp, config, dependencies, battleManager, matchmakingManager);
+  });
+
+  void app.register(async (matchmakingApp) => {
+    await registerMatchmakingRoutes(matchmakingApp, config, dependencies, matchmakingManager);
   });
 
   void app.register(async (gameApp) => {
@@ -115,11 +122,12 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager }
   });
 
   void app.register(async (adminApp) => {
-    await registerAdminRoutes(adminApp, config, dependencies, sandboxManager, battleManager);
+    await registerAdminRoutes(adminApp, config, dependencies, sandboxManager, battleManager, matchmakingManager);
   });
 
   app.addHook('onClose', async () => {
     await battleManager.close();
+    await matchmakingManager.close();
     await sandboxManager.close();
   });
 

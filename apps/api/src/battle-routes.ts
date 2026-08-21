@@ -4,6 +4,7 @@ import { AuthService, type AuthUser } from './auth-service.js';
 import { BattleManager, BattleStateError } from './battle-service.js';
 import type { AppConfig } from './config.js';
 import { hasSameOrigin } from './http-security.js';
+import { MatchmakingError, type MatchmakingManager } from './matchmaking-service.js';
 import type { Dependencies } from './services.js';
 
 const roomSchema = z.object({ roomCode: z.string().trim().toUpperCase().regex(/^[A-HJ-NP-Z2-9]{5}$/) });
@@ -18,6 +19,7 @@ export async function registerBattleRoutes(
   config: AppConfig,
   dependencies: Dependencies,
   battles: BattleManager,
+  matchmaking: MatchmakingManager,
 ): Promise<void> {
   const auth = new AuthService(config, dependencies);
 
@@ -34,6 +36,7 @@ export async function registerBattleRoutes(
     const body = createSchema.safeParse(request.body);
     if (!body.success) return invalid(reply, 'Выберите 3, 5 или 10 раундов и доступную категорию.');
     try {
+      await matchmaking.leaveQueueForManualBattle(user.id);
       const battle = await battles.createBattle(user, body.data.rounds, body.data.category);
       return reply.header('cache-control', 'no-store').code(201).send({ battle });
     } catch (error) { return battleError(reply, error); }
@@ -59,6 +62,7 @@ export async function registerBattleRoutes(
     const params = roomSchema.safeParse(request.params);
     if (!params.success) return invalid(reply, 'Некорректный код комнаты.');
     try {
+      await matchmaking.leaveQueueForManualBattle(user.id);
       const battle = await battles.joinBattle(params.data.roomCode, user);
       return reply.header('cache-control', 'no-store').send({ battle });
     } catch (error) { return battleError(reply, error); }
@@ -131,6 +135,12 @@ function invalid(reply: FastifyReply, message: string) {
 }
 
 function battleError(reply: FastifyReply, error: unknown) {
+  if (error instanceof MatchmakingError) {
+    return reply.code(error.statusCode).send({
+      error: 'Matchmaking state error', code: error.code, message: error.message,
+      ...(error.details ?? {}),
+    });
+  }
   if (error instanceof BattleStateError) {
     return reply.code(error.statusCode).send({ error: 'Battle state error', message: error.message });
   }

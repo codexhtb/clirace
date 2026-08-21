@@ -2,6 +2,7 @@ import { buildApp } from './app.js';
 import { BattleManager } from './battle-service.js';
 import { loadConfig } from './config.js';
 import { runMigrations } from './migrations.js';
+import { MatchmakingManager } from './matchmaking-service.js';
 import { SandboxManager } from './sandbox-manager.js';
 import { closeDependencies, connectDependencies, createDependencies } from './services.js';
 
@@ -9,8 +10,9 @@ const config = loadConfig();
 const dependencies = createDependencies(config);
 const sandboxManager = new SandboxManager(config, dependencies);
 const battleManager = new BattleManager(config, dependencies, sandboxManager);
+const matchmakingManager = new MatchmakingManager(config, dependencies, sandboxManager, battleManager);
 sandboxManager.setBattleHooks(battleManager);
-const app = buildApp({ config, dependencies, sandboxManager, battleManager });
+const app = buildApp({ config, dependencies, sandboxManager, battleManager, matchmakingManager });
 
 async function shutdown(signal: string): Promise<void> {
   app.log.info({ signal }, 'Shutting down');
@@ -27,6 +29,7 @@ try {
   await runMigrations(dependencies.postgres);
   await sandboxManager.start();
   await battleManager.start();
+  await matchmakingManager.start();
   await app.listen({ host: config.HOST, port: config.PORT });
 } catch (error) {
   app.log.fatal({ error }, 'Unable to start API');

@@ -18,6 +18,8 @@
     "test:real-shell-integrity": "node scripts/test-real-shell-integrity.mjs",
     "test:interview-100": "node scripts/test-interview-100.mjs",
     "test:production-smoke": "node scripts/test-production-smoke.mjs",
+    "test:matchmaking": "pnpm --filter @clirace/api test:matchmaking",
+    "test:matchmaking-e2e": "node scripts/test-matchmaking-e2e.mjs",
     "start": "pnpm --filter @clirace/api start"
   },
   "engines": {

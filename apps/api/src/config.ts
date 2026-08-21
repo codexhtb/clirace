@@ -26,6 +26,11 @@ const schema = z.object({
   BATTLE_RECONNECT_GRACE_SECONDS: z.coerce.number().int().min(10).max(300).default(60),
   BATTLE_WAITING_TTL_SECONDS: z.coerce.number().int().min(300).max(7_200).default(1_800),
   BATTLE_MAX_LIFETIME_SECONDS: z.coerce.number().int().min(300).max(7_200).default(1_800),
+  MATCHMAKING_ENABLED: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
+  MATCHMAKING_LEASE_SECONDS: z.coerce.number().int().min(60).max(300).default(90),
+  MATCHMAKING_PAIRING_TTL_SECONDS: z.coerce.number().int().min(30).max(300).default(120),
+  MATCHMAKING_MATCH_TTL_SECONDS: z.coerce.number().int().min(300).max(7_200).default(3_600),
+  MATCHMAKING_BATTLE_WAITING_TTL_SECONDS: z.coerce.number().int().min(60).max(600).default(120),
 });
 
 export type AppConfig = z.infer<typeof schema>;

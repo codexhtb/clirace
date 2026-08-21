@@ -223,6 +223,16 @@ export class SandboxManager {
     return { platform: await this.getPlatformStatus(), metrics: this.metrics.snapshot(), lifecycleCounts };
   }
 
+  async hasLiveSessionForUser(userId: string): Promise<boolean> {
+    const result = await this.dependencies.postgres.query<{ active: boolean }>(`
+      SELECT EXISTS (
+        SELECT 1 FROM sandbox_sessions
+        WHERE user_id = $1 AND lifecycle_state = ANY($2::varchar[])
+      ) AS active
+    `, [userId, LIVE_SANDBOX_STATES]);
+    return result.rows[0]?.active === true;
+  }
+
   setBattleHooks(hooks: BattleSandboxHooks): void {
     this.battleHooks = hooks;
   }
@@ -362,7 +372,7 @@ export class SandboxManager {
     }
   }
 
-  private async getCapacitySnapshot(): Promise<SandboxCapacitySnapshot> {
+  async getCapacitySnapshot(): Promise<SandboxCapacitySnapshot> {
     if (!this.enabled) {
       return {
         maxCapacity: this.config.SANDBOX_MAX_SESSIONS,

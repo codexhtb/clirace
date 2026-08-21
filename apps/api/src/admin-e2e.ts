@@ -4,6 +4,7 @@ import { setAdminRole } from './admin-role-cli.js';
 import { buildApp } from './app.js';
 import { BattleManager } from './battle-service.js';
 import { loadConfig } from './config.js';
+import { MatchmakingManager } from './matchmaking-service.js';
 import { hashPassword } from './password.js';
 import { SandboxManager } from './sandbox-manager.js';
 import { closeDependencies, connectDependencies, createDependencies } from './services.js';
@@ -20,7 +21,10 @@ async function main(): Promise<void> {
   await connectDependencies(dependencies);
   const sandboxManager = new SandboxManager(config, dependencies);
   const battleManager = new BattleManager(config, dependencies, sandboxManager);
-  const app = buildApp({ config, dependencies, sandboxManager, battleManager });
+  const matchmakingManager = new MatchmakingManager(config, dependencies, sandboxManager, battleManager, {
+    redisPrefix: `clirace:mm:admin-e2e:${process.pid}`,
+  });
+  const app = buildApp({ config, dependencies, sandboxManager, battleManager, matchmakingManager });
   await app.ready();
 
   const suffix = `${Date.now()}${randomBytes(3).toString('hex')}`;

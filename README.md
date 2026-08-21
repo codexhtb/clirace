@@ -36,7 +36,10 @@
 * матчи на 3 / 5 / 10 раундов;
 * восстановление активной сессии после refresh;
 * серверное определение победителя;
-* сохранение результатов матчей.
+* сохранение результатов матчей;
+* автоматический поиск соперника Quick Match;
+* Redis-очередь с heartbeat, TTL и восстановлением после обновления страницы;
+* защищённое от гонок создание ровно одного существующего Battle на пару.
 
 ## Operations Console
 
@@ -783,6 +786,54 @@ sudo bash scripts/deploy-local-shell.sh
 # Private Battles
 
 PHASE 8 добавляет полноценные приватные PvP Shell-битвы.
+
+## Quick Match
+
+На странице `/play` доступен автоматический поиск соперника. Это небольшой orchestration-слой над уже существующими Battle Engine и Sandbox Platform: после сведения двух игроков создаётся обычная запись в `battles`, а Ready, countdown, WebSocket, реальные терминалы, проверка заданий, победитель и результаты продолжают обслуживаться существующим движком.
+
+В V1 используется один публичный FIFO-pool `quick`. Очередь и краткоживущие состояния хранятся только в Redis с namespace `clirace:mm:*`; PostgreSQL остаётся источником истины для созданных Battles. Повторный вход в очередь идемпотентен, самоподбор запрещён, а Lua-операции атомарно выполняют claim, commit, rollback и cancel. Глобальная Redis-блокировка координирует будущие параллельные API workers.
+
+Перед созданием пары сервер проверяет активный Battle, несовместимую Shell-сессию, статус аккаунта и реальную доступность двух мест в Sandbox Platform. При нехватке ёмкости пользователь остаётся в состоянии `waitingCapacity`; отдельный счётчик ресурсов не создаётся.
+
+Поиск имеет lease 90 секунд. Браузер продлевает его heartbeat-запросом, а при F5 восстанавливает server-authoritative состояние через status API. Если пользователь пропустил событие о создании матча, status возвращает `battleId` и `roomCode`, после чего UI открывает обычную страницу Battle.
+
+API:
+
+```http
+POST   /api/matchmaking/queue
+GET    /api/matchmaking/status
+POST   /api/matchmaking/heartbeat
+DELETE /api/matchmaking/queue
+GET    /api/matchmaking/metrics   # только admin
+```
+
+Основные параметры:
+
+```env
+MATCHMAKING_ENABLED=true
+MATCHMAKING_LEASE_SECONDS=90
+MATCHMAKING_PAIRING_TTL_SECONDS=120
+MATCHMAKING_MATCH_TTL_SECONDS=3600
+MATCHMAKING_BATTLE_WAITING_TTL_SECONDS=120
+```
+
+Проверки Redis-очереди, конкурентных гонок и нагрузки 50/51 пользователей:
+
+```bash
+pnpm test:matchmaking
+```
+
+Интеграционная проверка API, PostgreSQL, Redis и BattleService:
+
+```bash
+pnpm --filter @clirace/api test:matchmaking-e2e
+```
+
+Полный внешний сценарий с двумя временными production-аккаунтами, двумя реальными sandbox, тремя раундами и server-authoritative результатом:
+
+```bash
+CLIRACE_URL=https://clirace.fun pnpm test:matchmaking-e2e
+```
 
 Получить настройки battle:
 

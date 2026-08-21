@@ -23,6 +23,8 @@ interface BattleRow {
   started_at: Date | null;
   finished_at: Date | null;
   winner_user_id: string | null;
+  matchmaking_id: string | null;
+  matchmaking_pool: string | null;
   created_at: Date;
   expires_at: Date;
 }
@@ -56,6 +58,25 @@ interface CurrentChallengeRow {
 export class BattleStateError extends Error {
   constructor(message: string, readonly statusCode = 409) {
     super(message);
+  }
+}
+
+export interface BattleNavigation {
+  id: string;
+  roomCode: string;
+  status: BattleRow['status'];
+  matchmakingId: string | null;
+  matchmakingPool: string | null;
+}
+
+export class BattleAdmissionError extends BattleStateError {
+  constructor(
+    readonly code: 'active_battle' | 'user_unavailable',
+    readonly userId: string,
+    message: string,
+    readonly battle: BattleNavigation | null = null,
+  ) {
+    super(message, 409);
   }
 }
 
@@ -134,55 +155,100 @@ export class BattleManager implements BattleSandboxHooks {
     };
   }
 
+  async findActiveBattleForUser(userId: string): Promise<BattleNavigation | null> {
+    const result = await this.dependencies.postgres.query<BattleRow>(`
+      SELECT b.* FROM battles b
+      JOIN battle_players bp ON bp.battle_id = b.id
+      WHERE bp.user_id = $1 AND b.status IN ('waiting', 'countdown', 'running')
+      ORDER BY b.created_at DESC, b.id DESC
+      LIMIT 1
+    `, [userId]);
+    return result.rows[0] ? toBattleNavigation(result.rows[0]) : null;
+  }
+
+  async findMatchmakingBattle(matchmakingId: string): Promise<BattleNavigation | null> {
+    const result = await this.dependencies.postgres.query<BattleRow>(`
+      SELECT * FROM battles WHERE matchmaking_id = $1 LIMIT 1
+    `, [matchmakingId]);
+    return result.rows[0] ? toBattleNavigation(result.rows[0]) : null;
+  }
+
   async createBattle(user: AuthUser, rounds: 3 | 5 | 10, categorySlug: string): Promise<unknown> {
     const client = await this.dependencies.postgres.connect();
     try {
       await client.query('BEGIN');
-      const category = categorySlug === 'all' ? null : await client.query<{ id: number }>(
-        'SELECT id FROM categories WHERE slug = $1 AND enabled', [categorySlug],
-      ).then((result) => result.rows[0] ?? null);
-      if (categorySlug !== 'all' && !category) throw new BattleStateError('Категория не найдена.', 400);
-
-      const challenges = await client.query<{ id: string }>(`
-        SELECT id FROM challenges
-        WHERE enabled AND type = 'real_shell'
-          AND ($1::smallint IS NULL OR category_id = $1)
-          AND NOT EXISTS (
-            SELECT 1 FROM challenge_collection_items ci
-            JOIN challenge_collections cc ON cc.id = ci.collection_id
-            WHERE ci.challenge_id = challenges.id AND cc.slug = 'interview-100'
-          )
-        ORDER BY random()
-        LIMIT $2
-      `, [category?.id ?? null, rounds]);
-      if (challenges.rows.length !== rounds) {
-        throw new BattleStateError(`В этой категории пока меньше ${rounds} Shell-заданий. Выберите меньше раундов или все категории.`, 422);
-      }
-
-      const battleId = randomUUID();
-      const challengeIds = challenges.rows.map((challenge) => challenge.id);
+      await this.lockBattleUsers(client, [user.id]);
+      await this.assertUsersActive(client, [user.id]);
+      await this.assertNoActiveBattle(client, user.id);
+      const selection = await this.selectBattleChallenges(client, rounds, categorySlug);
       const expiresAt = new Date(Date.now() + this.config.BATTLE_WAITING_TTL_SECONDS * 1_000);
-      let roomCode: string | undefined;
-      for (let attempt = 0; attempt < 12 && !roomCode; attempt += 1) {
-        const candidate = generateRoomCode();
-        const inserted = await client.query<{ room_code: string }>(`
-          INSERT INTO battles (
-            id, room_code, host_user_id, category_id, round_count, challenge_ids, expires_at
-          ) VALUES ($1, $2, $3, $4, $5, $6::bigint[], $7)
-          ON CONFLICT (room_code) DO NOTHING
-          RETURNING room_code
-        `, [battleId, candidate, user.id, category?.id ?? null, rounds, challengeIds, expiresAt]);
-        roomCode = inserted.rows[0]?.room_code;
-      }
-      if (!roomCode) throw new BattleStateError('Не удалось создать уникальный код комнаты. Повторите попытку.', 503);
+      const battle = await this.insertBattle(client, {
+        hostUserId: user.id,
+        rounds,
+        categoryId: selection.categoryId,
+        challengeIds: selection.challengeIds,
+        expiresAt,
+      });
       await client.query(`
         INSERT INTO battle_players (id, battle_id, user_id)
         VALUES ($1, $2, $3)
-      `, [randomUUID(), battleId, user.id]);
+      `, [randomUUID(), battle.id, user.id]);
       await client.query('COMMIT');
-      return this.loadState(roomCode, user.id);
+      return this.loadState(battle.roomCode, user.id);
     } catch (error) {
       await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async createMatchmakingBattle(
+    matchmakingId: string,
+    pool: string,
+    first: AuthUser,
+    second: AuthUser,
+  ): Promise<BattleNavigation> {
+    if (first.id === second.id) throw new BattleStateError('Нельзя создать Battle с самим собой.', 409);
+    const client = await this.dependencies.postgres.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended('clirace:match:' || $1::text, 0))", [matchmakingId]);
+      const existing = await client.query<BattleRow>('SELECT * FROM battles WHERE matchmaking_id = $1', [matchmakingId]);
+      if (existing.rows[0]) {
+        await client.query('COMMIT');
+        return toBattleNavigation(existing.rows[0]);
+      }
+
+      const users = [first.id, second.id].sort((left, right) => BigInt(left) < BigInt(right) ? -1 : 1);
+      await this.lockBattleUsers(client, users);
+      await this.assertUsersActive(client, users);
+      await this.assertNoActiveBattle(client, first.id);
+      await this.assertNoActiveBattle(client, second.id);
+      const selection = await this.selectBattleChallenges(client, 3, 'all');
+      const battle = await this.insertBattle(client, {
+        hostUserId: first.id,
+        rounds: 3,
+        categoryId: selection.categoryId,
+        challengeIds: selection.challengeIds,
+        expiresAt: new Date(Date.now() + this.config.MATCHMAKING_BATTLE_WAITING_TTL_SECONDS * 1_000),
+        matchmakingId,
+        matchmakingPool: pool,
+      });
+      await client.query(`
+        INSERT INTO battle_players (id, battle_id, user_id)
+        VALUES ($1, $3, $4), ($2, $3, $5)
+      `, [randomUUID(), randomUUID(), battle.id, first.id, second.id]);
+      await client.query('COMMIT');
+      return {
+        id: battle.id,
+        roomCode: battle.roomCode,
+        status: 'waiting',
+        matchmakingId,
+        matchmakingPool: pool,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
       throw error;
     } finally {
       client.release();
@@ -200,6 +266,9 @@ export class BattleManager implements BattleSandboxHooks {
       battleId = battle.id;
       const existing = await client.query('SELECT id FROM battle_players WHERE battle_id = $1 AND user_id = $2', [battle.id, user.id]);
       if (existing.rowCount === 0) {
+        await this.lockBattleUsers(client, [user.id]);
+        await this.assertUsersActive(client, [user.id]);
+        await this.assertNoActiveBattle(client, user.id, battle.id);
         if (battle.status !== 'waiting') throw new BattleStateError('Матч уже начался.', 409);
         const count = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM battle_players WHERE battle_id = $1', [battle.id]);
         if ((count.rows[0]?.count ?? 0) >= 2) throw new BattleStateError('Комната уже заполнена.', 409);
@@ -581,6 +650,117 @@ export class BattleManager implements BattleSandboxHooks {
     }
   }
 
+  private async lockBattleUsers(client: PoolClient, userIds: string[]): Promise<void> {
+    for (const userId of userIds) {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended('clirace:battle:user:' || $1::text, 0))",
+        [userId],
+      );
+    }
+  }
+
+  private async assertUsersActive(client: PoolClient, userIds: string[]): Promise<void> {
+    const result = await client.query<{ id: string; account_status: 'active' | 'suspended' }>(`
+      SELECT id, account_status FROM users
+      WHERE id = ANY($1::bigint[])
+      ORDER BY id
+      FOR UPDATE
+    `, [userIds]);
+    for (const userId of userIds) {
+      const user = result.rows.find((row) => row.id === userId);
+      if (!user || user.account_status !== 'active') {
+        throw new BattleAdmissionError('user_unavailable', userId, 'Пользователь больше не может участвовать в Battle.');
+      }
+    }
+  }
+
+  private async assertNoActiveBattle(client: PoolClient, userId: string, allowedBattleId?: string): Promise<void> {
+    const result = await client.query<BattleRow>(`
+      SELECT b.* FROM battles b
+      JOIN battle_players bp ON bp.battle_id = b.id
+      WHERE bp.user_id = $1
+        AND b.status IN ('waiting', 'countdown', 'running')
+        AND ($2::uuid IS NULL OR b.id <> $2)
+      ORDER BY b.created_at DESC, b.id DESC
+      LIMIT 1
+    `, [userId, allowedBattleId ?? null]);
+    if (result.rows[0]) {
+      throw new BattleAdmissionError(
+        'active_battle',
+        userId,
+        'У пользователя уже есть активный Battle.',
+        toBattleNavigation(result.rows[0]),
+      );
+    }
+  }
+
+  private async selectBattleChallenges(
+    client: PoolClient,
+    rounds: 3 | 5 | 10,
+    categorySlug: string,
+  ): Promise<{ categoryId: number | null; challengeIds: string[] }> {
+    const category = categorySlug === 'all' ? null : await client.query<{ id: number }>(
+      'SELECT id FROM categories WHERE slug = $1 AND enabled', [categorySlug],
+    ).then((result) => result.rows[0] ?? null);
+    if (categorySlug !== 'all' && !category) throw new BattleStateError('Категория не найдена.', 400);
+
+    const challenges = await client.query<{ id: string }>(`
+      SELECT id FROM challenges
+      WHERE enabled AND type = 'real_shell'
+        AND ($1::smallint IS NULL OR category_id = $1)
+        AND NOT EXISTS (
+          SELECT 1 FROM challenge_collection_items ci
+          JOIN challenge_collections cc ON cc.id = ci.collection_id
+          WHERE ci.challenge_id = challenges.id AND cc.slug = 'interview-100'
+        )
+      ORDER BY random()
+      LIMIT $2
+    `, [category?.id ?? null, rounds]);
+    if (challenges.rows.length !== rounds) {
+      throw new BattleStateError(`В этой категории пока меньше ${rounds} Shell-заданий. Выберите меньше раундов или все категории.`, 422);
+    }
+    return {
+      categoryId: category?.id ?? null,
+      challengeIds: challenges.rows.map((challenge) => challenge.id),
+    };
+  }
+
+  private async insertBattle(client: PoolClient, options: {
+    hostUserId: string;
+    rounds: 3 | 5 | 10;
+    categoryId: number | null;
+    challengeIds: string[];
+    expiresAt: Date;
+    matchmakingId?: string;
+    matchmakingPool?: string;
+  }): Promise<{ id: string; roomCode: string }> {
+    const battleId = randomUUID();
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const candidate = generateRoomCode();
+      const inserted = await client.query<{ room_code: string }>(`
+        INSERT INTO battles (
+          id, room_code, host_user_id, category_id, round_count, challenge_ids, expires_at,
+          matchmaking_id, matchmaking_pool
+        ) VALUES ($1, $2, $3, $4, $5, $6::bigint[], $7, $8, $9)
+        ON CONFLICT (room_code) DO NOTHING
+        RETURNING room_code
+      `, [
+        battleId,
+        candidate,
+        options.hostUserId,
+        options.categoryId,
+        options.rounds,
+        options.challengeIds,
+        options.expiresAt,
+        options.matchmakingId ?? null,
+        options.matchmakingPool ?? null,
+      ]);
+      const roomCode = inserted.rows[0]?.room_code;
+      if (roomCode) return { id: battleId, roomCode };
+    }
+    throw new BattleStateError('Не удалось создать уникальный код комнаты. Повторите попытку.', 503);
+  }
+
   private async ensureRound(
     client: PoolClient,
     battleId: string,
@@ -671,6 +851,7 @@ function publicBattleState(
       ? { slug: battle.category_slug, name: battle.category_name }
       : { slug: 'all', name: 'Все Shell' },
     hostUserId: battle.host_user_id,
+    matchmakingPool: battle.matchmaking_pool,
     winnerUserId: battle.winner_user_id,
     countdownStartAt: battle.countdown_start_at?.toISOString() ?? null,
     startedAt: battle.started_at?.toISOString() ?? null,
@@ -701,6 +882,16 @@ function publicBattleState(
       category: { slug: challenge.category_slug, name: challenge.category_name },
     } : null,
     ...(results ? { results } : {}),
+  };
+}
+
+function toBattleNavigation(battle: BattleRow): BattleNavigation {
+  return {
+    id: battle.id,
+    roomCode: battle.room_code,
+    status: battle.status,
+    matchmakingId: battle.matchmaking_id,
+    matchmakingPool: battle.matchmaking_pool,
   };
 }
 

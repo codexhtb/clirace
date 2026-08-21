@@ -6,6 +6,7 @@ import { AuthService, type AuthUser } from './auth-service.js';
 import type { BattleManager } from './battle-service.js';
 import type { AppConfig } from './config.js';
 import { hasSameOrigin } from './http-security.js';
+import type { MatchmakingManager } from './matchmaking-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { checkDependencies, type Dependencies } from './services.js';
 
@@ -23,6 +24,7 @@ export async function registerAdminRoutes(
   dependencies: Dependencies,
   sandboxManager: SandboxManager,
   battleManager: BattleManager,
+  matchmakingManager: MatchmakingManager,
 ): Promise<void> {
   const auth = new AuthService(config, dependencies);
 
@@ -41,13 +43,13 @@ export async function registerAdminRoutes(
   });
 
   app.get('/api/admin/overview', async () => {
-    const [checks, sandbox, product, integrity] = await Promise.all([
+    const [checks, sandbox, product, integrity, matchmaking] = await Promise.all([
       checkDependencies(dependencies),
       sandboxManager.getOperationsSnapshot(),
       dependencies.postgres.query<{
         users_total: number; users_24h: number; users_7d: number; users_30d: number;
         logins_24h: number; active_games: number; active_sandboxes: number;
-        battles_today: number; challenges_today: number;
+        battles_today: number; matchmaking_today: number; challenges_today: number;
       }>(`
         SELECT
           (SELECT count(*)::int FROM users) AS users_total,
@@ -58,18 +60,21 @@ export async function registerAdminRoutes(
           (SELECT count(*)::int FROM game_sessions WHERE status = 'active') AS active_games,
           (SELECT count(*)::int FROM sandbox_sessions WHERE lifecycle_state IN ('requested','queued','starting','ready','attached','idle','terminating')) AS active_sandboxes,
           (SELECT count(*)::int FROM battles WHERE created_at >= date_trunc('day', now())) AS battles_today,
+          (SELECT count(*)::int FROM battles WHERE matchmaking_pool IS NOT NULL AND created_at >= date_trunc('day', now())) AS matchmaking_today,
           (SELECT count(*)::int FROM results WHERE correct AND created_at >= date_trunc('day', now())) AS challenges_today
       `),
       dependencies.postgres.query(`
         SELECT id, source, total, passed, failed, duration_ms, failed_challenge_ids, created_at
         FROM admin_integrity_runs ORDER BY created_at DESC, id DESC LIMIT 1
       `),
+      matchmakingManager.metrics(),
     ]);
     return {
       dependencies: { api: 'up', ...checks },
       sandbox,
       product: product.rows[0],
       integrity: integrity.rows[0] ?? null,
+      matchmaking,
       generatedAt: new Date().toISOString(),
     };
   });
@@ -140,6 +145,7 @@ export async function registerAdminRoutes(
     const [revokedSessions, terminatedSandboxes] = await Promise.all([
       auth.revokeAllSessions(parsed.data.id),
       sandboxManager.destroyUserSessions(parsed.data.id, 'account_suspended'),
+      matchmakingManager.removeUser(parsed.data.id, 'suspended'),
     ]);
     await audit(dependencies, request, 'admin.user.suspend', 'user', parsed.data.id, { revokedSessions, terminatedSandboxes });
     return { ok: true, revokedSessions, terminatedSandboxes };

@@ -34,6 +34,11 @@ interface OverviewPayload {
     lifecycleCounts: Record<string, number>;
   };
   product: Record<string, number>;
+  matchmaking: {
+    queueDepth: number; oldestWaitSeconds: number; enqueuedTotal: number; matchedTotal: number;
+    cancelledTotal: number; expiredTotal: number; failedTotal: number;
+    waitP50Seconds: number; waitP95Seconds: number;
+  };
   integrity: Record<string, unknown> | null;
   generatedAt: string;
 }
@@ -125,6 +130,17 @@ function Overview() {
           <Stat label="Активных shell" value={p.active_sandboxes} />
           <Stat label="Battles сегодня" value={p.battles_today} />
           <Stat label="Решений сегодня" value={p.challenges_today} />
+        </div>
+      </section>
+      <section>
+        <AdminHeading title="Matchmaking" detail="Quick Match · Redis queue · без пользовательских labels" />
+        <div className="admin-stat-grid">
+          <Stat label="В очереди" value={data.matchmaking.queueDepth} hint={`старейший ${data.matchmaking.oldestWaitSeconds.toFixed(0)} с`} />
+          <Stat label="Матчей сегодня" value={p.matchmaking_today} />
+          <Stat label="P50 ожидания" value={`${data.matchmaking.waitP50Seconds.toFixed(1)} с`} />
+          <Stat label="P95 ожидания" value={`${data.matchmaking.waitP95Seconds.toFixed(1)} с`} />
+          <Stat label="Истекло" value={data.matchmaking.expiredTotal} />
+          <Stat label="Ошибок pairing" value={data.matchmaking.failedTotal} />
         </div>
       </section>
       <section className="grid gap-5 xl:grid-cols-2">

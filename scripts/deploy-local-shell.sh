@@ -120,6 +120,18 @@ for attempt in $(seq 1 30); do
       echo 'Operations Console V1 production validation passed.'
     fi
 
+    matchmaking_validation_marker=/var/lib/clirace/matchmaking-v1-validated
+    if [[ ! -f "$matchmaking_validation_marker" ]]; then
+      echo 'Running one-time Matchmaking V1 production validation...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/matchmaking-test.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/matchmaking-e2e.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$matchmaking_validation_marker"
+      echo 'Matchmaking V1 production validation passed.'
+    fi
+
     # The legacy archive runner may have populated a real Git checkout. Verify
     # every deployed tracked file byte-for-byte before advancing HEAD/index;
     # this also handles files that are new relative to the old local index.
