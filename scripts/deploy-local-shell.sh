@@ -108,16 +108,17 @@ for attempt in $(seq 1 30); do
       echo 'Sandbox Platform V2 production validation passed.'
     fi
 
-    # The legacy archive runner may have populated a real Git checkout. After
-    # verifying that every deployed tracked file exactly matches origin/main,
-    # advance HEAD/index without discarding or overwriting any worktree data.
+    # The legacy archive runner may have populated a real Git checkout. Verify
+    # every deployed tracked file byte-for-byte before advancing HEAD/index;
+    # this also handles files that are new relative to the old local index.
     if [[ -d .git ]]; then
       git -c safe.directory="$PROJECT_DIR" fetch origin main
-      if ! git -c safe.directory="$PROJECT_DIR" diff --quiet origin/main -- .; then
-        echo 'Deployed worktree differs from origin/main; refusing to alter Git metadata.' >&2
-        git -c safe.directory="$PROJECT_DIR" status --short >&2
-        exit 1
-      fi
+      while IFS= read -r -d '' tracked; do
+        if [[ ! -f "$tracked" ]] || ! cmp -s <(git -c safe.directory="$PROJECT_DIR" show "origin/main:$tracked") "$tracked"; then
+          echo "Deployed file differs from origin/main: $tracked" >&2
+          exit 1
+        fi
+      done < <(git -c safe.directory="$PROJECT_DIR" ls-tree -r -z --name-only origin/main)
       while IFS= read -r untracked; do
         [[ -z "$untracked" ]] && continue
         git -c safe.directory="$PROJECT_DIR" cat-file -e "origin/main:$untracked" 2>/dev/null || {

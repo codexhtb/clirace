@@ -42,7 +42,7 @@ try {
 
   # Archive Git blobs instead of the Windows working tree. This preserves the
   # repository's LF rules and makes the deployed files byte-identical to HEAD.
-  & git.exe archive --format=tar.gz --output=$archive HEAD
+  & git.exe -c core.autocrlf=false archive --format=tar.gz --output=$archive HEAD
   if ($LASTEXITCODE -ne 0) { throw 'Unable to create the deployment archive.' }
 
   Write-Host '[3/4] Uploading files to the server...' -ForegroundColor Cyan
