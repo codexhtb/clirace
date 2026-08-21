@@ -89,7 +89,7 @@ async function main(): Promise<void> {
     const recovered = (await inject(app, 'GET', '/api/matchmaking/status', g.cookie)).json<{ status: string }>();
     equal(recovered.status, 'searching', 'Battle creation failure does not leave opponent stuck');
 
-    equal((await inject(app, 'POST', '/api/matchmaking/queue', h.cookie)).statusCode, 200, 'suspension cleanup fixture queued');
+    await matchmakingManager.enqueue(h);
     await matchmakingManager.removeUser(h.id, 'suspended');
     equal((await inject(app, 'GET', '/api/matchmaking/status', h.cookie)).json<{ status: string }>().status, 'idle', 'suspension removes queue entry');
 
