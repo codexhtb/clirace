@@ -34,14 +34,19 @@ class UserClient {
   async delete() {
     if (!this.cookie) return;
     let lastStatus = 0;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         const { response, body } = await this.request('/api/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) });
         lastStatus = response.status;
         if (response.status === 204) { this.cookie = ''; return; }
+        if (response.status === 429) {
+          const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '60', 10);
+          await delay(Math.min(65, Math.max(1, Number.isFinite(retryAfter) ? retryAfter : 60)) * 1_000);
+          continue;
+        }
         if (response.status !== 429 && response.status < 500) throw new Error(`delete ${this.username}: ${response.status} ${body?.message ?? ''}`);
       } catch (error) {
-        if (attempt === 2) throw error;
+        if (attempt === 4) throw error;
       }
       await delay(500 * (attempt + 1));
     }
