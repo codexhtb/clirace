@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { visibleDivision } from './ranked-config.js';
+import { RankedService } from './ranked-service.js';
 import type { Dependencies } from './services.js';
 
 const usernameSchema = z.object({
@@ -14,6 +16,7 @@ const historyQuerySchema = z.object({
 const leaderboardQuerySchema = z.object({
   category: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/).default('overall'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).max(100_000).default(0),
 });
 
 interface PublicUserRow {
@@ -39,9 +42,23 @@ interface HistoryRow {
   duration_ms: number;
 }
 
+interface RankedHistoryRow {
+  battle_id: string;
+  room_code: string;
+  opponent_username: string;
+  winner_id: string | null;
+  outcome: 'player_a_win' | 'player_b_win' | 'no_contest';
+  mmr_before: number;
+  mmr_after: number;
+  division_before: string;
+  division_after: string;
+  created_at: Date;
+}
+
 export async function registerCommunityRoutes(
   app: FastifyInstance,
   dependencies: Dependencies,
+  rankedService = new RankedService(dependencies),
 ): Promise<void> {
   app.get('/api/profiles/:username', async (request, reply) => {
     const params = usernameSchema.safeParse(request.params);
@@ -49,7 +66,7 @@ export async function registerCommunityRoutes(
     const user = await findPublicUser(dependencies, params.data.username);
     if (!user) return notFound(reply);
 
-    const [overallResult, statsResult, ratingsResult, rankResult, historyResult, progressResult, achievementResult] = await Promise.all([
+    const [overallResult, statsResult, ranked, rankedHistory, ratingsResult, rankResult, historyResult, progressResult, achievementResult] = await Promise.all([
       dependencies.postgres.query<{ rating: number; games_played: number }>(`
         SELECT rating, games_played FROM user_ratings
         WHERE user_id = $1 AND category_id IS NULL
@@ -78,6 +95,8 @@ export async function registerCommunityRoutes(
         WHERE u.id = $1
         GROUP BY u.id
       `, [user.id]),
+      rankedService.stats(user.id),
+      loadRankedHistory(dependencies, user.id, 10),
       dependencies.postgres.query<{
         slug: string; name: string; rating: number; games_played: number; updated_at: Date;
       }>(`
@@ -157,6 +176,21 @@ export async function registerCommunityRoutes(
           unlockedAt: achievement.unlocked_at.toISOString(),
         })),
         recentRuns: historyResult.rows.map(publicHistoryRow),
+        ranked: {
+          ...ranked,
+          recentMatches: rankedHistory.rows.map((match) => ({
+            battleId: match.battle_id,
+            roomCode: match.room_code,
+            opponent: match.opponent_username,
+            result: match.outcome === 'no_contest' ? 'no_contest' : match.winner_id === user.id ? 'win' : 'loss',
+            mmrBefore: match.mmr_before,
+            mmrAfter: match.mmr_after,
+            delta: match.mmr_after - match.mmr_before,
+            divisionBefore: match.division_before,
+            divisionAfter: match.division_after,
+            playedAt: match.created_at.toISOString(),
+          })),
+        },
       },
     });
   });
@@ -184,6 +218,9 @@ export async function registerCommunityRoutes(
   app.get('/api/leaderboard', async (request, reply) => {
     const query = leaderboardQuerySchema.safeParse(request.query);
     if (!query.success) return invalidRequest(reply);
+    if (query.data.category === 'ranked') {
+      return rankedLeaderboard(reply, dependencies, query.data.limit, query.data.offset);
+    }
     const category = query.data.category === 'overall'
       ? null
       : await dependencies.postgres.query<{ id: number; slug: string; name: string }>(`
@@ -227,8 +264,8 @@ export async function registerCommunityRoutes(
       LEFT JOIN session_stats ss ON ss.user_id = ranked.user_id
       LEFT JOIN result_stats rs ON rs.user_id = ranked.user_id
       ORDER BY ranked.rank
-      LIMIT $2
-    `, [categoryId, query.data.limit]);
+      LIMIT $2 OFFSET $3
+    `, [categoryId, query.data.limit, query.data.offset]);
     const total = await dependencies.postgres.query<{ total: number }>(`
       SELECT count(*)::int AS total FROM user_ratings
       WHERE category_id IS NOT DISTINCT FROM $1 AND games_played > 0
@@ -255,6 +292,77 @@ async function findPublicUser(dependencies: Dependencies, username: string): Pro
     SELECT id, username, created_at FROM users WHERE username_normalized = $1
   `, [username.toLowerCase()]);
   return result.rows[0];
+}
+
+async function rankedLeaderboard(
+  reply: FastifyReply,
+  dependencies: Dependencies,
+  limit: number,
+  offset: number,
+) {
+  const [entries, total] = await Promise.all([
+    dependencies.postgres.query<{
+      rank: number; username: string; mmr: number; games_played: number;
+      wins: number; losses: number; placement_games_completed: number;
+    }>(`
+      WITH ranked AS (
+        SELECT stats.user_id, stats.mmr, stats.games_played, stats.wins, stats.losses,
+               stats.placement_games_completed,
+               row_number() OVER (
+                 ORDER BY stats.mmr DESC, stats.wins DESC, stats.games_played ASC, u.username_normalized
+               )::int AS rank
+        FROM user_ranked_stats stats
+        JOIN users u ON u.id = stats.user_id
+        WHERE stats.games_played > 0 AND u.account_status = 'active'
+      )
+      SELECT ranked.*, u.username FROM ranked
+      JOIN users u ON u.id = ranked.user_id
+      ORDER BY ranked.rank LIMIT $1 OFFSET $2
+    `, [limit, offset]),
+    dependencies.postgres.query<{ total: number }>(`
+      SELECT count(*)::int AS total FROM user_ranked_stats stats
+      JOIN users u ON u.id = stats.user_id
+      WHERE stats.games_played > 0 AND u.account_status = 'active'
+    `),
+  ]);
+  return reply.header('cache-control', 'public, max-age=20').send({
+    board: { slug: 'ranked', name: 'Ranked' },
+    total: total.rows[0]?.total ?? 0,
+    entries: entries.rows.map((entry) => ({
+      rank: entry.rank,
+      username: entry.username,
+      rating: entry.mmr,
+      mmr: entry.mmr,
+      gamesPlayed: entry.games_played,
+      wins: entry.wins,
+      losses: entry.losses,
+      placementGamesCompleted: entry.placement_games_completed,
+      division: visibleDivision(entry.mmr, entry.games_played),
+      provisional: entry.games_played < 5,
+      totalScore: 0,
+      bestStreak: 0,
+      accuracy: entry.games_played > 0 ? Math.round((entry.wins / entry.games_played) * 100) : 0,
+    })),
+  });
+}
+
+function loadRankedHistory(dependencies: Dependencies, userId: string, limit: number) {
+  return dependencies.postgres.query<RankedHistoryRow>(`
+    SELECT result.battle_id, battle.room_code, opponent.username AS opponent_username,
+           result.winner_id, result.outcome,
+           CASE WHEN result.player_a_id = $1 THEN result.player_a_mmr_before ELSE result.player_b_mmr_before END AS mmr_before,
+           CASE WHEN result.player_a_id = $1 THEN result.player_a_mmr_after ELSE result.player_b_mmr_after END AS mmr_after,
+           CASE WHEN result.player_a_id = $1 THEN result.player_a_division_before ELSE result.player_b_division_before END AS division_before,
+           CASE WHEN result.player_a_id = $1 THEN result.player_a_division_after ELSE result.player_b_division_after END AS division_after,
+           result.created_at
+    FROM ranked_match_results result
+    JOIN battles battle ON battle.id = result.battle_id
+    JOIN users opponent ON opponent.id = CASE
+      WHEN result.player_a_id = $1 THEN result.player_b_id ELSE result.player_a_id END
+    WHERE result.player_a_id = $1 OR result.player_b_id = $1
+    ORDER BY result.created_at DESC, result.id DESC
+    LIMIT $2
+  `, [userId, limit]);
 }
 
 function loadHistory(dependencies: Dependencies, userId: string, limit: number, offset: number) {

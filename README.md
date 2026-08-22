@@ -1330,6 +1330,27 @@ Reference host-level Caddy configuration находится в `infra/caddy/Cadd
 
 ---
 
+## Ranked / MMR V1
+
+Ranked использует существующие Matchmaking V1, Battle Engine и rootless sandbox. У Battle сервером сохраняется режим `private`, `quick` или `ranked`; только последний может изменить отдельный `ranked_mmr`.
+
+- PostgreSQL — постоянный source of truth (`user_ranked_stats`, `ranked_match_results`).
+- Начальный MMR — 1000, placements — 5 матчей.
+- Elo: `expected = 1 / (1 + 10 ^ ((opponent - player) / 400))`, K=40 во время placements и K=24 после них, результат округляется `Math.round` и ограничивается снизу нулём.
+- Дивизионы вычисляет API: Bronze `<900`, Silver `900–1099`, Gold `1100–1299`, Platinum `1300–1499`, Diamond `1500–1699`, Master `1700+`.
+- Обновление обоих игроков и `ranked_match_results` выполняется в одной транзакции с `FOR UPDATE`; `UNIQUE(battle_id)` не допускает повторного применения.
+- Ranked Redis queue изолирована от Quick Match и сначала ищет в диапазоне ±100 MMR, затем ±200 после 15 секунд, ±350 после 30 секунд и широко раскрывается после 60 секунд.
+- Технический сбой до честного завершения записывается как `no_contest` с нулевым изменением MMR.
+
+Проверки:
+
+```bash
+pnpm test:ranked
+pnpm test:ranked-matchmaking
+pnpm test:ranked-service
+CLIRACE_URL=https://clirace.fun pnpm test:ranked-e2e
+```
+
 # Текущая стадия
 
 ```text

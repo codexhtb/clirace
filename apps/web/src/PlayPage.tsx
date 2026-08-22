@@ -3,6 +3,7 @@ import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'rea
 import { CommunityHeader } from './CommunityHeader';
 import { humanizeError } from './errors';
 import { QuickMatchPanel } from './QuickMatchPanel';
+import { RankedMatchPanel } from './RankedMatchPanel';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
@@ -143,6 +144,17 @@ export function PlayPage() {
 function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
   categories: Category[]; shellEnabled: boolean; busy: boolean; error: string | null; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [matchmakingMode, setMatchmakingMode] = useState<'quick' | 'ranked'>('quick');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/matchmaking/status?mode=quick', { cache: 'no-store', signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: { pool?: 'quick' | 'ranked' } | null) => {
+        if (payload?.pool === 'ranked') setMatchmakingMode('ranked');
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
   const requestedDefaults = getPlayDefaults();
   const defaults = requestedDefaults.mode === 'real_shell' && !shellEnabled
     ? { ...requestedDefaults, mode: 'mixed' as const }
@@ -155,7 +167,11 @@ function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
         <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Быстрая практика, собеседование, задача дня или соревнование с другом — каждый режим использует реальные серверные результаты.</p>
       </div>
 
-      <QuickMatchPanel />
+      <div className="matchmaking-mode-tabs" role="tablist" aria-label="Публичный PvP режим">
+        <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" onClick={() => setMatchmakingMode('quick')}>Quick Match</button>
+        <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" onClick={() => setMatchmakingMode('ranked')}>Ranked</button>
+      </div>
+      {matchmakingMode === 'quick' ? <QuickMatchPanel /> : <RankedMatchPanel />}
 
       <div className="mb-4 mt-10 flex items-center justify-between gap-4">
         <p className="eyebrow">Другие режимы</p>

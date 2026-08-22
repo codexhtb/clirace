@@ -1,9 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import { AuthService, type AuthUser } from './auth-service.js';
 import type { AppConfig } from './config.js';
 import { hasSameOrigin } from './http-security.js';
 import { MatchmakingError, type MatchmakingManager } from './matchmaking-service.js';
 import type { Dependencies } from './services.js';
+
+const modeSchema = z.object({ mode: z.enum(['quick', 'ranked']).default('quick') }).strict();
 
 export async function registerMatchmakingRoutes(
   app: FastifyInstance,
@@ -19,7 +22,9 @@ export async function registerMatchmakingRoutes(
     if (!hasSameOrigin(request)) return forbiddenOrigin(reply);
     const user = await requireUser(auth, request, reply);
     if (!user) return;
-    return sendResult(reply, () => matchmaking.enqueue(user));
+    const body = modeSchema.safeParse(request.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: 'Invalid mode', message: 'Выберите Quick Match или Ranked.' });
+    return sendResult(reply, () => matchmaking.enqueue(user, body.data.mode));
   });
 
   app.get('/api/matchmaking/status', {
@@ -29,7 +34,9 @@ export async function registerMatchmakingRoutes(
   }, async (request, reply) => {
     const user = await requireUser(auth, request, reply);
     if (!user) return;
-    return sendResult(reply, () => matchmaking.status(user.id));
+    const query = modeSchema.safeParse(request.query ?? {});
+    if (!query.success) return reply.code(400).send({ error: 'Invalid mode', message: 'Некорректный режим поиска.' });
+    return sendResult(reply, () => matchmaking.status(user.id, query.data.mode));
   });
 
   app.post('/api/matchmaking/heartbeat', {

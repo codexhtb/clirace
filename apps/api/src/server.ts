@@ -3,16 +3,18 @@ import { BattleManager } from './battle-service.js';
 import { loadConfig } from './config.js';
 import { runMigrations } from './migrations.js';
 import { MatchmakingManager } from './matchmaking-service.js';
+import { RankedService } from './ranked-service.js';
 import { SandboxManager } from './sandbox-manager.js';
 import { closeDependencies, connectDependencies, createDependencies } from './services.js';
 
 const config = loadConfig();
 const dependencies = createDependencies(config);
 const sandboxManager = new SandboxManager(config, dependencies);
-const battleManager = new BattleManager(config, dependencies, sandboxManager);
+const rankedService = new RankedService(dependencies);
+const battleManager = new BattleManager(config, dependencies, sandboxManager, rankedService);
 const matchmakingManager = new MatchmakingManager(config, dependencies, sandboxManager, battleManager);
 sandboxManager.setBattleHooks(battleManager);
-const app = buildApp({ config, dependencies, sandboxManager, battleManager, matchmakingManager });
+const app = buildApp({ config, dependencies, sandboxManager, rankedService, battleManager, matchmakingManager });
 
 async function shutdown(signal: string): Promise<void> {
   app.log.info({ signal }, 'Shutting down');

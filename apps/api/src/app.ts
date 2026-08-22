@@ -15,6 +15,7 @@ import { registerInterviewRoutes } from './interview-routes.js';
 import { registerLearningRoutes } from './learning-routes.js';
 import { registerMatchmakingRoutes } from './matchmaking-routes.js';
 import type { MatchmakingManager } from './matchmaking-service.js';
+import type { RankedService } from './ranked-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { registerSandboxRoutes } from './sandbox-routes.js';
 import { checkDependencies, type Dependencies } from './services.js';
@@ -25,9 +26,10 @@ interface BuildAppOptions {
   sandboxManager: SandboxManager;
   battleManager: BattleManager;
   matchmakingManager: MatchmakingManager;
+  rankedService?: RankedService;
 }
 
-export function buildApp({ config, dependencies, sandboxManager, battleManager, matchmakingManager }: BuildAppOptions): FastifyInstance {
+export function buildApp({ config, dependencies, sandboxManager, battleManager, matchmakingManager, rankedService }: BuildAppOptions): FastifyInstance {
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
     // Caddy is the only public proxy in front of the Docker nginx gateway.
@@ -99,7 +101,7 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager, 
   });
 
   void app.register(async (communityApp) => {
-    await registerCommunityRoutes(communityApp, dependencies);
+    await registerCommunityRoutes(communityApp, dependencies, rankedService);
   });
 
   void app.register(async (dailyApp) => {

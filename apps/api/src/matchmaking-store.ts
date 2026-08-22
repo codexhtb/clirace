@@ -1,28 +1,33 @@
 import type { Dependencies } from './services.js';
+import { rankedSearchRange } from './ranked-config.js';
 
 export const QUICK_MATCH_POOL = 'quick';
+export const RANKED_MATCH_POOL = 'ranked';
+export type MatchmakingPool = typeof QUICK_MATCH_POOL | typeof RANKED_MATCH_POOL;
 
 export interface SearchingState {
   status: 'searching';
-  pool: string;
+  pool: MatchmakingPool;
   userId: string;
   queuedAt: number;
   waitingCapacity: boolean;
+  rating: number;
 }
 
 export interface PairingState {
   status: 'pairing';
-  pool: string;
+  pool: MatchmakingPool;
   userId: string;
   queuedAt: number;
   claimedAt: number;
   matchId: string;
   opponentUserId: string;
+  rating: number;
 }
 
 export interface MatchedState {
   status: 'matched';
-  pool: string;
+  pool: MatchmakingPool;
   userId: string;
   matchId: string;
   battleId: string;
@@ -35,12 +40,14 @@ export type MatchmakingRedisState = SearchingState | PairingState | MatchedState
 
 export interface PairClaim {
   matchId: string;
-  pool: string;
+  pool: MatchmakingPool;
   userA: string;
   userB: string;
   queuedAtA: number;
   queuedAtB: number;
   claimedAt: number;
+  ratingA: number;
+  ratingB: number;
 }
 
 export interface MatchmakingMetricsSnapshot {
@@ -69,7 +76,7 @@ if existing then
 end
 local state = {
   status = 'searching', pool = ARGV[2], userId = ARGV[1],
-  queuedAt = tonumber(ARGV[3]), waitingCapacity = false
+  queuedAt = tonumber(ARGV[3]), waitingCapacity = false, rating = tonumber(ARGV[5])
 }
 local encoded = cjson.encode(state)
 redis.call('SET', KEYS[2], encoded, 'PX', ARGV[4])
@@ -110,6 +117,15 @@ end
 local current = cjson.decode(currentRaw)
 if current.status ~= 'searching' then return '' end
 local candidates = redis.call('ZRANGE', KEYS[1], 0, 255)
+local selectedId = nil
+local selected = nil
+local selectedDistance = nil
+local function searchRange(waitMs)
+  if waitMs < 15000 then return tonumber(ARGV[8]) end
+  if waitMs < 30000 then return tonumber(ARGV[9]) end
+  if waitMs < 60000 then return tonumber(ARGV[10]) end
+  return tonumber(ARGV[11])
+end
 for _, candidateId in ipairs(candidates) do
   if candidateId ~= ARGV[1] then
     local candidateKey = ARGV[2] .. candidateId
@@ -122,31 +138,46 @@ for _, candidateId in ipairs(candidates) do
       if candidate.status ~= 'searching' then
         redis.call('ZREM', KEYS[1], candidateId)
       else
-        local claim = {
-          matchId = ARGV[3], pool = ARGV[4], userA = candidateId, userB = ARGV[1],
-          queuedAtA = candidate.queuedAt, queuedAtB = current.queuedAt,
-          claimedAt = tonumber(ARGV[5])
-        }
-        local first = {
-          status = 'pairing', pool = ARGV[4], userId = candidateId,
-          queuedAt = candidate.queuedAt, claimedAt = tonumber(ARGV[5]),
-          matchId = ARGV[3], opponentUserId = ARGV[1]
-        }
-        local second = {
-          status = 'pairing', pool = ARGV[4], userId = ARGV[1],
-          queuedAt = current.queuedAt, claimedAt = tonumber(ARGV[5]),
-          matchId = ARGV[3], opponentUserId = candidateId
-        }
-        redis.call('ZREM', KEYS[1], candidateId, ARGV[1])
-        redis.call('SET', candidateKey, cjson.encode(first), 'PX', ARGV[6])
-        redis.call('SET', KEYS[2], cjson.encode(second), 'PX', ARGV[6])
-        redis.call('SET', KEYS[4], cjson.encode(claim), 'PX', ARGV[6])
-        return cjson.encode(claim)
+        local distance = math.abs((candidate.rating or 1000) - (current.rating or 1000))
+        local compatible = ARGV[7] ~= '1'
+        if not compatible then
+          local currentRange = searchRange(tonumber(ARGV[5]) - current.queuedAt)
+          local candidateRange = searchRange(tonumber(ARGV[5]) - candidate.queuedAt)
+          compatible = distance <= math.max(currentRange, candidateRange)
+        end
+        if compatible and (not selected or distance < selectedDistance
+          or (distance == selectedDistance and candidate.queuedAt < selected.queuedAt)
+          or (distance == selectedDistance and candidate.queuedAt == selected.queuedAt and candidateId < selectedId)) then
+          selectedId = candidateId
+          selected = candidate
+          selectedDistance = distance
+        end
       end
     end
   end
 end
-return ''
+if not selected then return '' end
+local selectedKey = ARGV[2] .. selectedId
+local claim = {
+  matchId = ARGV[3], pool = ARGV[4], userA = selectedId, userB = ARGV[1],
+  queuedAtA = selected.queuedAt, queuedAtB = current.queuedAt,
+  claimedAt = tonumber(ARGV[5]), ratingA = selected.rating or 1000, ratingB = current.rating or 1000
+}
+local first = {
+  status = 'pairing', pool = ARGV[4], userId = selectedId,
+  queuedAt = selected.queuedAt, claimedAt = tonumber(ARGV[5]), rating = selected.rating or 1000,
+  matchId = ARGV[3], opponentUserId = ARGV[1]
+}
+local second = {
+  status = 'pairing', pool = ARGV[4], userId = ARGV[1],
+  queuedAt = current.queuedAt, claimedAt = tonumber(ARGV[5]), rating = current.rating or 1000,
+  matchId = ARGV[3], opponentUserId = selectedId
+}
+redis.call('ZREM', KEYS[1], selectedId, ARGV[1])
+redis.call('SET', selectedKey, cjson.encode(first), 'PX', ARGV[6])
+redis.call('SET', KEYS[2], cjson.encode(second), 'PX', ARGV[6])
+redis.call('SET', KEYS[4], cjson.encode(claim), 'PX', ARGV[6])
+return cjson.encode(claim)
 `;
 
 const COMMIT_SCRIPT = String.raw`
@@ -192,7 +223,8 @@ local function restore(userId, queuedAt, stateKey)
   end
   local state = {
     status = 'searching', pool = pair.pool, userId = userId,
-    queuedAt = queuedAt, waitingCapacity = ARGV[5] == '1'
+    queuedAt = queuedAt, waitingCapacity = ARGV[5] == '1',
+    rating = userId == pair.userA and pair.ratingA or pair.ratingB
   }
   redis.call('SET', stateKey, cjson.encode(state), 'PX', ARGV[4])
   redis.call('ZADD', KEYS[2], queuedAt, userId)
@@ -238,10 +270,10 @@ export class MatchmakingStore {
     if (!/^[a-z0-9:_-]{3,100}$/.test(prefix)) throw new Error('Invalid matchmaking Redis prefix.');
   }
 
-  async enqueue(userId: string, pool: string, now: number, leaseMs: number): Promise<MatchmakingRedisState> {
+  async enqueue(userId: string, pool: MatchmakingPool, now: number, leaseMs: number, rating = 1_000): Promise<MatchmakingRedisState> {
     const raw = await this.redis.eval(ENQUEUE_SCRIPT, {
-      keys: [this.queueKey(pool), this.userKey(userId), this.metricsKey()],
-      arguments: [userId, pool, String(now), String(leaseMs)],
+      keys: [this.queueKey(pool), this.userKey(userId), this.metricsKey(pool)],
+      arguments: [userId, pool, String(now), String(leaseMs), String(rating)],
     });
     return parseState(raw);
   }
@@ -262,14 +294,21 @@ export class MatchmakingStore {
 
   async claimOldest(
     userId: string,
-    pool: string,
+    pool: MatchmakingPool,
     matchId: string,
     now: number,
     pairingTtlMs: number,
   ): Promise<PairClaim | null> {
     const raw = await this.redis.eval(CLAIM_SCRIPT, {
-      keys: [this.queueKey(pool), this.userKey(userId), this.metricsKey(), this.pairKey(matchId)],
-      arguments: [userId, this.userKeyPrefix(), matchId, pool, String(now), String(pairingTtlMs)],
+      keys: [this.queueKey(pool), this.userKey(userId), this.metricsKey(pool), this.pairKey(matchId)],
+      arguments: [
+        userId, this.userKeyPrefix(), matchId, pool, String(now), String(pairingTtlMs),
+        pool === RANKED_MATCH_POOL ? '1' : '0',
+        String(rankedSearchRange(0)),
+        String(rankedSearchRange(15_000)),
+        String(rankedSearchRange(30_000)),
+        String(rankedSearchRange(60_000)),
+      ],
     });
     return raw ? parseJson<PairClaim>(raw) : null;
   }
@@ -278,7 +317,7 @@ export class MatchmakingStore {
     const committed = await this.redis.eval(COMMIT_SCRIPT, {
       keys: [
         this.pairKey(claim.matchId), this.userKey(claim.userA), this.userKey(claim.userB),
-        this.metricsKey(), this.waitsKey(),
+        this.metricsKey(claim.pool), this.waitsKey(claim.pool),
       ],
       arguments: [claim.matchId, battle.id, battle.roomCode, String(matchTtlMs), String(matchedAt)],
     });
@@ -292,7 +331,7 @@ export class MatchmakingStore {
     const rolledBack = await this.redis.eval(ROLLBACK_SCRIPT, {
       keys: [
         this.pairKey(claim.matchId), this.queueKey(claim.pool), this.userKey(claim.userA),
-        this.userKey(claim.userB), this.metricsKey(),
+        this.userKey(claim.userB), this.metricsKey(claim.pool),
       ],
       arguments: [
         claim.matchId, options.invalidUserId ?? '', String(Date.now()), String(options.leaseMs),
@@ -302,13 +341,13 @@ export class MatchmakingStore {
     return Number(rolledBack) === 1;
   }
 
-  async cancel(userId: string, pool = QUICK_MATCH_POOL): Promise<
+  async cancel(userId: string, pool: MatchmakingPool = QUICK_MATCH_POOL): Promise<
     { outcome: 'cancelled' }
     | { outcome: 'match_committing'; matchId: string }
     | { outcome: 'matched'; state: MatchedState }
   > {
     const raw = await this.redis.eval(CANCEL_SCRIPT, {
-      keys: [this.queueKey(pool), this.userKey(userId), this.metricsKey()], arguments: [userId],
+      keys: [this.queueKey(pool), this.userKey(userId), this.metricsKey(pool)], arguments: [userId],
     });
     return parseJson(raw);
   }
@@ -329,7 +368,7 @@ export class MatchmakingStore {
     await this.cancel(userId);
   }
 
-  async clearState(userId: string, pool = QUICK_MATCH_POOL): Promise<void> {
+  async clearState(userId: string, pool: MatchmakingPool = QUICK_MATCH_POOL): Promise<void> {
     await Promise.all([
       this.redis.del(this.userKey(userId)),
       this.redis.zRem(this.queueKey(pool), userId),
@@ -350,27 +389,27 @@ export class MatchmakingStore {
     return claims;
   }
 
-  async listQueuedUserIds(pool = QUICK_MATCH_POOL, limit = 2_000): Promise<string[]> {
+  async listQueuedUserIds(pool: MatchmakingPool = QUICK_MATCH_POOL, limit = 2_000): Promise<string[]> {
     return this.redis.zRange(this.queueKey(pool), 0, Math.max(0, limit - 1));
   }
 
-  async sweepExpired(pool = QUICK_MATCH_POOL): Promise<number> {
+  async sweepExpired(pool: MatchmakingPool = QUICK_MATCH_POOL): Promise<number> {
     const userIds = await this.listQueuedUserIds(pool);
     if (!userIds.length) return 0;
     const states = await this.redis.mGet(userIds.map((userId) => this.userKey(userId)));
     const expired = userIds.filter((_userId, index) => !states[index]);
     if (!expired.length) return 0;
     await this.redis.zRem(this.queueKey(pool), expired);
-    await this.redis.hIncrBy(this.metricsKey(), 'expiredTotal', expired.length);
+    await this.redis.hIncrBy(this.metricsKey(pool), 'expiredTotal', expired.length);
     return expired.length;
   }
 
-  async metrics(pool = QUICK_MATCH_POOL, now = Date.now()): Promise<MatchmakingMetricsSnapshot> {
+  async metrics(pool: MatchmakingPool = QUICK_MATCH_POOL, now = Date.now()): Promise<MatchmakingMetricsSnapshot> {
     const [raw, queueDepth, oldest, waits] = await Promise.all([
-      this.redis.hGetAll(this.metricsKey()),
+      this.redis.hGetAll(this.metricsKey(pool)),
       this.redis.zCard(this.queueKey(pool)),
       this.redis.zRangeWithScores(this.queueKey(pool), 0, 0),
-      this.redis.lRange(this.waitsKey(), 0, 511),
+      this.redis.lRange(this.waitsKey(pool), 0, 511),
     ]);
     const samples = waits.map(Number).filter(Number.isFinite).sort((left, right) => left - right);
     return {
@@ -409,8 +448,8 @@ export class MatchmakingStore {
   private userKeyPrefix(): string { return `${this.prefix}:user:`; }
   private userKey(userId: string): string { return `${this.userKeyPrefix()}${userId}`; }
   private pairKey(matchId: string): string { return `${this.prefix}:pair:${matchId}`; }
-  private metricsKey(): string { return `${this.prefix}:metrics`; }
-  private waitsKey(): string { return `${this.prefix}:waits`; }
+  private metricsKey(pool: MatchmakingPool): string { return `${this.prefix}:pool:${pool}:metrics`; }
+  private waitsKey(pool: MatchmakingPool): string { return `${this.prefix}:pool:${pool}:waits`; }
   private lockKey(): string { return `${this.prefix}:lock:pairing`; }
 }
 

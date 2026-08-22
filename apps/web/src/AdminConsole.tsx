@@ -39,6 +39,12 @@ interface OverviewPayload {
     cancelledTotal: number; expiredTotal: number; failedTotal: number;
     waitP50Seconds: number; waitP95Seconds: number;
   };
+  ranked: {
+    matchmaking: OverviewPayload['matchmaking'];
+    matchesToday: number;
+    noContestToday: number;
+    averageMmr: number;
+  };
   integrity: Record<string, unknown> | null;
   generatedAt: string;
 }
@@ -141,6 +147,15 @@ function Overview() {
           <Stat label="P95 ожидания" value={`${data.matchmaking.waitP95Seconds.toFixed(1)} с`} />
           <Stat label="Истекло" value={data.matchmaking.expiredTotal} />
           <Stat label="Ошибок pairing" value={data.matchmaking.failedTotal} />
+        </div>
+      </section>
+      <section>
+        <AdminHeading title="Ranked" detail="Read-only MMR operations snapshot" />
+        <div className="admin-stat-grid">
+          <Stat label="Ranked в очереди" value={data.ranked.matchmaking.queueDepth} hint={`старейший ${data.ranked.matchmaking.oldestWaitSeconds.toFixed(0)} с`} />
+          <Stat label="Ranked сегодня" value={data.ranked.matchesToday} />
+          <Stat label="Средний MMR" value={data.ranked.averageMmr} />
+          <Stat label="No contest" value={data.ranked.noContestToday} />
         </div>
       </section>
       <section className="grid gap-5 xl:grid-cols-2">
@@ -252,7 +267,7 @@ function tableColumns(section: Exclude<Section, 'overview'>, requestAction: (act
   if (section === 'users') return [
     { label: 'Пользователь', render: (r) => <div><strong>@{text(r.username)}</strong><small>{text(r.email)}</small></div> },
     { label: 'Роль / статус', render: (r) => <><Badge value={r.role} /><Badge value={r.account_status} /></> },
-    { label: 'Активность', render: (r) => <div><strong>{text(r.rating)} rating</strong><small>{text(r.completed_challenges)} задач · {text(r.battle_count)} battles</small></div> },
+    { label: 'Активность', render: (r) => <div><strong>{text(r.ranked_division)} · {text(r.ranked_mmr)} MMR</strong><small>{text(r.ranked_wins)}W/{text(r.ranked_losses)}L · {text(r.ranked_games)} ranked</small></div> },
     { label: 'Даты', render: (r) => <div><strong>{formatDate(r.created_at)}</strong><small>login: {formatDate(r.last_login_at)}</small></div> },
     { label: 'Sandbox', render: (r) => r.active_sandbox ? <Badge value="active" /> : '—' },
     { label: '', render: (r) => <div className="admin-row-actions"><button onClick={() => requestAction({ title: r.account_status === 'suspended' ? 'Возобновить аккаунт?' : 'Приостановить аккаунт?', detail: `@${text(r.username)}. Активные сессии будут отозваны, песочницы завершены.`, confirm: r.account_status === 'suspended' ? 'Возобновить' : 'Приостановить', url: `/api/admin/users/${text(r.id)}/${r.account_status === 'suspended' ? 'unsuspend' : 'suspend'}` })}>{r.account_status === 'suspended' ? 'Unsuspend' : 'Suspend'}</button><button onClick={() => requestAction({ title: 'Отозвать все сессии?', detail: `Пользователь @${text(r.username)} должен будет войти заново.`, confirm: 'Отозвать', url: `/api/admin/users/${text(r.id)}/revoke-sessions` })}>Revoke</button></div> },
@@ -275,7 +290,7 @@ function tableColumns(section: Exclude<Section, 'overview'>, requestAction: (act
   ];
   if (section === 'battles') return [
     { label: 'Battle', render: (r) => <div><strong>{text(r.room_code)}</strong><small>{shortId(r.id)}</small></div> },
-    { label: 'Статус', render: (r) => <Badge value={r.status} /> },
+    { label: 'Статус', render: (r) => <><Badge value={r.status} /><Badge value={r.mode} /></> },
     { label: 'Игроки', render: (r) => <div><strong>{text(r.players, '—')}</strong><small>host: @{text(r.host_username)} · winner: {text(r.winner_username)}</small></div> },
     { label: 'Раунды', render: (r) => <div><strong>{text(r.round_count)}</strong><small>{text(r.category_name, 'Все категории')}</small></div> },
     { label: 'Время', render: (r) => <div><strong>{relative(r.created_at)}</strong><small>{formatDate(r.finished_at)}</small></div> },

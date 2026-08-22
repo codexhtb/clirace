@@ -3,7 +3,11 @@ import WebSocket from 'ws';
 const base = process.env.CLIRACE_URL ?? 'http://localhost:8080';
 const origin = new URL(base).origin;
 const wsBase = origin.replace(/^http/, 'ws');
-const entry = process.env.CLIRACE_BATTLE_ENTRY === 'matchmaking' ? 'matchmaking' : 'private';
+const entry = ['matchmaking', 'ranked'].includes(process.env.CLIRACE_BATTLE_ENTRY)
+  ? process.env.CLIRACE_BATTLE_ENTRY
+  : 'private';
+const publicMatchmaking = entry === 'matchmaking' || entry === 'ranked';
+const matchmakingMode = entry === 'ranked' ? 'ranked' : 'quick';
 const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const password = 'Battle-E2E-2026!';
 
@@ -163,8 +167,8 @@ const commands = {
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const a = new UserClient(`${entry === 'matchmaking' ? 'match_a' : 'battle_a'}_${suffix}`.slice(0, 24));
-const b = new UserClient(`${entry === 'matchmaking' ? 'match_b' : 'battle_b'}_${suffix}`.slice(0, 24));
+const a = new UserClient(`${entry === 'ranked' ? 'rank_a' : entry === 'matchmaking' ? 'match_a' : 'battle_a'}_${suffix}`.slice(0, 24));
+const b = new UserClient(`${entry === 'ranked' ? 'rank_b' : entry === 'matchmaking' ? 'match_b' : 'battle_b'}_${suffix}`.slice(0, 24));
 const sockets = [];
 let roomCode;
 
@@ -172,15 +176,16 @@ try {
   await Promise.all([a.register(), b.register()]);
   console.log('[battle-e2e] users registered');
   let matchmakingBattleId;
-  if (entry === 'matchmaking') {
+  if (publicMatchmaking) {
+    const queueOptions = { method: 'POST', body: JSON.stringify({ mode: matchmakingMode }) };
     const duplicateEnqueue = await Promise.all([
-      a.request('/api/matchmaking/queue', { method: 'POST' }),
-      a.request('/api/matchmaking/queue', { method: 'POST' }),
+      a.request('/api/matchmaking/queue', queueOptions),
+      a.request('/api/matchmaking/queue', queueOptions),
     ]);
     if (duplicateEnqueue.some(({ response }) => !response.ok)) throw new Error('Idempotent matchmaking enqueue failed.');
-    const secondEnqueue = await b.request('/api/matchmaking/queue', { method: 'POST' });
+    const secondEnqueue = await b.request('/api/matchmaking/queue', queueOptions);
     if (!secondEnqueue.response.ok) throw new Error(`second matchmaking enqueue: ${secondEnqueue.response.status} ${secondEnqueue.body.message ?? ''}`);
-    const [statusA, statusB] = await Promise.all([waitForMatch(a), waitForMatch(b)]);
+    const [statusA, statusB] = await Promise.all([waitForMatch(a, matchmakingMode), waitForMatch(b, matchmakingMode)]);
     if (statusA.battleId !== statusB.battleId || statusA.roomCode !== statusB.roomCode) {
       throw new Error(`Players received different matches: ${JSON.stringify(statusA)} / ${JSON.stringify(statusB)}`);
     }
@@ -196,6 +201,7 @@ try {
     if (!stateA.response.ok || !stateB.response.ok || stateA.body.battle.players.length !== 2 || stateB.body.battle.id !== matchmakingBattleId) {
       throw new Error('Matched Battle is not available to both players.');
     }
+    if (stateA.body.battle.mode !== matchmakingMode) throw new Error(`Battle mode is ${stateA.body.battle.mode}, expected ${matchmakingMode}.`);
     console.log(`[matchmaking-e2e] exactly one Battle ${matchmakingBattleId} / ${roomCode}`);
   } else {
     const created = await a.request('/api/battles', { method: 'POST', body: JSON.stringify({ rounds: 3, category: 'bash' }) });
@@ -293,6 +299,21 @@ try {
   const state = controlA.state;
   if (state.winnerUserId !== state.me.userId) throw new Error('Backend selected the wrong winner.');
   if (!state.results?.length || state.results.length !== 2) throw new Error('Persistent battle results are missing.');
+  let rankedSummary;
+  if (entry === 'ranked') {
+    if (state.mode !== 'ranked' || !state.rankedResult) throw new Error('Ranked result is missing from Battle state.');
+    const winnerRating = state.rankedResult.players.find((player) => player.userId === state.winnerUserId);
+    const loserRating = state.rankedResult.players.find((player) => player.userId !== state.winnerUserId);
+    if (!winnerRating || winnerRating.delta <= 0 || !loserRating || loserRating.delta >= 0) throw new Error('Ranked MMR deltas are invalid.');
+    const [profileA, profileB, repeatedState] = await Promise.all([
+      fetch(`${base}/api/profiles/${a.username}`).then((response) => response.json()),
+      fetch(`${base}/api/profiles/${b.username}`).then((response) => response.json()),
+      a.request(`/api/battles/${roomCode}`),
+    ]);
+    if (profileA.profile?.ranked?.gamesPlayed !== 1 || profileB.profile?.ranked?.gamesPlayed !== 1) throw new Error('Ranked profile stats were not updated.');
+    if (repeatedState.body.battle.rankedResult.players.find((player) => player.userId === state.winnerUserId)?.mmrAfter !== winnerRating.mmrAfter) throw new Error('Reconnect returned a different MMR result.');
+    rankedSummary = { winnerDelta: winnerRating.delta, loserDelta: loserRating.delta, resultPersisted: true, reconnectStable: true };
+  }
 
   await delay(1_500);
   const cleanupA = await a.request('/api/sandbox/sessions', { method: 'POST', body: JSON.stringify({}) });
@@ -304,7 +325,8 @@ try {
   console.log(JSON.stringify({
     ok: true,
     entry,
-    ...(entry === 'matchmaking' ? { exactlyOnePairing: true } : {}),
+    ...(publicMatchmaking ? { exactlyOnePairing: true } : {}),
+    ...(rankedSummary ? { ranked: rankedSummary } : {}),
     roomCode,
     rounds,
     twoIndependentSandboxes: true,
@@ -319,9 +341,9 @@ try {
   await Promise.allSettled([a.delete(), b.delete()]);
 }
 
-async function waitForMatch(user) {
+async function waitForMatch(user, mode = 'quick') {
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    const { response, body } = await user.request('/api/matchmaking/status');
+    const { response, body } = await user.request(`/api/matchmaking/status?mode=${mode}`);
     if (!response.ok) throw new Error(`matchmaking status: ${response.status} ${body.message ?? ''}`);
     if (body.status === 'matched') return body;
     await delay(250);

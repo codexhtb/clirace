@@ -9,34 +9,39 @@ import type { AppConfig } from './config.js';
 import {
   MatchmakingStore,
   QUICK_MATCH_POOL,
+  RANKED_MATCH_POOL,
   type MatchedState,
+  type MatchmakingPool,
   type MatchmakingMetricsSnapshot,
   type MatchmakingRedisState,
   type PairClaim,
 } from './matchmaking-store.js';
+import { RankedService, type PublicRankedStats } from './ranked-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { LIVE_SANDBOX_STATES } from './sandbox-platform.js';
 import type { Dependencies } from './services.js';
 
 export type MatchmakingStatus =
-  | { status: 'idle'; pool: typeof QUICK_MATCH_POOL }
+  | { status: 'idle'; pool: MatchmakingPool; ranked?: PublicRankedStats }
   | {
     status: 'searching';
-    pool: typeof QUICK_MATCH_POOL;
+    pool: MatchmakingPool;
     queuedAt: string;
     leaseExpiresAt: string;
     waitingCapacity: boolean;
     phase: 'queued' | 'pairing';
+    ranked?: PublicRankedStats;
   }
   | {
     status: 'matched';
-    pool: typeof QUICK_MATCH_POOL;
+    pool: MatchmakingPool;
     matchId: string | null;
     battleId: string;
     roomCode: string;
-    opponent: { userId: string; username: string } | null;
+    opponent: { userId: string; username: string; ranked?: PublicRankedStats } | null;
     matchedAt: string | null;
-    source: 'quick_match' | 'active_battle';
+    source: 'quick_match' | 'ranked_match' | 'active_battle';
+    ranked?: PublicRankedStats;
   };
 
 export class MatchmakingError extends Error {
@@ -52,6 +57,7 @@ export class MatchmakingError extends Error {
 
 export class MatchmakingManager {
   private readonly store: MatchmakingStore;
+  private readonly ranked: RankedService;
   private maintenanceTimer: NodeJS.Timeout | undefined;
 
   constructor(
@@ -62,6 +68,7 @@ export class MatchmakingManager {
     options: { redisPrefix?: string } = {},
   ) {
     this.store = new MatchmakingStore(dependencies.redis, options.redisPrefix);
+    this.ranked = new RankedService(dependencies);
   }
 
   async start(): Promise<void> {
@@ -81,7 +88,7 @@ export class MatchmakingManager {
     this.maintenanceTimer = undefined;
   }
 
-  async enqueue(user: AuthUser): Promise<MatchmakingStatus> {
+  async enqueue(user: AuthUser, pool: MatchmakingPool = QUICK_MATCH_POOL): Promise<MatchmakingStatus> {
     this.assertEnabled();
     const existingState = await this.store.getState(user.id);
     if (existingState) return this.resolveRedisState(existingState.state, existingState.ttlMs);
@@ -96,27 +103,30 @@ export class MatchmakingManager {
       );
     }
 
-    const state = await this.store.enqueue(user.id, QUICK_MATCH_POOL, Date.now(), this.leaseMs());
-    console.info('Matchmaking enqueue', { userId: user.id, pool: QUICK_MATCH_POOL });
+    const ranked = pool === RANKED_MATCH_POOL ? await this.ranked.stats(user.id) : undefined;
+    const state = await this.store.enqueue(user.id, pool, Date.now(), this.leaseMs(), ranked?.mmr);
+    console.info('Matchmaking enqueue', { userId: user.id, pool, ...(ranked ? { mmr: ranked.mmr } : {}) });
     if (state.status !== 'searching') return this.resolveRedisState(state, this.leaseMs());
-    await this.tryPair(user.id);
-    return this.status(user.id);
+    await this.tryPair(pool);
+    return this.status(user.id, pool);
   }
 
   async heartbeat(user: AuthUser): Promise<MatchmakingStatus> {
     this.assertEnabled();
     const state = await this.store.heartbeat(user.id, this.leaseMs());
     if (!state) throw new MatchmakingError('queue_expired', 'Поиск истёк. Запустите его снова.', 410);
-    if (state.status === 'searching') await this.tryPair(user.id);
+    if (state.status === 'searching') await this.tryPair(state.pool);
     return this.status(user.id);
   }
 
   async cancel(userId: string): Promise<MatchmakingStatus> {
     this.assertEnabled();
-    const result = await this.store.cancel(userId);
+    const stored = await this.store.getState(userId);
+    const pool = stored?.state.pool ?? QUICK_MATCH_POOL;
+    const result = await this.store.cancel(userId, pool);
     if (result.outcome === 'cancelled') {
-      console.info('Matchmaking cancel', { userId, pool: QUICK_MATCH_POOL });
-      return { status: 'idle', pool: QUICK_MATCH_POOL };
+      console.info('Matchmaking cancel', { userId, pool });
+      return this.idleStatus(userId, pool);
     }
     if (result.outcome === 'match_committing') {
       throw new MatchmakingError(
@@ -131,7 +141,8 @@ export class MatchmakingManager {
 
   async leaveQueueForManualBattle(userId: string): Promise<void> {
     if (!this.config.MATCHMAKING_ENABLED) return;
-    const result = await this.store.cancel(userId);
+    const stored = await this.store.getState(userId);
+    const result = await this.store.cancel(userId, stored?.state.pool ?? QUICK_MATCH_POOL);
     if (result.outcome === 'cancelled') return;
     if (result.outcome === 'match_committing') {
       throw new MatchmakingError(
@@ -152,12 +163,12 @@ export class MatchmakingManager {
     }
   }
 
-  async status(userId: string): Promise<MatchmakingStatus> {
+  async status(userId: string, preferredPool: MatchmakingPool = QUICK_MATCH_POOL): Promise<MatchmakingStatus> {
     this.assertEnabled();
     const stored = await this.store.getState(userId);
     if (stored) return this.resolveRedisState(stored.state, stored.ttlMs);
     const activeBattle = await this.battleManager.findActiveBattleForUser(userId);
-    if (!activeBattle) return { status: 'idle', pool: QUICK_MATCH_POOL };
+    if (!activeBattle) return this.idleStatus(userId, preferredPool);
     return this.activeBattleStatus(activeBattle, userId);
   }
 
@@ -166,7 +177,7 @@ export class MatchmakingManager {
     if (!stored) return;
     const state = stored.state;
     if (state.status === 'searching') {
-      await this.store.cancel(userId);
+      await this.store.cancel(userId, state.pool);
       console.info('Matchmaking user removed', { userId, reason, state: 'searching' });
       return;
     }
@@ -179,7 +190,7 @@ export class MatchmakingManager {
         }
         await this.store.rollbackPair(claim, { invalidUserId: userId, leaseMs: this.leaseMs() });
       } else {
-        await this.store.clearState(userId);
+        await this.store.clearState(userId, state.pool);
       }
       console.info('Matchmaking user removed', { userId, reason, state: 'pairing' });
       return;
@@ -190,22 +201,31 @@ export class MatchmakingManager {
       await this.battleManager.terminateBattle(battle.id);
     }
     await Promise.all([
-      this.store.clearState(userId),
-      this.store.clearState(state.opponentUserId),
+      this.store.clearState(userId, state.pool),
+      this.store.clearState(state.opponentUserId, state.pool),
     ]);
     const opponent = await this.loadActiveUsers([state.opponentUserId]).then((users) => users[0]);
     if (opponent && !await this.battleManager.findActiveBattleForUser(opponent.id)) {
-      await this.store.enqueue(opponent.id, QUICK_MATCH_POOL, Date.now(), this.leaseMs());
+      const opponentStats = state.pool === RANKED_MATCH_POOL ? await this.ranked.stats(opponent.id) : undefined;
+      await this.store.enqueue(opponent.id, state.pool, Date.now(), this.leaseMs(), opponentStats?.mmr);
     }
     console.info('Matchmaking user removed', { userId, reason, state: 'matched' });
   }
 
-  async metrics(): Promise<MatchmakingMetricsSnapshot> {
-    return this.store.metrics();
+  async metrics(pool: MatchmakingPool = QUICK_MATCH_POOL): Promise<MatchmakingMetricsSnapshot> {
+    return this.store.metrics(pool);
+  }
+
+  async allMetrics(): Promise<Record<MatchmakingPool, MatchmakingMetricsSnapshot>> {
+    const [quick, ranked] = await Promise.all([
+      this.metrics(QUICK_MATCH_POOL), this.metrics(RANKED_MATCH_POOL),
+    ]);
+    return { quick, ranked };
   }
 
   async prometheusMetrics(): Promise<string> {
-    const metrics = await this.metrics();
+    const metrics = await this.metrics(QUICK_MATCH_POOL);
+    const ranked = await this.metrics(RANKED_MATCH_POOL);
     return [
       '# HELP matchmaking_queue_depth Users currently waiting in Quick Match.',
       '# TYPE matchmaking_queue_depth gauge',
@@ -231,11 +251,17 @@ export class MatchmakingManager {
       `matchmaking_wait_seconds{quantile="0.95"} ${metrics.waitP95Seconds}`,
       `matchmaking_wait_seconds_sum ${metrics.waitSumSeconds}`,
       `matchmaking_wait_seconds_count ${metrics.waitCount}`,
+      '# HELP matchmaking_ranked_queue_depth Users currently waiting in Ranked.',
+      '# TYPE matchmaking_ranked_queue_depth gauge',
+      `matchmaking_ranked_queue_depth ${ranked.queueDepth}`,
+      '# HELP matchmaking_ranked_matched_total Ranked pairs committed.',
+      '# TYPE matchmaking_ranked_matched_total counter',
+      `matchmaking_ranked_matched_total ${ranked.matchedTotal}`,
       '',
     ].join('\n');
   }
 
-  private async tryPair(_userId: string): Promise<void> {
+  private async tryPair(pool: MatchmakingPool): Promise<void> {
     const lockToken = randomUUID();
     const lockTtlMs = Math.min(60_000, this.config.MATCHMAKING_PAIRING_TTL_SECONDS * 1_000);
     if (!await this.store.acquirePairingLock(lockToken, lockTtlMs)) return;
@@ -243,7 +269,7 @@ export class MatchmakingManager {
       // The lock holder drains FIFO pairs instead of creating only one match.
       // This keeps a concurrent enqueue burst from waiting for the next browser heartbeat.
       for (let paired = 0; paired < 64; paired += 1) {
-        const queued = await this.store.listQueuedUserIds(QUICK_MATCH_POOL, 256);
+        const queued = await this.store.listQueuedUserIds(pool, 256);
         if (queued.length < 2) return;
         const admission = await this.capacityAdmission();
         if (!admission.allowed) {
@@ -252,12 +278,14 @@ export class MatchmakingManager {
           ));
           return;
         }
-        const currentUserId = queued[1]!;
+        // Anchor pairing on the oldest waiter. Ranked then selects the closest
+        // compatible opponent; Quick keeps FIFO because all casual ratings are equal.
+        const currentUserId = queued[0]!;
         await this.store.markWaitingCapacity(currentUserId, false, this.leaseMs());
         const matchId = randomUUID();
         const claim = await this.store.claimOldest(
           currentUserId,
-          QUICK_MATCH_POOL,
+          pool,
           matchId,
           Date.now(),
           this.config.MATCHMAKING_PAIRING_TTL_SECONDS * 1_000,
@@ -317,11 +345,12 @@ export class MatchmakingManager {
     if (state.status === 'searching') {
       return {
         status: 'searching',
-        pool: QUICK_MATCH_POOL,
+        pool: state.pool,
         queuedAt: new Date(state.queuedAt).toISOString(),
         leaseExpiresAt: new Date(Date.now() + ttlMs).toISOString(),
         waitingCapacity: state.waitingCapacity,
         phase: 'queued',
+        ...(state.pool === RANKED_MATCH_POOL ? { ranked: await this.ranked.stats(state.userId) } : {}),
       };
     }
     if (state.status === 'pairing') {
@@ -334,15 +363,16 @@ export class MatchmakingManager {
       }
       if (claim && Date.now() - claim.claimedAt > 10_000) {
         await this.store.rollbackPair(claim, { leaseMs: this.leaseMs() });
-        return this.status(state.userId);
+        return this.status(state.userId, state.pool);
       }
       return {
         status: 'searching',
-        pool: QUICK_MATCH_POOL,
+        pool: state.pool,
         queuedAt: new Date(state.queuedAt).toISOString(),
         leaseExpiresAt: new Date(Date.now() + ttlMs).toISOString(),
         waitingCapacity: false,
         phase: 'pairing',
+        ...(state.pool === RANKED_MATCH_POOL ? { ranked: await this.ranked.stats(state.userId) } : {}),
       };
     }
     return this.resolveMatchedState(state);
@@ -351,48 +381,57 @@ export class MatchmakingManager {
   private async resolveMatchedState(state: MatchedState): Promise<MatchmakingStatus> {
     const battle = await this.battleManager.findMatchmakingBattle(state.matchId);
     if (battle?.status === 'cancelled' || battle?.status === 'finished') {
-      await this.store.clearState(state.userId);
-      return { status: 'idle', pool: QUICK_MATCH_POOL };
+      await this.store.clearState(state.userId, state.pool);
+      return this.idleStatus(state.userId, state.pool);
     }
-    const opponent = await this.opponent(state.battleId, state.userId, state.opponentUserId);
+    const opponent = await this.opponent(
+      state.battleId, state.userId, state.opponentUserId, state.pool === RANKED_MATCH_POOL,
+    );
     return {
       status: 'matched',
-      pool: QUICK_MATCH_POOL,
+      pool: state.pool,
       matchId: state.matchId,
       battleId: state.battleId,
       roomCode: state.roomCode,
       opponent,
       matchedAt: new Date(state.matchedAt).toISOString(),
-      source: 'quick_match',
+      source: state.pool === RANKED_MATCH_POOL ? 'ranked_match' : 'quick_match',
+      ...(state.pool === RANKED_MATCH_POOL ? { ranked: await this.ranked.stats(state.userId) } : {}),
     };
   }
 
   private async activeBattleStatus(battle: BattleNavigation, userId: string): Promise<MatchmakingStatus> {
     return {
       status: 'matched',
-      pool: QUICK_MATCH_POOL,
+      pool: battle.mode === 'ranked' ? RANKED_MATCH_POOL : QUICK_MATCH_POOL,
       matchId: battle.matchmakingId,
       battleId: battle.id,
       roomCode: battle.roomCode,
-      opponent: await this.opponent(battle.id, userId),
+      opponent: await this.opponent(battle.id, userId, undefined, battle.mode === 'ranked'),
       matchedAt: null,
-      source: battle.matchmakingPool ? 'quick_match' : 'active_battle',
+      source: battle.mode === 'ranked' ? 'ranked_match' : battle.matchmakingPool ? 'quick_match' : 'active_battle',
+      ...(battle.mode === 'ranked' ? { ranked: await this.ranked.stats(userId) } : {}),
     };
   }
 
-  private async opponent(battleId: string, userId: string, fallbackUserId?: string): Promise<{ userId: string; username: string } | null> {
+  private async opponent(
+    battleId: string,
+    userId: string,
+    fallbackUserId?: string,
+    includeRanked = false,
+  ): Promise<{ userId: string; username: string; ranked?: PublicRankedStats } | null> {
     const result = await this.dependencies.postgres.query<{ id: string; username: string }>(`
       SELECT u.id, u.username FROM battle_players bp
       JOIN users u ON u.id = bp.user_id
       WHERE bp.battle_id = $1 AND bp.user_id <> $2
       ORDER BY bp.joined_at, bp.id LIMIT 1
     `, [battleId, userId]);
-    if (result.rows[0]) return { userId: result.rows[0].id, username: result.rows[0].username };
+    if (result.rows[0]) return this.publicOpponent(result.rows[0], includeRanked);
     if (!fallbackUserId) return null;
     const fallback = await this.dependencies.postgres.query<{ id: string; username: string }>(
       'SELECT id, username FROM users WHERE id = $1', [fallbackUserId],
     );
-    return fallback.rows[0] ? { userId: fallback.rows[0].id, username: fallback.rows[0].username } : null;
+    return fallback.rows[0] ? this.publicOpponent(fallback.rows[0], includeRanked) : null;
   }
 
   private async loadActiveUsers(userIds: string[]): Promise<AuthUser[]> {
@@ -420,14 +459,14 @@ export class MatchmakingManager {
         SELECT count(*)::int AS pending
         FROM battle_players bp
         JOIN battles b ON b.id = bp.battle_id
-        WHERE b.matchmaking_pool = $1
+        WHERE b.matchmaking_pool IS NOT NULL
           AND b.status IN ('waiting', 'countdown', 'running')
           AND NOT EXISTS (
             SELECT 1 FROM sandbox_sessions ss
             WHERE ss.battle_player_id = bp.id
-              AND ss.lifecycle_state = ANY($2::varchar[])
+              AND ss.lifecycle_state = ANY($1::varchar[])
           )
-      `, [QUICK_MATCH_POOL, LIVE_SANDBOX_STATES]),
+      `, [LIVE_SANDBOX_STATES]),
     ]);
     const pendingDemand = demand.rows[0]?.pending ?? 0;
     const available = Math.max(0, platform.capacity.available - pendingDemand);
@@ -449,7 +488,10 @@ export class MatchmakingManager {
   }
 
   private async cleanupInvalidQueueEntries(): Promise<void> {
-    const userIds = await this.store.listQueuedUserIds();
+    const userIds = [...new Set((await Promise.all([
+      this.store.listQueuedUserIds(QUICK_MATCH_POOL),
+      this.store.listQueuedUserIds(RANKED_MATCH_POOL),
+    ])).flat())];
     if (!userIds.length) return;
     const valid = await this.dependencies.postgres.query<{ id: string }>(`
       SELECT u.id FROM users u
@@ -460,12 +502,17 @@ export class MatchmakingManager {
         )
     `, [userIds]);
     const validIds = new Set(valid.rows.map((row) => row.id));
-    await Promise.all(userIds.filter((userId) => !validIds.has(userId)).map((userId) => this.store.removeSearchingUser(userId)));
+    await Promise.all(userIds.filter((userId) => !validIds.has(userId)).map(async (userId) => {
+      const state = await this.store.getState(userId);
+      if (state) await this.store.cancel(userId, state.state.pool);
+    }));
   }
 
   private async maintenance(): Promise<void> {
-    const expired = await this.store.sweepExpired();
-    if (expired) console.info('Matchmaking leases expired', { count: expired, pool: QUICK_MATCH_POOL });
+    for (const pool of [QUICK_MATCH_POOL, RANKED_MATCH_POOL] as const) {
+      const expired = await this.store.sweepExpired(pool);
+      if (expired) console.info('Matchmaking leases expired', { count: expired, pool });
+    }
     await this.cleanupInvalidQueueEntries();
   }
 
@@ -475,6 +522,25 @@ export class MatchmakingManager {
     if (!this.config.MATCHMAKING_ENABLED) {
       throw new MatchmakingError('temporarily_unavailable', 'Quick Match временно недоступен.', 503);
     }
+  }
+
+  private async idleStatus(userId: string, pool: MatchmakingPool): Promise<MatchmakingStatus> {
+    return {
+      status: 'idle',
+      pool,
+      ...(pool === RANKED_MATCH_POOL ? { ranked: await this.ranked.stats(userId) } : {}),
+    };
+  }
+
+  private async publicOpponent(
+    opponent: { id: string; username: string },
+    includeRanked: boolean,
+  ): Promise<{ userId: string; username: string; ranked?: PublicRankedStats }> {
+    return {
+      userId: opponent.id,
+      username: opponent.username,
+      ...(includeRanked ? { ranked: await this.ranked.stats(opponent.id) } : {}),
+    };
   }
 }
 

@@ -32,6 +32,11 @@ interface Profile {
   dailyStreak: { current: number; best: number; lastDate: string | null };
   achievements: Array<{ slug: string; title: string; description: string; icon: string; unlockedAt: string }>;
   recentRuns: RunHistory[];
+  ranked: {
+    mmr: number; gamesPlayed: number; wins: number; losses: number;
+    placementGamesCompleted: number; placementGamesRequired: number; division: string; provisional: boolean;
+    recentMatches: Array<{ battleId: string; roomCode: string; opponent: string; result: 'win' | 'loss' | 'no_contest'; mmrBefore: number; mmrAfter: number; delta: number; divisionBefore: string; divisionAfter: string; playedAt: string }>;
+  };
 }
 
 export function ProfilePage() {
@@ -95,6 +100,11 @@ function ProfileContent({ profile }: { profile: Profile }) {
         <Stat icon={Gauge} value={formatPracticeTime(profile.stats.durationMs)} label="в терминале" />
       </section>
 
+      <section className="ranked-profile-card mt-6">
+        <div><p className="eyebrow">Ranked</p><h2>{profile.ranked.provisional ? 'Unranked' : profile.ranked.division}</h2><span>{profile.ranked.provisional ? `Placement ${profile.ranked.placementGamesCompleted}/${profile.ranked.placementGamesRequired}` : `${profile.ranked.mmr} MMR`}</span></div>
+        <div className="ranked-profile-stats"><span><strong>{profile.ranked.gamesPlayed}</strong> игр</span><span><strong>{profile.ranked.wins}</strong> побед</span><span><strong>{profile.ranked.losses}</strong> поражений</span></div>
+      </section>
+
       <section className="mt-10">
         <div className="flex items-end justify-between gap-4">
           <div><p className="eyebrow">Прогресс</p><h2 className="mt-3 text-2xl font-semibold text-white">Достижения</h2></div>
@@ -139,6 +149,18 @@ function ProfileContent({ profile }: { profile: Profile }) {
           </div>
         </section>
       </div>
+      <section className="mt-10">
+        <div><p className="eyebrow">Ranked history</p><h2 className="mt-3 text-2xl font-semibold text-white">Последние рейтинговые матчи</h2></div>
+        <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
+          {profile.ranked.recentMatches.length ? profile.ranked.recentMatches.map((match) => (
+            <a className="ranked-history-row" href={`/battle/${match.roomCode}`} key={match.battleId}>
+              <div><strong>@{match.opponent}</strong><span>{formatDateTime(match.playedAt)}</span></div>
+              <b className={match.result === 'win' ? 'text-acid' : match.result === 'loss' ? 'text-rose-300' : 'text-slate-400'}>{match.result === 'win' ? 'ПОБЕДА' : match.result === 'loss' ? 'ПОРАЖЕНИЕ' : 'NO CONTEST'}</b>
+              <div><strong>{match.mmrBefore} → {match.mmrAfter}</strong><span>{match.delta >= 0 ? '+' : ''}{match.delta} MMR</span></div>
+            </a>
+          )) : <EmptyPanel text="Здесь появятся завершённые Ranked Battles." />}
+        </div>
+      </section>
     </>
   );
 }

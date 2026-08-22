@@ -4,6 +4,7 @@ import type { RawData, WebSocket } from 'ws';
 import type { AuthUser } from './auth-service.js';
 import type { BattleRoundCompletion, BattleSandboxHooks, BattleSandboxMetadata } from './battle-types.js';
 import type { AppConfig } from './config.js';
+import { RankedService, type PublicRankedStats, type RankedApplication, type RankedBattleResult } from './ranked-service.js';
 import type { SandboxManager, SessionTicket } from './sandbox-manager.js';
 import type { Dependencies } from './services.js';
 
@@ -25,6 +26,7 @@ interface BattleRow {
   winner_user_id: string | null;
   matchmaking_id: string | null;
   matchmaking_pool: string | null;
+  mode: 'private' | 'quick' | 'ranked';
   created_at: Date;
   expires_at: Date;
 }
@@ -40,6 +42,7 @@ interface PlayerRow {
   current_round: number;
   completed_rounds: number;
   joined_at: Date;
+  disconnected_at: Date | null;
   finished_at: Date | null;
   result: 'win' | 'loss' | 'dnf' | null;
 }
@@ -67,6 +70,7 @@ export interface BattleNavigation {
   status: BattleRow['status'];
   matchmakingId: string | null;
   matchmakingPool: string | null;
+  mode: BattleRow['mode'];
 }
 
 export class BattleAdmissionError extends BattleStateError {
@@ -83,12 +87,14 @@ export class BattleAdmissionError extends BattleStateError {
 export class BattleManager implements BattleSandboxHooks {
   private readonly sockets = new Map<string, Map<string, Set<WebSocket>>>();
   private readonly countdownTimers = new Map<string, NodeJS.Timeout>();
+  private readonly disconnectTimers = new Map<string, NodeJS.Timeout>();
   private cleanupTimer: NodeJS.Timeout | undefined;
 
   constructor(
     private readonly config: AppConfig,
     private readonly dependencies: Dependencies,
     private readonly sandboxManager: SandboxManager,
+    private readonly rankedService = new RankedService(dependencies),
   ) {}
 
   async start(): Promise<void> {
@@ -98,6 +104,18 @@ export class BattleManager implements BattleSandboxHooks {
       WHERE status = 'countdown' AND countdown_start_at IS NOT NULL
     `);
     for (const battle of countdowns.rows) this.scheduleCountdown(battle.id, battle.countdown_start_at);
+    const disconnected = await this.dependencies.postgres.query<{ battle_id: string; user_id: string; disconnected_at: Date }>(`
+      SELECT bp.battle_id, bp.user_id, bp.disconnected_at
+      FROM battle_players bp JOIN battles b ON b.id = bp.battle_id
+      WHERE b.status = 'running' AND NOT bp.connected AND bp.disconnected_at IS NOT NULL
+    `);
+    for (const player of disconnected.rows) {
+      this.scheduleDisconnectResolution(player.battle_id, player.user_id, player.disconnected_at);
+    }
+    const recovered = await this.rankedService.recover();
+    if (recovered.applied || recovered.noContest) {
+      console.info('Ranked result recovery completed', recovered);
+    }
     this.cleanupTimer = setInterval(() => void this.cleanupExpiredBattles(), 60_000);
     this.cleanupTimer.unref();
   }
@@ -105,7 +123,9 @@ export class BattleManager implements BattleSandboxHooks {
   async close(): Promise<void> {
     if (this.cleanupTimer) clearInterval(this.cleanupTimer);
     for (const timer of this.countdownTimers.values()) clearTimeout(timer);
+    for (const timer of this.disconnectTimers.values()) clearTimeout(timer);
     this.countdownTimers.clear();
+    this.disconnectTimers.clear();
     for (const battleSockets of this.sockets.values()) {
       for (const userSockets of battleSockets.values()) {
         for (const socket of userSockets) socket.close(1001, 'server_shutdown');
@@ -126,6 +146,8 @@ export class BattleManager implements BattleSandboxHooks {
     if (timer) clearTimeout(timer);
     this.countdownTimers.delete(battleId);
     await this.broadcast(battleId, 'match:finished', { cancelled: true, reason: 'admin_terminated' });
+    const ranked = await this.rankedService.recordNoContest(battleId, 'admin_terminated');
+    this.logRankedApplication(ranked);
     await this.sandboxManager.destroyBattleSessions(battleId, 'battle_admin_terminated');
     return true;
   }
@@ -188,6 +210,7 @@ export class BattleManager implements BattleSandboxHooks {
         categoryId: selection.categoryId,
         challengeIds: selection.challengeIds,
         expiresAt,
+        mode: 'private',
       });
       await client.query(`
         INSERT INTO battle_players (id, battle_id, user_id)
@@ -234,6 +257,7 @@ export class BattleManager implements BattleSandboxHooks {
         expiresAt: new Date(Date.now() + this.config.MATCHMAKING_BATTLE_WAITING_TTL_SECONDS * 1_000),
         matchmakingId,
         matchmakingPool: pool,
+        mode: pool === 'ranked' ? 'ranked' : 'quick',
       });
       await client.query(`
         INSERT INTO battle_players (id, battle_id, user_id)
@@ -246,6 +270,7 @@ export class BattleManager implements BattleSandboxHooks {
         status: 'waiting',
         matchmakingId,
         matchmakingPool: pool,
+        mode: pool === 'ranked' ? 'ranked' : 'quick',
       };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
@@ -295,7 +320,13 @@ export class BattleManager implements BattleSandboxHooks {
       ? await this.loadChallenge(battle.challenge_ids[viewer.current_round - 1])
       : undefined;
     const results = battle.status === 'finished' ? await this.loadResults(battle.id, players) : undefined;
-    return publicBattleState(battle, players, viewer, challenge, results);
+    const rankedResult = battle.mode === 'ranked' && ['finished', 'cancelled'].includes(battle.status)
+      ? await this.rankedService.getBattleResult(battle.id)
+      : null;
+    const rankedStats = battle.mode === 'ranked' && viewer
+      ? await this.rankedService.stats(viewer.user_id)
+      : null;
+    return publicBattleState(battle, players, viewer, challenge, results, rankedResult, rankedStats);
   }
 
   async setReady(roomCode: string, userId: string, ready: boolean): Promise<void> {
@@ -378,6 +409,10 @@ export class BattleManager implements BattleSandboxHooks {
     userSockets.add(socket);
     battleSockets.set(user.id, userSockets);
     this.sockets.set(battle.id, battleSockets);
+    const disconnectKey = `${battle.id}:${user.id}`;
+    const disconnectTimer = this.disconnectTimers.get(disconnectKey);
+    if (disconnectTimer) clearTimeout(disconnectTimer);
+    this.disconnectTimers.delete(disconnectKey);
     await this.dependencies.postgres.query(`
       UPDATE battle_players SET connected = true, disconnected_at = NULL
       WHERE battle_id = $1 AND user_id = $2
@@ -454,6 +489,7 @@ export class BattleManager implements BattleSandboxHooks {
     const client = await this.dependencies.postgres.connect();
     let completion: BattleRoundCompletion | undefined;
     let eventBattleFinished = false;
+    let rankedApplication: RankedApplication | undefined;
     try {
       await client.query('BEGIN');
       const battle = await client.query<BattleRow>('SELECT * FROM battles WHERE id = $1 FOR UPDATE', [metadata.battleId]).then((result) => result.rows[0]);
@@ -513,6 +549,7 @@ export class BattleManager implements BattleSandboxHooks {
             UPDATE battles SET status = 'finished', winner_user_id = $1, finished_at = $2, updated_at = now()
             WHERE id = $3
           `, [userId, completedAt, battle.id]);
+          rankedApplication = await this.rankedService.applyFinishedBattle(client, battle.id);
           await client.query(`
             UPDATE battle_players
             SET result = CASE WHEN user_id = $1 THEN 'win' ELSE 'loss' END,
@@ -556,6 +593,7 @@ export class BattleManager implements BattleSandboxHooks {
       userId, round: metadata.roundNumber, completedRounds: completion.completedRounds,
     });
     if (eventBattleFinished) {
+      if (rankedApplication) this.logRankedApplication(rankedApplication);
       await this.broadcast(metadata.battleId, 'match:finished', { winnerUserId: completion.winnerUserId });
       setTimeout(() => void this.sandboxManager.destroyBattleSessions(metadata.battleId, 'battle_finished'), 750).unref();
     }
@@ -595,6 +633,81 @@ export class BattleManager implements BattleSandboxHooks {
       WHERE battle_id = $1 AND user_id = $2
     `, [battleId, userId]);
     await this.broadcast(battleId, 'player:left', { userId });
+    this.scheduleDisconnectResolution(battleId, userId, new Date());
+  }
+
+  private scheduleDisconnectResolution(battleId: string, userId: string, disconnectedAt: Date): void {
+    const key = `${battleId}:${userId}`;
+    const previous = this.disconnectTimers.get(key);
+    if (previous) clearTimeout(previous);
+    const dueAt = disconnectedAt.getTime() + this.config.BATTLE_RECONNECT_GRACE_SECONDS * 1_000;
+    const timer = setTimeout(() => void this.resolveDisconnect(battleId, userId), Math.max(0, dueAt - Date.now()));
+    timer.unref();
+    this.disconnectTimers.set(key, timer);
+  }
+
+  private async resolveDisconnect(battleId: string, userId: string): Promise<void> {
+    this.disconnectTimers.delete(`${battleId}:${userId}`);
+    const client = await this.dependencies.postgres.connect();
+    let outcome: 'forfeit' | 'no_contest' | null = null;
+    let winnerUserId: string | null = null;
+    let rankedApplication: RankedApplication | undefined;
+    try {
+      await client.query('BEGIN');
+      const battle = await client.query<BattleRow>('SELECT * FROM battles WHERE id = $1 FOR UPDATE', [battleId])
+        .then((result) => result.rows[0]);
+      if (!battle || battle.status !== 'running') {
+        await client.query('ROLLBACK');
+        return;
+      }
+      const players = await client.query<PlayerRow>(`
+        SELECT bp.*, u.username FROM battle_players bp JOIN users u ON u.id = bp.user_id
+        WHERE bp.battle_id = $1 ORDER BY bp.user_id FOR UPDATE OF bp
+      `, [battleId]);
+      const disconnected = players.rows.find((player) => player.user_id === userId);
+      if (!disconnected || disconnected.connected || !disconnected.disconnected_at
+        || Date.now() - disconnected.disconnected_at.getTime() < this.config.BATTLE_RECONNECT_GRACE_SECONDS * 1_000) {
+        await client.query('ROLLBACK');
+        return;
+      }
+      const opponent = players.rows.find((player) => player.user_id !== userId);
+      if (!opponent?.connected) {
+        outcome = 'no_contest';
+        await client.query(`
+          UPDATE battles SET status = 'cancelled', finished_at = now(), updated_at = now()
+          WHERE id = $1
+        `, [battleId]);
+      } else {
+        outcome = 'forfeit';
+        winnerUserId = opponent.user_id;
+        await client.query(`
+          UPDATE battles SET status = 'finished', winner_user_id = $2, finished_at = now(), updated_at = now()
+          WHERE id = $1
+        `, [battleId, winnerUserId]);
+        await client.query(`
+          UPDATE battle_players
+          SET result = CASE WHEN user_id = $2 THEN 'win' ELSE 'dnf' END,
+              finished_at = COALESCE(finished_at, now()), sandbox_ready = false
+          WHERE battle_id = $1
+        `, [battleId, winnerUserId]);
+        rankedApplication = await this.rankedService.applyFinishedBattle(client, battleId);
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      console.error('Battle disconnect resolution failed', { battleId, userId, reason: errorMessage(error) });
+      return;
+    } finally {
+      client.release();
+    }
+    if (outcome === 'no_contest') {
+      rankedApplication = await this.rankedService.recordNoContest(battleId, 'both_players_disconnected');
+    }
+    if (rankedApplication) this.logRankedApplication(rankedApplication);
+    await this.broadcast(battleId, 'match:finished', {
+      ...(winnerUserId ? { winnerUserId, reason: 'forfeit' } : { cancelled: true, reason: 'no_contest' }),
+    });
+    await this.sandboxManager.destroyBattleSessions(battleId, outcome === 'forfeit' ? 'battle_forfeit' : 'battle_no_contest');
   }
 
   private async broadcast(battleId: string, type: string, data?: Record<string, unknown>): Promise<void> {
@@ -646,6 +759,8 @@ export class BattleManager implements BattleSandboxHooks {
     `);
     for (const battle of expired.rows) {
       await this.broadcast(battle.id, 'match:finished', { cancelled: true });
+      const ranked = await this.rankedService.recordNoContest(battle.id, 'battle_expired');
+      this.logRankedApplication(ranked);
       await this.sandboxManager.destroyBattleSessions(battle.id, 'battle_expired');
     }
   }
@@ -733,6 +848,7 @@ export class BattleManager implements BattleSandboxHooks {
     expiresAt: Date;
     matchmakingId?: string;
     matchmakingPool?: string;
+    mode: BattleRow['mode'];
   }): Promise<{ id: string; roomCode: string }> {
     const battleId = randomUUID();
     for (let attempt = 0; attempt < 12; attempt += 1) {
@@ -740,8 +856,8 @@ export class BattleManager implements BattleSandboxHooks {
       const inserted = await client.query<{ room_code: string }>(`
         INSERT INTO battles (
           id, room_code, host_user_id, category_id, round_count, challenge_ids, expires_at,
-          matchmaking_id, matchmaking_pool
-        ) VALUES ($1, $2, $3, $4, $5, $6::bigint[], $7, $8, $9)
+          matchmaking_id, matchmaking_pool, mode
+        ) VALUES ($1, $2, $3, $4, $5, $6::bigint[], $7, $8, $9, $10)
         ON CONFLICT (room_code) DO NOTHING
         RETURNING room_code
       `, [
@@ -754,6 +870,7 @@ export class BattleManager implements BattleSandboxHooks {
         options.expiresAt,
         options.matchmakingId ?? null,
         options.matchmakingPool ?? null,
+        options.mode,
       ]);
       const roomCode = inserted.rows[0]?.room_code;
       if (roomCode) return { id: battleId, roomCode };
@@ -830,6 +947,21 @@ export class BattleManager implements BattleSandboxHooks {
       })),
     }));
   }
+
+  private logRankedApplication(application: RankedApplication): void {
+    if (!['applied', 'already_applied'].includes(application.status)) return;
+    console.info('Ranked result application', {
+      battleId: application.battleId,
+      idempotencyResult: application.status,
+      outcome: application.result?.outcome,
+      noContestReason: application.result?.noContestReason,
+      players: application.result?.players.map((player) => ({
+        userId: player.userId,
+        oldRating: player.mmrBefore,
+        newRating: player.mmrAfter,
+      })),
+    });
+  }
 }
 
 function publicBattleState(
@@ -838,6 +970,8 @@ function publicBattleState(
   viewer: PlayerRow | undefined,
   challenge: CurrentChallengeRow | undefined,
   results: unknown,
+  rankedResult: RankedBattleResult | null,
+  rankedStats: PublicRankedStats | null,
 ) {
   const preparing = battle.status === 'waiting'
     && players.length === 2
@@ -852,6 +986,7 @@ function publicBattleState(
       : { slug: 'all', name: 'Все Shell' },
     hostUserId: battle.host_user_id,
     matchmakingPool: battle.matchmaking_pool,
+    mode: battle.mode,
     winnerUserId: battle.winner_user_id,
     countdownStartAt: battle.countdown_start_at?.toISOString() ?? null,
     startedAt: battle.started_at?.toISOString() ?? null,
@@ -882,6 +1017,8 @@ function publicBattleState(
       category: { slug: challenge.category_slug, name: challenge.category_name },
     } : null,
     ...(results ? { results } : {}),
+    ...(rankedResult ? { rankedResult } : {}),
+    ...(rankedStats ? { rankedStats } : {}),
   };
 }
 
@@ -892,6 +1029,7 @@ function toBattleNavigation(battle: BattleRow): BattleNavigation {
     status: battle.status,
     matchmakingId: battle.matchmaking_id,
     matchmakingPool: battle.matchmaking_pool,
+    mode: battle.mode,
   };
 }
 
@@ -901,4 +1039,8 @@ function generateRoomCode(): string {
 
 function safeSend(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(payload));
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message.slice(0, 200) : 'unknown';
 }

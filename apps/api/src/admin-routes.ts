@@ -6,6 +6,7 @@ import { AuthService, type AuthUser } from './auth-service.js';
 import type { BattleManager } from './battle-service.js';
 import type { AppConfig } from './config.js';
 import { hasSameOrigin } from './http-security.js';
+import { visibleDivision } from './ranked-config.js';
 import type { MatchmakingManager } from './matchmaking-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { checkDependencies, type Dependencies } from './services.js';
@@ -50,6 +51,7 @@ export async function registerAdminRoutes(
         users_total: number; users_24h: number; users_7d: number; users_30d: number;
         logins_24h: number; active_games: number; active_sandboxes: number;
         battles_today: number; matchmaking_today: number; challenges_today: number;
+        ranked_matches_today: number; ranked_no_contest_today: number; ranked_average_mmr: number;
       }>(`
         SELECT
           (SELECT count(*)::int FROM users) AS users_total,
@@ -61,20 +63,29 @@ export async function registerAdminRoutes(
           (SELECT count(*)::int FROM sandbox_sessions WHERE lifecycle_state IN ('requested','queued','starting','ready','attached','idle','terminating')) AS active_sandboxes,
           (SELECT count(*)::int FROM battles WHERE created_at >= date_trunc('day', now())) AS battles_today,
           (SELECT count(*)::int FROM battles WHERE matchmaking_pool IS NOT NULL AND created_at >= date_trunc('day', now())) AS matchmaking_today,
+          (SELECT count(*)::int FROM ranked_match_results WHERE outcome <> 'no_contest' AND created_at >= date_trunc('day', now())) AS ranked_matches_today,
+          (SELECT count(*)::int FROM ranked_match_results WHERE outcome = 'no_contest' AND created_at >= date_trunc('day', now())) AS ranked_no_contest_today,
+          (SELECT coalesce(round(avg(mmr)), 1000)::int FROM user_ranked_stats WHERE games_played > 0) AS ranked_average_mmr,
           (SELECT count(*)::int FROM results WHERE correct AND created_at >= date_trunc('day', now())) AS challenges_today
       `),
       dependencies.postgres.query(`
         SELECT id, source, total, passed, failed, duration_ms, failed_challenge_ids, created_at
         FROM admin_integrity_runs ORDER BY created_at DESC, id DESC LIMIT 1
       `),
-      matchmakingManager.metrics(),
+      matchmakingManager.allMetrics(),
     ]);
     return {
       dependencies: { api: 'up', ...checks },
       sandbox,
       product: product.rows[0],
       integrity: integrity.rows[0] ?? null,
-      matchmaking,
+      matchmaking: matchmaking.quick,
+      ranked: {
+        matchmaking: matchmaking.ranked,
+        matchesToday: product.rows[0]?.ranked_matches_today ?? 0,
+        noContestToday: product.rows[0]?.ranked_no_contest_today ?? 0,
+        averageMmr: product.rows[0]?.ranked_average_mmr ?? 1000,
+      },
       generatedAt: new Date().toISOString(),
     };
   });
@@ -100,6 +111,11 @@ export async function registerAdminRoutes(
       )
       SELECT p.id, p.username, p.email, p.role, p.account_status, p.created_at, p.last_login_at,
         COALESCE(r.rating, 1000)::int AS rating,
+        COALESCE(rr.mmr, 1000)::int AS ranked_mmr,
+        COALESCE(rr.games_played, 0)::int AS ranked_games,
+        COALESCE(rr.wins, 0)::int AS ranked_wins,
+        COALESCE(rr.losses, 0)::int AS ranked_losses,
+        COALESCE(rr.placement_games_completed, 0)::int AS placement_games_completed,
         (SELECT count(DISTINCT st.challenge_id)::int FROM game_sessions gs
           JOIN session_tasks st ON st.game_session_id = gs.id AND st.status = 'correct'
           WHERE gs.user_id = p.id) AS completed_challenges,
@@ -109,9 +125,13 @@ export async function registerAdminRoutes(
         (SELECT count(*)::int FROM filtered) AS total
       FROM page p
       LEFT JOIN user_ratings r ON r.user_id = p.id AND r.category_id IS NULL
+      LEFT JOIN user_ranked_stats rr ON rr.user_id = p.id
       ORDER BY p.created_at DESC, p.id DESC
     `, [search, role, status, recentDays, limit, (page - 1) * limit]);
-    return paged(result.rows, page, limit);
+    return paged(result.rows.map((row) => ({
+      ...row,
+      ranked_division: visibleDivision(Number(row.ranked_mmr), Number(row.ranked_games)),
+    })), page, limit);
   });
 
   app.get('/api/admin/users/:id', async (request, reply) => {
@@ -121,15 +141,22 @@ export async function registerAdminRoutes(
       SELECT u.id, u.username, u.email, u.role, u.account_status, u.created_at, u.updated_at,
              u.last_login_at, u.suspended_at, actor.username AS suspended_by_username,
              COALESCE(r.rating, 1000)::int AS rating,
+             COALESCE(rr.mmr, 1000)::int AS ranked_mmr,
+             COALESCE(rr.games_played, 0)::int AS ranked_games,
+             COALESCE(rr.wins, 0)::int AS ranked_wins,
+             COALESCE(rr.losses, 0)::int AS ranked_losses,
+             COALESCE(rr.placement_games_completed, 0)::int AS placement_games_completed,
              (SELECT count(*)::int FROM game_sessions gs WHERE gs.user_id = u.id) AS game_count,
              (SELECT count(*)::int FROM battle_players bp WHERE bp.user_id = u.id) AS battle_count
       FROM users u
       LEFT JOIN users actor ON actor.id = u.suspended_by
       LEFT JOIN user_ratings r ON r.user_id = u.id AND r.category_id IS NULL
+      LEFT JOIN user_ranked_stats rr ON rr.user_id = u.id
       WHERE u.id = $1
     `, [parsed.data.id]);
     if (!result.rows[0]) return notFound(reply, 'Пользователь не найден.');
-    return { user: result.rows[0] };
+    const user = result.rows[0] as Record<string, unknown>;
+    return { user: { ...user, ranked_division: visibleDivision(Number(user.ranked_mmr), Number(user.ranked_games)) } };
   });
 
   app.post('/api/admin/users/:id/suspend', mutationLimit(), async (request, reply) => {
@@ -279,7 +306,7 @@ export async function registerAdminRoutes(
     if (!parsed.success) return invalidQuery(reply);
     const { page, limit, status, search } = parsed.data;
     const result = await dependencies.postgres.query(`
-      SELECT b.id, b.room_code, b.status, b.round_count, b.created_at, b.started_at, b.finished_at,
+      SELECT b.id, b.room_code, b.status, b.mode, b.round_count, b.created_at, b.started_at, b.finished_at,
         b.expires_at, host.username AS host_username, winner.username AS winner_username,
         cat.name AS category_name,
         COALESCE(string_agg(players.username, ' vs ' ORDER BY bp.joined_at), '') AS players,

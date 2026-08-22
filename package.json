@@ -24,6 +24,10 @@
     "linux-core:import": "pnpm --filter @clirace/api linux-core:import",
     "test:learning": "pnpm --filter @clirace/api test:learning",
     "test:learning-production": "node scripts/test-learning-e2e.mjs",
+    "test:ranked": "pnpm --filter @clirace/api test:ranked",
+    "test:ranked-matchmaking": "pnpm --filter @clirace/api test:ranked-matchmaking",
+    "test:ranked-service": "pnpm --filter @clirace/api test:ranked-e2e",
+    "test:ranked-e2e": "node scripts/test-ranked-e2e.mjs",
     "start": "pnpm --filter @clirace/api start"
   },
   "engines": {

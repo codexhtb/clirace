@@ -15,7 +15,10 @@
     "test:matchmaking-e2e": "node dist/matchmaking-e2e.js",
     "linux-core:validate": "node dist/learning-content-cli.js validate",
     "linux-core:import": "node dist/learning-content-cli.js import",
-    "test:learning": "node dist/learning-e2e.js"
+    "test:learning": "node dist/learning-e2e.js",
+    "test:ranked": "node dist/ranked-test.js",
+    "test:ranked-matchmaking": "node dist/ranked-matchmaking-test.js",
+    "test:ranked-e2e": "node dist/ranked-e2e.js"
   },
   "dependencies": {
     "@fastify/helmet": "^13.0.1",

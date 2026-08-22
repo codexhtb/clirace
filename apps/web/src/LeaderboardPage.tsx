@@ -14,6 +14,10 @@ interface LeaderboardEntry {
   totalScore: number;
   bestStreak: number;
   accuracy: number;
+  division?: string;
+  wins?: number;
+  losses?: number;
+  provisional?: boolean;
 }
 interface Leaderboard {
   board: { slug: string; name: string };
@@ -80,6 +84,7 @@ export function LeaderboardPage() {
 
         <div className="mt-10 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Категория рейтинга">
           <button className={`leaderboard-filter ${selected === 'overall' ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory('overall')} type="button">Общий</button>
+          <button className={`leaderboard-filter ${selected === 'ranked' ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory('ranked')} type="button">Ranked</button>
           {categories.map((category) => <button className={`leaderboard-filter ${selected === category.slug ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory(category.slug)} type="button" key={category.slug}>{category.name}</button>)}
         </div>
 
@@ -115,8 +120,8 @@ function LeaderboardRow({ entry, active }: { entry: LeaderboardEntry; active: bo
     <a className={`leaderboard-row ${active ? 'leaderboard-row-active' : ''}`} href={`/profile/${encodeURIComponent(entry.username)}`}>
       <span className="rank-cell">{entry.rank === 1 ? <Crown size={16} /> : entry.rank <= 3 ? <Medal size={16} /> : `#${entry.rank}`}</span>
       <span className="min-w-0"><strong className="truncate">@{entry.username}</strong>{active && <small>это вы</small>}</span>
-      <span><strong>{entry.rating}</strong><small>CLI</small></span>
-      <span><strong>{entry.gamesPlayed} · {entry.accuracy}%</strong><small>забегов · точность</small></span>
+      <span><strong>{entry.provisional ? 'Unranked' : entry.division ?? entry.rating}</strong><small>{entry.division ? `${entry.rating} MMR` : 'CLI'}</small></span>
+      <span><strong>{entry.division ? `${entry.wins ?? 0}W · ${entry.losses ?? 0}L` : `${entry.gamesPlayed} · ${entry.accuracy}%`}</strong><small>{entry.division ? 'победы · поражения' : 'забегов · точность'}</small></span>
     </a>
   );
 }

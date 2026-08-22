@@ -426,6 +426,21 @@ button { cursor: pointer; }
 .learn-breakdown { @apply mt-10 rounded border border-line bg-panel p-5 text-left sm:p-7; }.learn-breakdown h2 { @apply mb-5 text-xl font-semibold text-white; }.learn-breakdown > div { @apply grid grid-cols-[minmax(120px,1fr)_minmax(70px,2fr)_45px] items-center gap-3 border-t border-line py-3 sm:grid-cols-[minmax(150px,1fr)_2fr_50px_70px]; }.learn-breakdown > div > span { @apply text-xs text-slate-300; }.learn-breakdown > div > div { @apply h-1.5 overflow-hidden rounded bg-black/50; }.learn-breakdown > div > div i { @apply block h-full bg-acid; }.learn-breakdown > div > strong { @apply text-right font-mono text-xs text-white; }.learn-breakdown > div > small { @apply col-start-2 font-mono text-[8px] text-slate-600 sm:col-start-auto sm:text-right; }
 .learn-area-grid { @apply mt-4 grid gap-4 text-left md:grid-cols-2; }.learn-area-grid section { @apply min-h-32 rounded border border-line bg-panel p-5; }.learn-area-grid small { @apply font-mono text-[9px] uppercase tracking-[.13em] text-slate-600; }.learn-area-grid p { @apply mt-4 text-sm leading-6 text-slate-300; }
 
+.matchmaking-mode-tabs { @apply mb-3 inline-flex rounded border border-line bg-panel p-1; }
+.matchmaking-mode-tabs button { @apply rounded px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[.1em] text-slate-500 transition-colors; }
+.matchmaking-mode-tabs button.active { @apply bg-acid text-ink; }
+.matchmaking-ranked { border-color: rgba(182, 240, 74, .28); background: linear-gradient(135deg, rgba(182,240,74,.045), rgba(15,21,28,.96)); }
+.ranked-badge { @apply mt-4 inline-flex items-center gap-3 rounded border border-acid/20 bg-acid/[.04] px-3 py-2 font-mono text-[10px] uppercase tracking-[.08em]; }
+.ranked-badge strong { @apply text-white; }.ranked-badge span { @apply text-acid; }
+.matchmaking-opponent { @apply mt-4 inline-block font-mono text-[10px] uppercase tracking-[.08em] text-acid; }
+.ranked-result-block { @apply mt-7 grid overflow-hidden rounded border border-acid/25 bg-acid/[.035] text-left sm:grid-cols-3; }
+.ranked-result-block > div { @apply flex min-h-28 flex-col justify-center border-b border-line p-5 sm:border-b-0 sm:border-r; }
+.ranked-result-block > div:last-child { @apply border-0; }.ranked-result-block span { @apply font-mono text-[9px] uppercase tracking-[.12em] text-slate-500; }.ranked-result-block strong { @apply mt-2 text-xl text-white; }.ranked-result-block b { @apply mt-1 font-mono text-xs; }
+.ranked-profile-card { @apply flex flex-col justify-between gap-5 rounded-lg border border-acid/25 bg-acid/[.035] p-6 sm:flex-row sm:items-center; }
+.ranked-profile-card h2 { @apply mt-2 text-3xl font-semibold text-white; }.ranked-profile-card > div:first-child > span { @apply mt-1 block font-mono text-xs text-acid; }
+.ranked-profile-stats { @apply grid grid-cols-3 gap-3; }.ranked-profile-stats span { @apply flex min-w-20 flex-col rounded border border-line bg-black/20 p-3 text-xs text-slate-500; }.ranked-profile-stats strong { @apply font-mono text-lg text-white; }
+.ranked-history-row { @apply grid items-center gap-3 border-b border-line px-5 py-4 text-sm transition-colors last:border-0 hover:bg-white/[.02] sm:grid-cols-[1fr_120px_150px]; }.ranked-history-row > div { @apply flex flex-col; }.ranked-history-row span { @apply mt-1 text-xs text-slate-600; }
+
 @media (max-width: 520px) {
   .mode-row { grid-template-columns: 28px 70px 1fr; }
   .mode-row > :last-child { display: none; }
