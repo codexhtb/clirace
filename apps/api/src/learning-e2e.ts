@@ -49,7 +49,7 @@ async function main(): Promise<void> {
 
     const inserted = await dependencies.postgres.query<{ id: string }>(`
       INSERT INTO users (username, username_normalized, email, email_normalized, password_hash)
-      VALUES ($1, lower($1), $2, lower($2), $3) RETURNING id
+      VALUES ($1::varchar, lower($1::text), $2::varchar, lower($2::text), $3) RETURNING id
     `, [username, email, await hashPassword(password)]);
     userId = inserted.rows[0]!.id;
     const cookie = await login(app, username, password);
