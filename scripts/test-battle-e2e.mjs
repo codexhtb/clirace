@@ -355,7 +355,15 @@ try {
   }, null, 2));
 } finally {
   for (const socket of sockets) socket.close();
-  const cleanup = await Promise.allSettled([a.delete(), b.delete()]);
+  const cleanup = [];
+  for (const user of [a, b]) {
+    try {
+      await user.delete();
+      cleanup.push({ status: 'fulfilled' });
+    } catch (reason) {
+      cleanup.push({ status: 'rejected', reason });
+    }
+  }
   const failures = cleanup.filter((result) => result.status === 'rejected');
   if (failures.length) throw new AggregateError(failures.map((result) => result.reason), 'E2E account cleanup failed.');
 }
