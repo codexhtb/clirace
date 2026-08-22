@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AuthService } from './auth-service.js';
@@ -149,7 +150,14 @@ export async function registerAuthRoutes(
   });
 
   app.delete('/api/auth/account', {
-    config: { rateLimit: { max: 5, timeWindow: '1 hour' } },
+    config: { rateLimit: {
+      max: 5,
+      timeWindow: '1 hour',
+      keyGenerator: (request) => {
+        const token = request.cookies[config.AUTH_COOKIE_NAME];
+        return token ? createHash('sha256').update(token).digest('hex') : request.ip;
+      },
+    } },
   }, async (request, reply) => {
     if (!hasSameOrigin(request)) return forbidden(reply);
     const user = await auth.currentUser(request);
