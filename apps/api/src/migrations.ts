@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import type { Pool } from 'pg';
 import { seedInterview100 } from './interview-seed.js';
+import { importLinuxCoreQuestions } from './learning-content.js';
 
 const MIGRATION_LOCK_ID = 1_971_204_245;
 
@@ -37,6 +38,7 @@ export async function runMigrations(postgres: Pool): Promise<void> {
       }
     }
     await seedInterview100(client);
+    await importLinuxCoreQuestions(client);
   } finally {
     await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]).catch(() => undefined);
     client.release();

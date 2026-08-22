@@ -8,6 +8,7 @@ import { QuickStartSection } from './QuickStartSection';
 import { InterviewPage } from './InterviewPage';
 import { CommunityHeader } from './CommunityHeader';
 import { AdminConsole } from './AdminConsole';
+import { LearnPage } from './LearnPage';
 
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleCreatePage,
@@ -222,7 +223,9 @@ function HomePage() {
 export function App() {
   const path = window.location.pathname;
   useEffect(() => {
-    const title = path.startsWith('/admin') ? 'Operations Console — CLIRace'
+    const title = path === '/learn/linux-core' ? 'Linux Core — обучение Linux с объяснениями | CLIRace'
+      : path === '/learn' ? 'CLIRace Learn — обучение Linux и DevOps'
+      : path.startsWith('/admin') ? 'Operations Console — CLIRace'
       : path === '/play' ? 'Играть — CLIRace'
       : path === '/interview' ? 'Interview 100 — CLIRace'
         : path === '/daily' ? 'Daily Challenge — CLIRace'
@@ -232,10 +235,21 @@ export function App() {
                 : path === '/' || path === '/login' || path === '/register' ? 'CLIRace — практика Linux и DevOps в терминале'
                   : 'Страница не найдена — CLIRace';
     document.title = title;
+    const description = path.startsWith('/learn')
+      ? 'Изучайте основы Linux: отвечайте на вопросы, разбирайте ошибки и закрепляйте знания в настоящем терминале CLIRace.'
+      : 'CLIRace — практика Linux и DevOps в настоящем терминале.';
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.append(meta); }
+    meta.content = description;
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.append(canonical); }
+    canonical.href = `https://clirace.fun${path}`;
   }, [path]);
   if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
   if (path === '/admin' || path.startsWith('/admin/')) return <AdminConsole />;
   if (path === '/play') return <PlayPage />;
+  if (path === '/learn') return <LearnPage catalogOnly />;
+  if (path === '/learn/linux-core') return <LearnPage />;
   if (path === '/daily') return <DailyPage />;
   if (path === '/interview') return <InterviewPage />;
   if (path === '/battle') return <Suspense fallback={<BattlePageFallback />}><BattleCreatePage /></Suspense>;

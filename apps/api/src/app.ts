@@ -12,6 +12,7 @@ import type { AppConfig } from './config.js';
 import { registerDailyRoutes } from './daily-routes.js';
 import { registerGameRoutes } from './game-routes.js';
 import { registerInterviewRoutes } from './interview-routes.js';
+import { registerLearningRoutes } from './learning-routes.js';
 import { registerMatchmakingRoutes } from './matchmaking-routes.js';
 import type { MatchmakingManager } from './matchmaking-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
@@ -119,6 +120,10 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager, 
 
   void app.register(async (interviewApp) => {
     await registerInterviewRoutes(interviewApp, config, dependencies);
+  });
+
+  void app.register(async (learningApp) => {
+    await registerLearningRoutes(learningApp, config, dependencies);
   });
 
   void app.register(async (adminApp) => {

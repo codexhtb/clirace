@@ -1,0 +1,124 @@
+[
+  {
+    "slug": "bash-exit-status",
+    "category": "bash",
+    "concept": "exit_status",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Как в Bash сразу после команды вывести её код завершения?",
+    "answers": [
+      { "id": "a1", "text": "echo $?" },
+      { "id": "a2", "text": "echo $!" },
+      { "id": "a3", "text": "echo $$" },
+      { "id": "a4", "text": "echo $#" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Специальный параметр `$?` содержит код завершения последнего pipeline. Ноль обычно означает успех, ненулевое значение — ошибку или особый результат.",
+    "answerExplanations": {
+      "a1": "`$?` хранит код завершения последней выполненной команды.",
+      "a2": "`$!` хранит PID последнего фонового процесса.",
+      "a3": "`$$` содержит PID текущего процесса shell.",
+      "a4": "`$#` показывает количество позиционных аргументов скрипта."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "redirection-append-output",
+    "category": "pipes_redirection",
+    "concept": "shell_redirection",
+    "difficulty": "easy",
+    "type": "command_output",
+    "question": "Выполнены команды: `echo one > note.txt`, затем `echo two >> note.txt`. Что выведет `cat note.txt`?",
+    "answers": [
+      { "id": "a1", "text": "one, затем two на новой строке" },
+      { "id": "a2", "text": "только строку two" },
+      { "id": "a3", "text": "только строку one" },
+      { "id": "a4", "text": "ошибку перенаправления" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Оператор `>` создаёт или перезаписывает файл, а `>>` добавляет вывод в его конец. Обе команды `echo` завершают текст переводом строки.",
+    "answerExplanations": {
+      "a1": "Сначала файл перезаписан строкой one, затем к нему добавлена строка two.",
+      "a2": "Строка one сохранилась, потому что вторая команда использует `>>`.",
+      "a3": "Вторая команда успешно добавляет строку two в конец файла.",
+      "a4": "Оба оператора являются корректными перенаправлениями Bash."
+    },
+    "shellPracticeChallengeSlug": "shell-feed-dragon",
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "pipes-filter-errors",
+    "category": "pipes_redirection",
+    "concept": "pipeline_streams",
+    "difficulty": "medium",
+    "type": "multiple_choice",
+    "question": "Какие утверждения о команде `grep ERROR app.log | wc -l` верны? Выберите два.",
+    "answers": [
+      { "id": "a1", "text": "grep передаёт совпавшие строки через stdout" },
+      { "id": "a2", "text": "wc -l считает полученные строки" },
+      { "id": "a3", "text": "pipe автоматически включает stderr grep" },
+      { "id": "a4", "text": "исходный файл app.log изменяется" }
+    ],
+    "correctAnswerIds": ["a1", "a2"],
+    "explanation": "Pipe соединяет stdout `grep` со stdin `wc`, поэтому результатом будет число совпавших строк. Stderr отдельно не перенаправляется, а файл читается без изменения.",
+    "answerExplanations": {
+      "a1": "Именно стандартный вывод левой команды поступает в pipe.",
+      "a2": "`wc -l` считает разделители строк в своём стандартном вводе.",
+      "a3": "Обычный pipe передаёт stdout; stderr требует отдельного перенаправления.",
+      "a4": "Ни `grep`, ни `wc` в этой команде не записывают в app.log."
+    },
+    "shellPracticeChallengeSlug": "shell-banana-count",
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "ssh-key-permissions",
+    "category": "ssh",
+    "concept": "ssh_private_key",
+    "difficulty": "easy",
+    "type": "scenario",
+    "question": "SSH отказывается использовать приватный ключ и сообщает, что его permissions are too open. Какое исправление обычно подходит?",
+    "answers": [
+      { "id": "a1", "text": "chmod 600 ~/.ssh/id_ed25519" },
+      { "id": "a2", "text": "chmod 644 ~/.ssh/id_ed25519" },
+      { "id": "a3", "text": "chmod 755 ~/.ssh/id_ed25519" },
+      { "id": "a4", "text": "chmod 777 ~/.ssh/id_ed25519" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Приватный ключ не должен быть доступен другим пользователям. Режим 600 оставляет владельцу чтение и запись, а группе и остальным не даёт прав.",
+    "answerExplanations": {
+      "a1": "Режим 600 ограничивает чтение ключа его владельцем.",
+      "a2": "Режим 644 разрешает другим пользователям читать приватный ключ.",
+      "a3": "Режим 755 открывает чтение и добавляет ненужное выполнение.",
+      "a4": "Режим 777 делает секретный ключ доступным всем."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "cron-weekday-backup",
+    "category": "cron",
+    "concept": "cron_schedule",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Какая cron-запись запускает `/opt/backup.sh` каждый будний день в 02:30?",
+    "answers": [
+      { "id": "a1", "text": "30 2 * * 1-5 /opt/backup.sh" },
+      { "id": "a2", "text": "2 30 * * 1-5 /opt/backup.sh" },
+      { "id": "a3", "text": "30 2 1-5 * * /opt/backup.sh" },
+      { "id": "a4", "text": "30 2 * 1-5 * /opt/backup.sh" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Поля cron идут как minute, hour, day of month, month, day of week. `30 2 * * 1-5` означает 02:30 с понедельника по пятницу.",
+    "answerExplanations": {
+      "a1": "Минуты, часы и диапазон будних дней стоят в нужных полях.",
+      "a2": "Здесь 2 — минуты, а час 30 недопустим.",
+      "a3": "Диапазон попал в поле дня месяца, а не дня недели.",
+      "a4": "Диапазон попал в поле месяца, а не дня недели."
+    },
+    "enabled": true,
+    "version": 1
+  }
+]

@@ -1,0 +1,124 @@
+[
+  {
+    "slug": "filesystem-absolute-path",
+    "category": "filesystem",
+    "concept": "filesystem_paths",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Какой из путей является абсолютным в Linux?",
+    "answers": [
+      { "id": "a1", "text": "/var/log/app.log" },
+      { "id": "a2", "text": "var/log/app.log" },
+      { "id": "a3", "text": "../log/app.log" },
+      { "id": "a4", "text": "./log/app.log" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Абсолютный путь начинается с корневого каталога `/` и не зависит от текущего каталога shell. Остальные варианты вычисляются относительно текущего расположения.",
+    "answerExplanations": {
+      "a1": "Начальный `/` означает отсчёт от корня файловой системы.",
+      "a2": "Без начального `/` путь считается относительным.",
+      "a3": "`..` обозначает родительский каталог относительно текущего.",
+      "a4": "`./` явно обозначает текущий каталог, а не корень."
+    },
+    "shellPracticeChallengeSlug": "shell-build-castle",
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "permissions-mode-750",
+    "category": "permissions",
+    "concept": "unix_file_mode",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Какие права задаёт числовой режим 750?",
+    "answers": [
+      { "id": "a1", "text": "owner rwx, group r-x, others ---" },
+      { "id": "a2", "text": "owner rwx, group rwx, others ---" },
+      { "id": "a3", "text": "owner rw-, group r-x, others ---" },
+      { "id": "a4", "text": "owner rwx, group r--, others ---" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Каждая цифра — сумма битов: read=4, write=2, execute=1. Поэтому 7 даёт rwx, 5 — r-x, а 0 не даёт прав.",
+    "answerExplanations": {
+      "a1": "Это точная расшифровка значений 7, 5 и 0.",
+      "a2": "Для прав rwx группе понадобилась бы цифра 7, а не 5.",
+      "a3": "Первая цифра 7 включает execute для владельца.",
+      "a4": "Цифра 5 включает read и execute, а не только read."
+    },
+    "shellPracticeChallengeSlug": "shell-executable-spell",
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "users-effective-groups",
+    "category": "users_groups",
+    "concept": "supplementary_groups",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Какой командой посмотреть UID, основной GID и дополнительные группы текущего пользователя?",
+    "answers": [
+      { "id": "a1", "text": "id" },
+      { "id": "a2", "text": "who" },
+      { "id": "a3", "text": "users" },
+      { "id": "a4", "text": "groups -a" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Команда `id` показывает эффективные UID/GID и список дополнительных групп. Это удобная первая проверка при диагностике доступа к файлам.",
+    "answerExplanations": {
+      "a1": "`id` выводит идентификаторы пользователя и его группы.",
+      "a2": "`who` показывает вошедшие в систему сеансы пользователей.",
+      "a3": "`users` перечисляет имена вошедших пользователей без UID и GID.",
+      "a4": "У `groups` нет переносимого параметра `-a`; UID он не показывает."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "storage-free-filesystems",
+    "category": "storage",
+    "concept": "filesystem_capacity",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Как быстро показать занятое и свободное место смонтированных файловых систем в удобных единицах?",
+    "answers": [
+      { "id": "a1", "text": "df -h" },
+      { "id": "a2", "text": "du -h" },
+      { "id": "a3", "text": "lsblk -f" },
+      { "id": "a4", "text": "free -h" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "`df -h` сообщает использование пространства на смонтированных файловых системах. `du` считает размер файлов, а `free` относится к оперативной памяти.",
+    "answerExplanations": {
+      "a1": "`df` показывает свободное место, а `-h` форматирует размеры.",
+      "a2": "`du` оценивает содержимое каталогов, а не свободное место тома.",
+      "a3": "`lsblk -f` показывает блочные устройства и файловые системы, но не полный отчёт использования.",
+      "a4": "`free -h` показывает использование RAM и swap."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "environment-temporary-variable",
+    "category": "environment",
+    "concept": "environment_variables",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Какая команда передаст переменную MODE только запускаемой команде, не меняя окружение текущего shell?",
+    "answers": [
+      { "id": "a1", "text": "MODE=debug ./app" },
+      { "id": "a2", "text": "export MODE=debug" },
+      { "id": "a3", "text": "set MODE debug" },
+      { "id": "a4", "text": "echo MODE=debug" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Присваивание перед командой создаёт переменную в окружении только этого процесса. После завершения `./app` значение MODE в текущем shell не появится.",
+    "answerExplanations": {
+      "a1": "Такое присваивание действует только для окружения запускаемой команды.",
+      "a2": "`export` изменит окружение текущего shell и его будущих дочерних процессов.",
+      "a3": "Это не синтаксис присваивания переменной в POSIX shell.",
+      "a4": "`echo` лишь напечатает текст и не задаст переменную."
+    },
+    "enabled": true,
+    "version": 1
+  }
+]

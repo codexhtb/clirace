@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
+import { ArrowLeft, BookOpen, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
 import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { humanizeError } from './errors';
@@ -97,6 +97,7 @@ export function PlayPage() {
           difficulty: data.get('difficulty'),
           mode: data.get('mode'),
           taskCount: Number(data.get('taskCount')),
+          ...(data.get('challengeSlug') ? { challengeSlug: data.get('challengeSlug') } : {}),
         }),
       });
       const payload = await response.json() as GameState & { message?: string };
@@ -161,15 +162,17 @@ function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
         <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-slate-600">solo / private</span>
       </div>
 
-      <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <a className="mode-card border-acid/40 bg-acid/[0.045]" href="#practice"><span className="mode-card-icon"><Terminal size={17} /></span><strong>Практика</strong><p>Короткий одиночный забег с выбранной сложностью.</p><span>2–5 минут · Shell по выбору</span></a>
         <a className="mode-card" href="/interview"><span className="mode-card-icon"><BookOpenCheck size={17} /></span><strong>Interview 100</strong><p>Подготовка к Linux и DevOps собеседованию.</p><span>10 / 25 / 50 задач</span></a>
+        <a className="mode-card" href="/learn/linux-core"><span className="mode-card-icon"><BookOpen size={17} /></span><strong>Linux Core</strong><p>Проверьте понимание Linux и разберите каждую ошибку.</p><span>10 / 25 вопросов · с объяснениями</span></a>
         <a className="mode-card" href="/daily"><span className="mode-card-icon"><CalendarDays size={17} /></span><strong>Daily</strong><p>Одна общая задача дня и серия прохождений.</p><span>1 задача · бонусные очки</span></a>
         <a className="mode-card" href="/battle"><span className="mode-card-icon"><Swords size={17} /></span><strong>Private Battle</strong><p>Одинаковые Shell-задачи для двух игроков.</p><span>3 / 5 / 10 раундов</span></a>
       </div>
 
       <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>
-        <div className="mb-7 border-b border-line pb-6"><p className="eyebrow">Настройка практики</p><h2 className="mt-2 text-2xl font-semibold text-white">Соберите свой забег</h2></div>
+        {defaults.challengeSlug && <input type="hidden" name="challengeSlug" value={defaults.challengeSlug} />}
+        <div className="mb-7 border-b border-line pb-6"><p className="eyebrow">{defaults.challengeSlug ? 'Практика из Linux Core' : 'Настройка практики'}</p><h2 className="mt-2 text-2xl font-semibold text-white">{defaults.challengeSlug ? 'Закрепите вопрос в терминале' : 'Соберите свой забег'}</h2></div>
         <div className="grid gap-7 sm:grid-cols-2">
           <label className="play-field">
             <span>Категория</span>
@@ -233,11 +236,13 @@ function getPlayDefaults() {
   const difficulty = query.get('difficulty');
   const mode = query.get('mode');
   const count = Number(query.get('count'));
+  const challengeSlug = query.get('challenge');
   return {
     category: category && /^[a-z0-9-]{1,40}$/.test(category) ? category : 'all',
     difficulty: (['all', 'Easy', 'Medium', 'Hard', 'Expert'] as const).find((value) => value === difficulty) ?? 'Easy',
     mode: modeOptions.find((option) => option.value === mode)?.value ?? 'mixed',
     count: count === 10 ? 10 : 5,
+    challengeSlug: challengeSlug && /^[a-z0-9-]{1,100}$/.test(challengeSlug) ? challengeSlug : '',
   };
 }
 

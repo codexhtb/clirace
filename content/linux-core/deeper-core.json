@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "storage-inodes-full",
+    "category": "storage",
+    "concept": "filesystem_inodes",
+    "difficulty": "medium",
+    "type": "scenario",
+    "question": "`df -h` показывает свободное место, но создание нового файла завершается `No space left on device`. Что стоит проверить?",
+    "answers": [
+      { "id": "a1", "text": "Свободные inode командой df -i" },
+      { "id": "a2", "text": "Текущий load average командой uptime" },
+      { "id": "a3", "text": "Список shell alias командой alias" },
+      { "id": "a4", "text": "Версию ядра командой uname -r" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Файловая система может исчерпать inode при большом количестве мелких файлов, даже если байты ещё свободны. `df -i` показывает использование inode.",
+    "answerExplanations": {
+      "a1": "Исчерпание inode напрямую мешает создать новый filesystem object.",
+      "a2": "Нагрузка CPU не объясняет ошибку отсутствия места на устройстве.",
+      "a3": "Shell alias не влияет на доступный запас inode.",
+      "a4": "Версия ядра сама по себе не показывает ресурс файловой системы."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "processes-zombie-state",
+    "category": "processes",
+    "concept": "zombie_process",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Что означает состояние процесса `Z` в выводе `ps`?",
+    "answers": [
+      { "id": "a1", "text": "Процесс завершён, но родитель ещё не прочитал его статус" },
+      { "id": "a2", "text": "Процесс остановлен сигналом и может быть продолжен" },
+      { "id": "a3", "text": "Процесс непрерывно ожидает ввод с терминала" },
+      { "id": "a4", "text": "Процесс выполняется с максимальным приоритетом" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Zombie уже завершил выполнение и не расходует CPU, но его запись остаётся до `wait()` родителя. Исправлять обычно нужно поведение родительского процесса.",
+    "answerExplanations": {
+      "a1": "Это точное определение zombie: завершённый, но ещё не reaped процесс.",
+      "a2": "Остановленный процесс обычно имеет состояние T, а не Z.",
+      "a3": "Ожидание ввода не превращает процесс в zombie.",
+      "a4": "Приоритет процесса обозначается отдельными полями и не состоянием Z."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "systemd-enable-versus-start",
+    "category": "systemd",
+    "concept": "systemd_enablement",
+    "difficulty": "medium",
+    "type": "multiple_choice",
+    "question": "Какие два утверждения о `systemctl enable --now api.service` верны?",
+    "answers": [
+      { "id": "a1", "text": "Unit будет настроен на запуск при подходящей загрузке" },
+      { "id": "a2", "text": "Unit будет запущен немедленно" },
+      { "id": "a3", "text": "Unit-файл будет навсегда удалён" },
+      { "id": "a4", "text": "Все зависимости unit будут отключены" }
+    ],
+    "correctAnswerIds": ["a1", "a2"],
+    "explanation": "`enable` создаёт связи для будущего запуска unit, а `--now` дополнительно запускает его сейчас. Это объединяет настройку автозапуска и `start`.",
+    "answerExplanations": {
+      "a1": "`enable` подключает unit к указанным в install-секции target.",
+      "a2": "Флаг `--now` просит systemd также запустить unit сразу.",
+      "a3": "Команда создаёт ссылки и не удаляет unit-файл.",
+      "a4": "Зависимости не отключаются этой командой."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "logs-current-boot-errors",
+    "category": "logs",
+    "concept": "journal_priority",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Какая команда покажет сообщения уровня error и важнее только для текущей загрузки?",
+    "answers": [
+      { "id": "a1", "text": "journalctl -b -p err" },
+      { "id": "a2", "text": "journalctl -f -p info" },
+      { "id": "a3", "text": "dmesg -b -p err" },
+      { "id": "a4", "text": "systemctl -b errors" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "`-b` ограничивает journal текущей загрузкой, а `-p err` выбирает приоритет error и более критичные уровни.",
+    "answerExplanations": {
+      "a1": "Оба фильтра journalctl применены к нужным измерениям.",
+      "a2": "`-f` следит за новыми сообщениями, а info включает менее важные записи.",
+      "a3": "У `dmesg` нет такого сочетания systemd journal-фильтров.",
+      "a4": "`systemctl` не предоставляет такой команды фильтрации журнала."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "troubleshooting-dns-order",
+    "category": "troubleshooting",
+    "concept": "dns_diagnosis",
+    "difficulty": "easy",
+    "type": "scenario",
+    "question": "Подключение к `203.0.113.10` работает, а к `api.example.test` — нет. Какую гипотезу проверить первой?",
+    "answers": [
+      { "id": "a1", "text": "Разрешение DNS-имени" },
+      { "id": "a2", "text": "Заполненность inode на сервере" },
+      { "id": "a3", "text": "Права выполнения локального shell" },
+      { "id": "a4", "text": "Состояние swap на клиенте" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Если тот же endpoint доступен по IP, сеть и сервис уже частично подтверждены. Отличие в имени делает DNS-резолвинг наиболее полезной первой проверкой.",
+    "answerExplanations": {
+      "a1": "Разница между двумя проверками — необходимость преобразовать имя в IP.",
+      "a2": "Inode сервера не объясняют, почему доступ зависит от формы адреса.",
+      "a3": "Shell уже способен запустить клиент для успешного подключения по IP.",
+      "a4": "Swap клиента обычно не определяет разрешение конкретного имени."
+    },
+    "enabled": true,
+    "version": 1
+  }
+]

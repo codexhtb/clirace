@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "processes-find-pid",
+    "category": "processes",
+    "concept": "process_pid",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Какая команда найдёт PID запущенного процесса nginx по имени?",
+    "answers": [
+      { "id": "a1", "text": "pgrep nginx" },
+      { "id": "a2", "text": "pidof -p nginx" },
+      { "id": "a3", "text": "jobs nginx" },
+      { "id": "a4", "text": "which nginx" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "`pgrep` ищет процессы по имени и печатает их PID. `which` ищет исполняемый файл в PATH, а `jobs` знает только задания текущего shell.",
+    "answerExplanations": {
+      "a1": "`pgrep nginx` возвращает PID процессов с подходящим именем.",
+      "a2": "У `pidof` нет такого применения параметра `-p`.",
+      "a3": "`jobs` показывает только фоновые задания текущего shell.",
+      "a4": "`which` ищет путь к программе, а не запущенный процесс."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "signals-graceful-stop",
+    "category": "signals",
+    "concept": "process_signals",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Какой сигнал `kill` отправляет по умолчанию, позволяя процессу корректно завершиться?",
+    "answers": [
+      { "id": "a1", "text": "SIGTERM" },
+      { "id": "a2", "text": "SIGKILL" },
+      { "id": "a3", "text": "SIGSTOP" },
+      { "id": "a4", "text": "SIGHUP" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Обычный `kill PID` отправляет SIGTERM. Процесс может обработать его, закрыть файлы и завершиться; SIGKILL стоит оставлять на случай, когда мягкая остановка не сработала.",
+    "answerExplanations": {
+      "a1": "SIGTERM — стандартный сигнал `kill` для контролируемого завершения.",
+      "a2": "SIGKILL нельзя перехватить; по умолчанию он не отправляется.",
+      "a3": "SIGSTOP приостанавливает процесс и не завершает его.",
+      "a4": "SIGHUP часто означает потерю терминала или перечитывание конфигурации."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "systemd-view-status",
+    "category": "systemd",
+    "concept": "systemd_units",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Как посмотреть текущее состояние unit `nginx.service` вместе с последними сообщениями?",
+    "answers": [
+      { "id": "a1", "text": "systemctl status nginx.service" },
+      { "id": "a2", "text": "systemctl enable nginx.service" },
+      { "id": "a3", "text": "journalctl start nginx.service" },
+      { "id": "a4", "text": "service nginx install" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "`systemctl status` показывает active state, PID и несколько последних строк журнала unit. Для полного журнала обычно используют `journalctl -u nginx.service`.",
+    "answerExplanations": {
+      "a1": "Эта команда предназначена для просмотра состояния unit.",
+      "a2": "`enable` настраивает автозапуск, но не показывает состояние.",
+      "a3": "У `journalctl` нет подкоманды `start` для запуска unit.",
+      "a4": "Такой командой systemd-службы не устанавливают."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "logs-follow-unit",
+    "category": "logs",
+    "concept": "journal_follow",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Как следить за новыми сообщениями журнала только для `api.service`?",
+    "answers": [
+      { "id": "a1", "text": "journalctl -u api.service -f" },
+      { "id": "a2", "text": "journalctl -b api.service -n" },
+      { "id": "a3", "text": "systemctl logs api.service -f" },
+      { "id": "a4", "text": "tail -u api.service journal" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "В `journalctl` параметр `-u` фильтрует записи по unit, а `-f` продолжает вывод по мере появления новых записей.",
+    "answerExplanations": {
+      "a1": "Сочетание `-u` и `-f` фильтрует unit и включает слежение.",
+      "a2": "`-b` выбирает загрузку, но эта запись не задаёт корректное слежение за unit.",
+      "a3": "`systemctl` не имеет подкоманды `logs`.",
+      "a4": "`tail` не умеет выбирать systemd unit такими параметрами."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "packages-refresh-index",
+    "category": "packages",
+    "concept": "apt_package_index",
+    "difficulty": "easy",
+    "type": "scenario",
+    "question": "На Ubuntu пакет существует в репозитории, но `apt install` его не находит после добавления нового источника. Какой первый шаг наиболее уместен?",
+    "answers": [
+      { "id": "a1", "text": "Выполнить apt update" },
+      { "id": "a2", "text": "Выполнить apt autoremove" },
+      { "id": "a3", "text": "Удалить каталог /var/lib/dpkg" },
+      { "id": "a4", "text": "Перезагрузить сервер" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "`apt update` загружает актуальные индексы пакетов из настроенных источников. Без свежего индекса APT может не знать о доступном пакете.",
+    "answerExplanations": {
+      "a1": "Обновление индекса — нормальный шаг после изменения источников.",
+      "a2": "`autoremove` удаляет ненужные зависимости и не обновляет индекс.",
+      "a3": "Удаление базы dpkg опасно и не решает проблему индекса.",
+      "a4": "Перезагрузка не загружает индексы пакетов из репозитория."
+    },
+    "enabled": true,
+    "version": 1
+  }
+]

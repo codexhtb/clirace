@@ -4,6 +4,7 @@ export function CommunityHeader() {
   const path = window.location.pathname;
   const links = [
     ['/play', 'Играть'],
+    ['/learn', 'Learn'],
     ['/interview', 'Interview 100'],
     ['/daily', 'Daily'],
     ['/rating', 'Рейтинг'],
@@ -18,7 +19,7 @@ export function CommunityHeader() {
         </a>
         <nav className="product-nav" aria-label="Основная навигация">
           {links.map(([href, label]) => {
-            const active = path === href || (href === '/battle' && path.startsWith('/battle/'));
+            const active = path === href || (href === '/learn' && path.startsWith('/learn/')) || (href === '/battle' && path.startsWith('/battle/'));
             return <a className={`nav-link ${active ? 'nav-link-active' : ''}`} href={href} key={href} aria-current={active ? 'page' : undefined}>{label}</a>;
           })}
         </nav>
@@ -26,7 +27,7 @@ export function CommunityHeader() {
       </div>
       <nav className="mobile-nav page-width" aria-label="Мобильная навигация">
         {links.map(([href, label]) => {
-          const active = path === href || (href === '/battle' && path.startsWith('/battle/'));
+          const active = path === href || (href === '/learn' && path.startsWith('/learn/')) || (href === '/battle' && path.startsWith('/battle/'));
           return <a className={`nav-link ${active ? 'nav-link-active' : ''}`} href={href} key={href} aria-current={active ? 'page' : undefined}>{label}</a>;
         })}
       </nav>

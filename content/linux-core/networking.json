@@ -1,0 +1,123 @@
+[
+  {
+    "slug": "networking-connection-refused",
+    "category": "networking",
+    "concept": "tcp_connection_refused",
+    "difficulty": "easy",
+    "type": "scenario",
+    "question": "Хост отвечает на ping, но подключение к TCP-порту 8080 получает `Connection refused`. Что наиболее вероятно?",
+    "answers": [
+      { "id": "a1", "text": "На целевом адресе никто не слушает порт 8080" },
+      { "id": "a2", "text": "DNS не смог преобразовать имя целевого хоста" },
+      { "id": "a3", "text": "Локальный файл hosts имеет неверные права" },
+      { "id": "a4", "text": "У клиента полностью отсутствует IP-маршрут" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "`Connection refused` обычно означает, что TCP-пакет дошёл до хоста, но endpoint отверг соединение: сервис не слушает этот адрес/порт или firewall активно отвечает reject.",
+    "answerExplanations": {
+      "a1": "Это типичная причина немедленного TCP-отказа на доступном хосте.",
+      "a2": "DNS-проблема возникла бы до обращения к IP и дала бы другую ошибку.",
+      "a3": "Права локального hosts не объясняют отказ уже достигнутого TCP endpoint.",
+      "a4": "При отсутствии маршрута обычно будет network unreachable или тайм-аут."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "networking-listen-sockets",
+    "category": "networking",
+    "concept": "tcp_listening",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Как показать слушающие TCP-сокеты и связанные процессы на современном Linux?",
+    "answers": [
+      { "id": "a1", "text": "ss -ltnp" },
+      { "id": "a2", "text": "ip -ltnp" },
+      { "id": "a3", "text": "ps -ltnp" },
+      { "id": "a4", "text": "ping -ltnp" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "У `ss` параметры `-l` выбирают listening, `-t` TCP, `-n` числовые адреса, `-p` процессы. Для данных чужих процессов могут потребоваться повышенные права.",
+    "answerExplanations": {
+      "a1": "`ss` — штатный инструмент просмотра сокетов с нужными флагами.",
+      "a2": "`ip` управляет сетевыми объектами, но не показывает сокеты так.",
+      "a3": "`ps` показывает процессы, а не список TCP-сокетов.",
+      "a4": "`ping` проверяет ICMP-доступность и не перечисляет сокеты."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "troubleshooting-service-first-checks",
+    "category": "troubleshooting",
+    "concept": "service_diagnosis",
+    "difficulty": "medium",
+    "type": "multiple_choice",
+    "question": "После перезапуска web-сервис недоступен. Какие две проверки логично выполнить первыми?",
+    "answers": [
+      { "id": "a1", "text": "Проверить состояние unit через systemctl status" },
+      { "id": "a2", "text": "Проверить журнал unit через journalctl -u" },
+      { "id": "a3", "text": "Удалить все файлы конфигурации сервиса" },
+      { "id": "a4", "text": "Переустановить операционную систему" }
+    ],
+    "correctAnswerIds": ["a1", "a2"],
+    "explanation": "Сначала нужно собрать наблюдаемые факты: запущен ли unit и какую ошибку он записал. Разрушительные действия до диагностики могут убрать полезные данные и усугубить сбой.",
+    "answerExplanations": {
+      "a1": "Состояние unit быстро показывает, запущен ли процесс и как он завершился.",
+      "a2": "Журнал обычно содержит конкретную причину сбоя запуска.",
+      "a3": "Удаление конфигурации разрушительно и не является первой диагностикой.",
+      "a4": "Переустановка системы несоразмерна локальному сбою одного сервиса."
+    },
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "filesystem-symlink-behavior",
+    "category": "filesystem",
+    "concept": "symbolic_links",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Что произойдёт с символической ссылкой, если удалить файл, на который она указывает?",
+    "answers": [
+      { "id": "a1", "text": "Ссылка останется, но станет битой" },
+      { "id": "a2", "text": "Ссылка автоматически удалится вместе с файлом" },
+      { "id": "a3", "text": "Ссылка сохранит отдельную копию содержимого" },
+      { "id": "a4", "text": "Ссылка превратится в обычный пустой файл" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Символическая ссылка хранит путь к цели, а не её данные. После удаления цели сам объект ссылки остаётся, но разыменовать его больше нельзя.",
+    "answerExplanations": {
+      "a1": "Symlink продолжает хранить путь, который теперь не существует.",
+      "a2": "Удаление цели не удаляет другие directory entries с symlink.",
+      "a3": "Symlink не копирует данные целевого файла.",
+      "a4": "Тип объекта ссылки автоматически не меняется."
+    },
+    "shellPracticeChallengeSlug": "shell-portal-shortcut",
+    "enabled": true,
+    "version": 1
+  },
+  {
+    "slug": "permissions-directory-execute",
+    "category": "permissions",
+    "concept": "directory_permissions",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Что означает право execute (`x`) для каталога?",
+    "answers": [
+      { "id": "a1", "text": "Разрешает проход к известным именам внутри каталога" },
+      { "id": "a2", "text": "Разрешает запуск всех файлов внутри каталога" },
+      { "id": "a3", "text": "Разрешает чтение содержимого каждого файла" },
+      { "id": "a4", "text": "Разрешает менять владельца каталога" }
+    ],
+    "correctAnswerIds": ["a1"],
+    "explanation": "Для каталога execute означает возможность traverse: пройти через каталог и обратиться к известному имени. Просмотр списка имён отдельно требует read.",
+    "answerExplanations": {
+      "a1": "Directory execute управляет traversal и доступом по известному имени.",
+      "a2": "Право запуска проверяется на самом файле, а не наследуется от каталога.",
+      "a3": "Чтение файла определяется правами этого файла и доступом к пути.",
+      "a4": "Смена владельца не является смыслом directory execute."
+    },
+    "enabled": true,
+    "version": 1
+  }
+]

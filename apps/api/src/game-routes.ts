@@ -15,6 +15,7 @@ const createSchema = z.object({
   difficulty: z.enum(['all', 'Easy', 'Medium', 'Hard', 'Expert']).default('all'),
   mode: z.enum(['recall', 'quick', 'real_shell', 'mixed']),
   taskCount: z.union([z.literal(5), z.literal(10)]).default(5),
+  challengeSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100).optional(),
 }).strict();
 
 const answerSchema = z.object({ answer: z.string().trim().min(1).max(2000) }).strict();
@@ -94,9 +95,11 @@ export async function registerGameRoutes(
         AND c.type = ANY($1::varchar[])
         AND ($2::smallint IS NULL OR c.category_id = $2)
         AND ($3::varchar IS NULL OR c.difficulty = $3)
+        AND ($4::varchar IS NULL OR c.slug = $4)
       ORDER BY random()
-      LIMIT $4
-    `, [types, category?.id ?? null, parsed.data.difficulty === 'all' ? null : parsed.data.difficulty, parsed.data.taskCount]);
+      LIMIT $5
+    `, [types, category?.id ?? null, parsed.data.difficulty === 'all' ? null : parsed.data.difficulty,
+      parsed.data.challengeSlug ?? null, parsed.data.challengeSlug ? 1 : parsed.data.taskCount]);
     if (challenges.rowCount === 0) return reply.code(422).send({
       error: 'No challenges', message: 'Для выбранных фильтров пока нет заданий.',
     });

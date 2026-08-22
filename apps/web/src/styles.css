@@ -370,6 +370,62 @@ button { cursor: pointer; }
 
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
+/* Learn V1 */
+.learn-hero-title { @apply mt-5 max-w-4xl text-5xl font-semibold leading-[.95] tracking-[-0.055em] text-white sm:text-7xl lg:text-8xl; }
+.learn-hero-title span { @apply text-acid; }
+.learn-lead { @apply mt-7 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base; }
+.learn-course-grid { @apply mt-12 grid gap-4 md:grid-cols-2; }
+.learn-course-card { @apply flex min-h-80 flex-col rounded-lg border border-line bg-panel p-6 transition-all hover:-translate-y-0.5 hover:border-acid/40 sm:p-8; }
+.learn-course-card > small { @apply mt-7 font-mono text-[9px] font-semibold uppercase tracking-[.16em] text-acid; }
+.learn-course-card h2 { @apply mt-3 text-3xl font-semibold tracking-[-.04em] text-white; }
+.learn-course-card p { @apply mt-3 max-w-md text-sm leading-7 text-slate-400; }
+.learn-course-card > strong { @apply mt-auto flex items-center gap-2 pt-8 font-mono text-[10px] uppercase tracking-[.12em] text-acid; }
+.learn-course-soon { @apply cursor-default opacity-55 hover:translate-y-0 hover:border-line; }
+.learn-course-soon > strong { @apply text-slate-500; }
+.learn-intro-grid { @apply grid gap-9 lg:grid-cols-[1.2fr_.8fr] lg:items-end; }
+.learn-method { @apply grid grid-cols-[1fr_auto] overflow-hidden rounded border border-line bg-panel; }
+.learn-method span { @apply flex min-h-16 items-center px-5 font-mono text-[10px] font-bold tracking-[.16em] text-slate-300; }
+.learn-method i { @apply flex items-center pr-4 font-mono text-acid; }
+.learn-progress-note { @apply mt-8 inline-flex rounded border border-cyan/20 bg-cyan/[.04] px-4 py-3 font-mono text-[10px] text-cyan; }
+.learn-mode-grid { @apply mt-10 grid gap-3 md:grid-cols-2 xl:grid-cols-4; }
+.learn-mode { @apply relative flex min-h-52 flex-col items-start rounded border border-line bg-panel p-5 text-left transition-all hover:border-acid/40 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-line; }
+.learn-mode > small { @apply font-mono text-[8px] font-semibold uppercase tracking-[.14em] text-slate-600; }
+.learn-mode > strong { @apply mt-6 text-xl font-semibold text-white; }
+.learn-mode > span { @apply mt-2 text-xs text-slate-500; }
+.learn-mode > svg { @apply mt-auto self-end text-acid; }
+.learn-topic select { @apply mt-4 w-full rounded border border-line bg-[#070a0e] px-3 py-2.5 text-xs text-slate-300 outline-none focus:border-acid/40; }
+.learn-topic > button { @apply mt-auto flex items-center gap-2 self-end font-mono text-[10px] font-bold uppercase tracking-[.1em] text-acid disabled:opacity-40; }
+.learn-auth { @apply mt-6 flex flex-col items-start justify-between gap-4 rounded border border-acid/20 bg-acid/[.04] p-5 sm:flex-row sm:items-center; }
+.learn-auth strong { @apply text-sm text-slate-300; }
+.learn-session { @apply mx-auto max-w-5xl; }
+.learn-session-top { @apply mb-5 grid items-center gap-3 font-mono text-[9px] uppercase tracking-[.12em] text-slate-600 sm:grid-cols-[150px_1fr_180px]; }
+.learn-session-top > div:first-child { @apply flex items-center justify-between; }.learn-session-top > div:first-child strong { @apply text-sm text-white; }
+.learn-session-top > span:last-child { @apply text-left sm:text-right; }
+.learn-progress-track { @apply h-1 overflow-hidden rounded-full bg-slate-900; }.learn-progress-track i { @apply block h-full bg-acid transition-all; box-shadow: 0 0 14px rgba(182,240,74,.45); }
+.learn-question-card { @apply rounded-lg border border-line bg-panel p-5 shadow-2xl sm:p-9; }
+.learn-question-meta { @apply flex flex-wrap gap-2 font-mono text-[8px] uppercase tracking-[.11em] text-slate-500; }
+.learn-question-meta span { @apply rounded border border-line bg-black/20 px-2 py-1; }
+.learn-question-card > h1 { @apply mt-7 max-w-4xl whitespace-pre-wrap text-2xl font-semibold leading-snug tracking-[-.025em] text-white sm:text-3xl; }
+.learn-hint { @apply mt-3 text-xs text-cyan; }
+.learn-answers { @apply mt-8 grid gap-3; }
+.learn-answer { @apply grid min-h-16 w-full grid-cols-[34px_1fr_auto] items-center gap-3 rounded border border-line bg-black/20 px-4 py-3 text-left transition-colors hover:border-slate-500 disabled:cursor-default; }
+.learn-answer > span { @apply flex h-8 w-8 items-center justify-center rounded border border-line font-mono text-[10px] text-slate-500; }
+.learn-answer p { @apply whitespace-pre-wrap text-sm leading-6 text-slate-300; }
+.learn-answer.selected { @apply border-cyan/60 bg-cyan/[.055]; }.learn-answer.selected > span { @apply border-cyan/40 text-cyan; }
+.learn-answer.correct { @apply border-acid/50 bg-acid/[.06]; }.learn-answer.correct > span, .learn-answer.correct > svg { @apply border-acid/30 text-acid; }
+.learn-answer.wrong { @apply border-rose-400/45 bg-rose-400/[.05]; }.learn-answer.wrong > span, .learn-answer.wrong > svg { @apply border-rose-400/30 text-rose-300; }
+.learn-answer.muted { @apply opacity-45; }
+.learn-submit-row { @apply mt-7 flex flex-col items-start justify-between gap-4 border-t border-line pt-6 sm:flex-row sm:items-center; }
+.learn-submit-row > span { @apply font-mono text-[9px] uppercase tracking-[.1em] text-slate-600; }
+.learn-feedback { @apply mt-8 rounded border p-5 sm:p-6; }.learn-feedback.is-correct { @apply border-acid/25 bg-acid/[.035]; }.learn-feedback.is-wrong { @apply border-rose-400/25 bg-rose-400/[.025]; }
+.learn-feedback-title { @apply flex items-center gap-3; }.learn-feedback.is-correct .learn-feedback-title { @apply text-acid; }.learn-feedback.is-wrong .learn-feedback-title { @apply text-rose-300; }.learn-feedback-title strong { @apply text-lg; }
+.learn-feedback section { @apply mt-6 border-t border-white/[.07] pt-5; }.learn-feedback section small { @apply font-mono text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500; }.learn-feedback section p { @apply mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-300; }.learn-feedback section p strong { @apply text-white; }
+.learn-feedback-actions { @apply mt-7 flex flex-col justify-between gap-3 border-t border-white/[.07] pt-5 sm:flex-row; }
+.learn-results { @apply mx-auto max-w-4xl text-center; }.learn-results > h1 { @apply mt-3 text-4xl font-semibold tracking-[-.045em] text-white sm:text-6xl; }
+.learn-score { @apply mx-auto mt-8 flex h-48 w-48 flex-col items-center justify-center rounded-full border border-acid/30 bg-acid/[.045] shadow-glow; }.learn-score strong { @apply font-mono text-5xl text-acid; }.learn-score span { @apply mt-2 text-xs text-slate-500; }
+.learn-breakdown { @apply mt-10 rounded border border-line bg-panel p-5 text-left sm:p-7; }.learn-breakdown h2 { @apply mb-5 text-xl font-semibold text-white; }.learn-breakdown > div { @apply grid grid-cols-[minmax(120px,1fr)_minmax(70px,2fr)_45px] items-center gap-3 border-t border-line py-3 sm:grid-cols-[minmax(150px,1fr)_2fr_50px_70px]; }.learn-breakdown > div > span { @apply text-xs text-slate-300; }.learn-breakdown > div > div { @apply h-1.5 overflow-hidden rounded bg-black/50; }.learn-breakdown > div > div i { @apply block h-full bg-acid; }.learn-breakdown > div > strong { @apply text-right font-mono text-xs text-white; }.learn-breakdown > div > small { @apply col-start-2 font-mono text-[8px] text-slate-600 sm:col-start-auto sm:text-right; }
+.learn-area-grid { @apply mt-4 grid gap-4 text-left md:grid-cols-2; }.learn-area-grid section { @apply min-h-32 rounded border border-line bg-panel p-5; }.learn-area-grid small { @apply font-mono text-[9px] uppercase tracking-[.13em] text-slate-600; }.learn-area-grid p { @apply mt-4 text-sm leading-6 text-slate-300; }
+
 @media (max-width: 520px) {
   .mode-row { grid-template-columns: 28px 70px 1fr; }
   .mode-row > :last-child { display: none; }
