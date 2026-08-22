@@ -293,8 +293,8 @@ export class LearningPathService {
         finalScore, JSON.stringify(strong), JSON.stringify(weak)]);
     }
     const updated = await client.query<EnrollmentRow>(`
-      UPDATE learning_enrollments SET status=$2,current_module_id=$3,current_item_id=$4,
-        progress_percent=$5,final_score=$6,completed_at=CASE WHEN $2='completed' THEN coalesce(completed_at,now()) ELSE completed_at END,
+      UPDATE learning_enrollments SET status=$2::varchar,current_module_id=$3,current_item_id=$4,
+        progress_percent=$5,final_score=$6,completed_at=CASE WHEN $2::varchar='completed' THEN coalesce(completed_at,now()) ELSE completed_at END,
         last_activity_at=now() WHERE id=$1 RETURNING *
     `, [enrollment.id, courseCompleted ? 'completed' : 'active', courseCompleted ? null : currentModule?.id ?? null,
       courseCompleted ? null : currentItem?.id ?? null, enrollment.status === 'completed' ? 100 : progressPercent, finalScore]);

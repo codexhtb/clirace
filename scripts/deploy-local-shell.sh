@@ -183,6 +183,8 @@ for attempt in $(seq 1 30); do
         node apps/api/dist/learning-e2e.js
       docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
         node apps/api/dist/admin-e2e.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/sandbox-integrity.js
       install -d -m 0755 /var/lib/clirace
       touch "$learning_paths_validation_marker"
       echo 'Learning Paths V1 validation passed.'
