@@ -1,14 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Activity, ArrowRight, BookOpen, Check, Command, Swords, Terminal, Trophy } from 'lucide-react';
-import { LeaderboardPage } from './LeaderboardPage';
-import { DailyPage } from './DailyPage';
-import { PlayPage } from './PlayPage';
-import { ProfilePage } from './ProfilePage';
 import { QuickStartSection } from './QuickStartSection';
-import { InterviewPage } from './InterviewPage';
 import { CommunityHeader } from './CommunityHeader';
-import { AdminConsole } from './AdminConsole';
-import { LearnPage } from './LearnPage';
 import { routeMetadata, secondaryNavigation } from './product-ux';
 import { currentUser } from './auth-client';
 
@@ -19,6 +12,13 @@ const BattleRoomPage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleRoomPage,
 })));
 const LearningPathsPage = lazy(() => import('./LearningPathsPage').then((module) => ({ default: module.LearningPathsPage })));
+const LeaderboardPage = lazy(() => import('./LeaderboardPage').then((module) => ({ default: module.LeaderboardPage })));
+const DailyPage = lazy(() => import('./DailyPage').then((module) => ({ default: module.DailyPage })));
+const PlayPage = lazy(() => import('./PlayPage').then((module) => ({ default: module.PlayPage })));
+const ProfilePage = lazy(() => import('./ProfilePage').then((module) => ({ default: module.ProfilePage })));
+const InterviewPage = lazy(() => import('./InterviewPage').then((module) => ({ default: module.InterviewPage })));
+const AdminConsole = lazy(() => import('./AdminConsole').then((module) => ({ default: module.AdminConsole })));
+const LearnPage = lazy(() => import('./LearnPage').then((module) => ({ default: module.LearnPage })));
 
 function BattlePageFallback() {
   return <main className="page-width py-24 font-mono text-sm uppercase tracking-[0.15em] text-slate-500">Загружаем Battle…</main>;
@@ -33,14 +33,14 @@ const modes = [
   { key: '01', name: 'НАБОР', detail: 'Развивайте мышечную память команд.', time: '5–20 с' },
   { key: '02', name: 'ВСПОМНИ', detail: 'Превращайте задачу в точный синтаксис.', time: '10–30 с' },
   { key: '03', name: 'БЫСТРО', detail: 'Решайте короткие практические задачи.', time: '15–60 с' },
-  { key: '04', name: 'SHELL', detail: 'Работайте в настоящей Linux-песочнице.', time: '30–60 с' },
+  { key: '04', name: 'ТЕРМИНАЛ', detail: 'Работайте в настоящей Linux-песочнице.', time: '30–60 с' },
 ];
 
 const stats = [
-  ['REAL', 'Linux shell'],
-  ['ROOTLESS', 'изоляция'],
-  ['OFF', 'внешняя сеть'],
-  ['TTL', 'одноразовая сессия'],
+  ['01', 'задача'],
+  ['120', 'очки'],
+  ['04', 'серия'],
+  ['00:18', 'прошло'],
 ];
 
 function SystemStatus() {
@@ -82,6 +82,10 @@ function LearningPathResume() {
   return <section className="page-width pb-16"><a className="home-course-resume" href={`/learn/paths/${course.slug}`}><div><small>Продолжить обучение</small><strong>{course.title}</strong></div><span>{course.enrollment.progress}%</span><ArrowRight size={16} /></a></section>;
 }
 
+function RouteFallback() {
+  return <main className="page-width py-24 font-mono text-xs text-slate-500" role="status">Загружаем страницу…</main>;
+}
+
 function TerminalDemo() {
   return (
     <div className="terminal-shell shadow-glow" aria-label="Предпросмотр CLI-задачи">
@@ -91,7 +95,7 @@ function TerminalDemo() {
           <span className="terminal-dot bg-[#e9c55b]" />
           <span className="terminal-dot bg-[#68d391]" />
         </div>
-        <span>забег/linux/средняя</span>
+        <span>практика/linux/средняя</span>
         <span className="text-acid">00:18.42</span>
       </div>
 
@@ -171,7 +175,7 @@ function HomePage() {
           <div className="product-paths mt-6">
             <a href="/play#practice"><Terminal size={19} /><div><strong>Практика</strong><span>Короткие задачи в настоящем Linux shell.</span></div><ArrowRight size={15} /></a>
             <a href="/learn"><BookOpen size={19} /><div><strong>Обучение</strong><span>Вопросы с разбором каждого ответа.</span></div><ArrowRight size={15} /></a>
-            <a href="/play?compete=quick#competition"><Trophy size={19} /><div><strong>Соревнования</strong><span>Quick без рейтинга или Ranked с MMR.</span></div><ArrowRight size={15} /></a>
+            <a href="/play?compete=quick#competition"><Trophy size={19} /><div><strong>Соревнования</strong><span>Quick без MMR или Ranked с MMR.</span></div><ArrowRight size={15} /></a>
           </div>
         </section>
 
@@ -257,17 +261,17 @@ export function App() {
     setMeta('name', 'robots', metadata.indexable ? 'index, follow' : 'noindex, nofollow');
   }, [path]);
   if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
-  if (path === '/admin' || path.startsWith('/admin/')) return <AdminConsole />;
-  if (path === '/play') return <PlayPage />;
-  if (path === '/learn') return <LearnPage catalogOnly />;
+  if (path === '/admin' || path.startsWith('/admin/')) return <Suspense fallback={<RouteFallback />}><AdminConsole /></Suspense>;
+  if (path === '/play') return <Suspense fallback={<RouteFallback />}><PlayPage /></Suspense>;
+  if (path === '/learn') return <Suspense fallback={<RouteFallback />}><LearnPage catalogOnly /></Suspense>;
   if (path === '/learn/paths' || path.startsWith('/learn/paths/')) return <Suspense fallback={<BattlePageFallback />}><LearningPathsPage /></Suspense>;
-  if (path === '/learn/linux-core') return <LearnPage />;
-  if (path === '/daily') return <DailyPage />;
-  if (path === '/interview') return <InterviewPage />;
+  if (path === '/learn/linux-core') return <Suspense fallback={<RouteFallback />}><LearnPage /></Suspense>;
+  if (path === '/daily') return <Suspense fallback={<RouteFallback />}><DailyPage /></Suspense>;
+  if (path === '/interview') return <Suspense fallback={<RouteFallback />}><InterviewPage /></Suspense>;
   if (path === '/battle') return <Suspense fallback={<BattlePageFallback />}><BattleCreatePage /></Suspense>;
   if (/^\/battle\/[A-HJ-NP-Z2-9]{5}$/i.test(path)) return <Suspense fallback={<BattlePageFallback />}><BattleRoomPage /></Suspense>;
-  if (path === '/leaderboard' || path === '/rating') return <LeaderboardPage />;
-  if (path === '/profile' || path.startsWith('/profile/')) return <ProfilePage />;
+  if (path === '/leaderboard' || path === '/rating') return <Suspense fallback={<RouteFallback />}><LeaderboardPage /></Suspense>;
+  if (path === '/profile' || path.startsWith('/profile/')) return <Suspense fallback={<RouteFallback />}><ProfilePage /></Suspense>;
   return <NotFoundPage />;
 }
 

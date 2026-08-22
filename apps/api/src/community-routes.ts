@@ -161,6 +161,7 @@ export async function registerCommunityRoutes(
         username: user.username,
         memberSince: user.created_at.toISOString(),
         overall: {
+          practiceScore: overall.rating,
           rating: overall.rating,
           gamesPlayed: overall.games_played,
           rank: rankResult.rows[0] ? Number(rankResult.rows[0].rank) : null,
@@ -177,6 +178,7 @@ export async function registerCommunityRoutes(
         ratings: ratingsResult.rows.map((rating) => ({
           slug: rating.slug,
           name: rating.name,
+          practiceScore: rating.rating,
           rating: rating.rating,
           gamesPlayed: rating.games_played,
           updatedAt: rating.updated_at.toISOString(),
@@ -298,11 +300,12 @@ export async function registerCommunityRoutes(
     `, [categoryId]);
 
     return reply.header('cache-control', 'public, max-age=20').send({
-      board: category ? { slug: category.slug, name: category.name } : { slug: 'overall', name: 'Общий рейтинг' },
+      board: category ? { slug: category.slug, name: `${category.name} · практика` } : { slug: 'overall', name: 'Оценка практики' },
       total: total.rows[0]?.total ?? 0,
       entries: entries.rows.map((entry) => ({
         rank: entry.rank,
         username: entry.username,
+        practiceScore: entry.rating,
         rating: entry.rating,
         gamesPlayed: entry.games_played,
         totalScore: Number(entry.total_score),
@@ -419,6 +422,7 @@ function publicHistoryRow(row: HistoryRow) {
     score: row.score,
     bestStreak: row.best_streak,
     ratingDelta: row.rating_delta,
+    practiceScoreDelta: row.rating_delta,
     startedAt: row.started_at.toISOString(),
     completedAt: row.completed_at.toISOString(),
     category: row.category_slug ? { slug: row.category_slug, name: row.category_name } : null,

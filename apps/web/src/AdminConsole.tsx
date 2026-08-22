@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { currentUser } from './auth-client';
+import { difficultyLabel, modeLabel } from './product-language';
 
 interface AdminUser {
   id: string;
@@ -253,7 +254,7 @@ function Filters({ section }: { section: Exclude<Section, 'overview'> }) {
     {section !== 'audit' && <label><Search size={14} /><input name="search" defaultValue={params.get('search') ?? ''} placeholder="Поиск…" /></label>}
     {section === 'users' && <><FilterSelect name="role" value={params.get('role')} options={['all:Все роли', 'user:User', 'admin:Admin']} /><FilterSelect name="status" value={params.get('status')} options={['all:Все статусы', 'active:Active', 'suspended:Suspended']} /><FilterSelect name="recentDays" value={params.get('recentDays')} options={['0:За всё время', '1:За 24 часа', '7:За 7 дней', '30:За 30 дней']} /></>}
     {section === 'sandboxes' && <><FilterSelect name="live" value={params.get('live')} options={['all:Все сессии', 'true:Только live', 'false:Завершённые']} /><input className="admin-filter-input" name="state" defaultValue={params.get('state') ?? 'all'} placeholder="Lifecycle state" /></>}
-    {section === 'challenges' && <><FilterSelect name="type" value={params.get('type')} options={['all:Все типы', 'typing:Typing', 'recall:Recall', 'quick:Quick', 'real_shell:Real shell']} /><FilterSelect name="difficulty" value={params.get('difficulty')} options={['all:Все сложности', 'Easy:Easy', 'Medium:Medium', 'Hard:Hard', 'Expert:Expert']} /><FilterSelect name="enabled" value={params.get('enabled')} options={['all:Все состояния', 'true:Enabled', 'false:Disabled']} /><input className="admin-filter-input" name="category" defaultValue={params.get('category') ?? 'all'} placeholder="Category slug" /></>}
+    {section === 'challenges' && <><FilterSelect name="type" value={params.get('type')} options={['all:Все типы', 'typing:Набор', 'recall:Вспомни', 'quick:Быстро', 'real_shell:Терминал']} /><FilterSelect name="difficulty" value={params.get('difficulty')} options={['all:Все сложности', 'Easy:Лёгкая', 'Medium:Средняя', 'Hard:Сложная', 'Expert:Экспертная']} /><FilterSelect name="enabled" value={params.get('enabled')} options={['all:Все состояния', 'true:Включено', 'false:Выключено']} /><input className="admin-filter-input" name="category" defaultValue={params.get('category') ?? 'all'} placeholder="Category slug" /></>}
     {section === 'battles' && <FilterSelect name="status" value={params.get('status')} options={['all:Все статусы', 'waiting:Waiting', 'countdown:Countdown', 'running:Running', 'finished:Finished', 'cancelled:Cancelled']} />}
     {section === 'audit' && <><input className="admin-filter-input" name="actor" defaultValue={params.get('actor') ?? ''} placeholder="Администратор" /><input className="admin-filter-input" name="action" defaultValue={params.get('action') ?? ''} placeholder="Действие" /><input className="admin-filter-input" name="targetType" defaultValue={params.get('targetType') ?? ''} placeholder="Тип объекта" /><FilterSelect name="days" value={params.get('days')} options={['1:24 часа', '7:7 дней', '30:30 дней', '0:Всё время']} /></>}
     <button className="admin-button" type="submit">Применить</button>
@@ -291,7 +292,7 @@ function tableColumns(section: Exclude<Section, 'overview'>, requestAction: (act
   ];
   if (section === 'challenges') return [
     { label: 'Задание', render: (r) => <div><strong>{text(r.title)}</strong><small>{text(r.slug)}</small></div> },
-    { label: 'Категория', render: (r) => <div><strong>{text(r.category_name)}</strong><small>{text(r.type)} · {text(r.difficulty)}</small></div> },
+    { label: 'Категория', render: (r) => <div><strong>{text(r.category_name)}</strong><small>{modeLabel(text(r.type))} · {difficultyLabel(text(r.difficulty))}</small></div> },
     { label: 'Валидация', render: (r) => <div><strong>{text(r.validation_kind)}</strong><small>{text(r.sandbox_challenge_id, 'без sandbox')} {r.integrity_status ? `· integrity ${text(r.integrity_status)}` : ''}</small></div> },
     { label: 'Коллекции', render: (r) => arrayText(r.collections) },
     { label: 'Состояние', render: (r) => <Badge value={r.enabled ? 'enabled' : 'disabled'} /> },

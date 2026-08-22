@@ -4,6 +4,8 @@ import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
 import { ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
+import { RankBadge } from './RankBadge';
+import { modeLabel } from './product-language';
 
 interface RunHistory {
   id: string;
@@ -12,6 +14,7 @@ interface RunHistory {
   score: number;
   bestStreak: number;
   ratingDelta: number;
+  practiceScoreDelta?: number;
   startedAt: string;
   completedAt: string;
   category: { slug: string; name: string | null } | null;
@@ -24,12 +27,12 @@ interface RunHistory {
 interface Profile {
   username: string;
   memberSince: string;
-  overall: { rating: number; gamesPlayed: number; rank: number | null };
+  overall: { rating: number; practiceScore?: number; gamesPlayed: number; rank: number | null };
   stats: {
     runs: number; totalScore: number; bestStreak: number; tasks: number;
     correct: number; accuracy: number; durationMs: number;
   };
-  ratings: Array<{ slug: string; name: string; rating: number; gamesPlayed: number; updatedAt: string }>;
+  ratings: Array<{ slug: string; name: string; rating: number; practiceScore?: number; gamesPlayed: number; updatedAt: string }>;
   dailyStreak: { current: number; best: number; lastDate: string | null };
   learning: { assessments: number; answered: number; correct: number; accuracy: number; active: boolean };
   learningPaths?: Array<{ slug: string; title: string; status: 'active' | 'completed'; progress: number; finalScore: number | null; currentModule: string | null; completedAt: string | null; mastery: Array<{ category: string; score: number }> }>;
@@ -80,7 +83,7 @@ export function ProfilePage() {
       <main className="page-width relative z-10 py-10 sm:py-16">
         {!profile && !error && !guest && <PageLoader label="Загружаем профиль" />}
         {guest && <section className="state-panel"><BookOpen size={24} className="text-acid" /><div><h1>Войдите, чтобы открыть профиль</h1><p>В профиле хранятся результаты практики, обучение и Ranked-статистика.</p></div><a className="primary-button" href="/?auth=1&returnTo=%2Fprofile">Войти <ArrowRight size={14} /></a></section>}
-        {error && <ErrorState title="Профиль не найден" message={error} retryHref="/leaderboard" />}
+        {error && <ErrorState title="Профиль не найден" message={error} retryHref="/rating" />}
         {profile && <ProfileContent profile={profile} />}
       </main>
     </div>
@@ -98,24 +101,22 @@ function ProfileContent({ profile }: { profile: Profile }) {
           <h1 className="mt-2 truncate text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">@{profile.username}</h1>
           <p className="mt-3 flex items-center gap-2 text-sm text-slate-500"><CalendarDays size={14} /> В CLIRace с {formatDate(profile.memberSince)}</p>
         </div>
-        <div className="profile-rating">
-          <span>CLI RATING</span>
-          <strong>{profile.overall.rating}</strong>
-          <small>{profile.overall.rank ? `#${profile.overall.rank} в общем рейтинге` : 'Завершите первый забег'}</small>
-        </div>
+        <RankBadge division={profile.ranked.division} mmr={profile.ranked.mmr} provisional={profile.ranked.provisional} placementGamesCompleted={profile.ranked.placementGamesCompleted} placementGamesRequired={profile.ranked.placementGamesRequired} />
       </section>
 
-      <section className="mt-6 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-panel sm:grid-cols-3 lg:grid-cols-6">
+      {profile.stats.runs === 0 && profile.ranked.gamesPlayed === 0 ? <section className="state-panel mt-6">
+        <Terminal size={22} className="text-acid" /><div><h2>Профиль готов к первой тренировке</h2><p>Решите короткую задачу или начните квалификацию — здесь появится ваш прогресс.</p></div><a className="primary-button" href="/play#practice">Начать практику <ArrowRight size={14} /></a>
+      </section> : <section className="mt-6 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-panel sm:grid-cols-3 lg:grid-cols-6">
         <Stat icon={Activity} value={String(profile.stats.runs)} label="забегов" />
         <Stat icon={Target} value={`${profile.stats.accuracy}%`} label="точность" />
         <Stat icon={Trophy} value={formatNumber(profile.stats.totalScore)} label="очков" />
         <Stat icon={Flame} value={String(profile.stats.bestStreak)} label="лучшая серия" />
         <Stat icon={Terminal} value={String(profile.stats.correct)} label="решено" />
         <Stat icon={Gauge} value={formatPracticeTime(profile.stats.durationMs)} label="в терминале" />
-      </section>
+      </section>}
 
       <section className="ranked-profile-card mt-6">
-        <div><p className="eyebrow">Ranked</p><h2>{profile.ranked.provisional ? 'Квалификация' : profile.ranked.division}</h2><span>{profile.ranked.provisional ? `${profile.ranked.placementGamesCompleted}/${profile.ranked.placementGamesRequired} квалификационных игр` : `${profile.ranked.mmr} MMR`}</span></div>
+        <div><p className="eyebrow">Ranked</p><h2>Соревновательная статистика</h2><span>MMR меняется только после Ranked-матчей</span></div>
         <div className="ranked-profile-stats"><span><strong>{profile.ranked.gamesPlayed}</strong> игр</span><span><strong>{profile.ranked.wins}</strong> побед</span><span><strong>{profile.ranked.losses}</strong> поражений</span></div>
       </section>
 
@@ -125,14 +126,14 @@ function ProfileContent({ profile }: { profile: Profile }) {
       </section>
 
       {(profile.learningPaths?.length ?? 0) > 0 && <section className="mt-10">
-        <div><p className="eyebrow">Learning Paths</p><h2 className="mt-3 text-2xl font-semibold text-white">Последовательное обучение</h2></div>
+        <div><p className="eyebrow">Учебные маршруты</p><h2 className="mt-3 text-2xl font-semibold text-white">Последовательное обучение</h2></div>
         <div className="profile-paths mt-5">{profile.learningPaths?.map((course) => <a href={`/learn/paths/${course.slug}`} key={course.slug}><div><strong>{course.title}</strong><span>{course.status === 'completed' ? `Завершён · ${course.finalScore}%` : `${course.progress}% · ${course.currentModule ?? 'Первый модуль'}`}</span></div><div>{course.mastery.map((entry) => <small key={entry.category}>{masteryLabel(entry.category)} {entry.score}%</small>)}</div><ArrowRight size={15} /></a>)}</div>
       </section>}
 
       <section className="mt-10">
         <div className="flex items-end justify-between gap-4">
           <div><p className="eyebrow">Прогресс</p><h2 className="mt-3 text-2xl font-semibold text-white">Достижения</h2></div>
-          <a className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-slate-500 transition-colors hover:text-acid" href="/daily"><Flame size={14} /> Daily: {profile.dailyStreak.current} дней</a>
+          <a className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-slate-500 transition-colors hover:text-acid" href="/daily"><Flame size={14} /> Задача дня: {profile.dailyStreak.current} дней</a>
         </div>
         {profile.achievements.length ? (
           <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -149,22 +150,22 @@ function ProfileContent({ profile }: { profile: Profile }) {
       <div className="mt-10 grid gap-10 lg:grid-cols-[0.72fr_1.28fr]">
         <section>
           <div className="flex items-end justify-between gap-4">
-            <div><p className="eyebrow">Навыки</p><h2 className="mt-3 text-2xl font-semibold text-white">Рейтинг категорий</h2></div>
+            <div><p className="eyebrow">Навыки</p><h2 className="mt-3 text-2xl font-semibold text-white">Оценка практики по темам</h2></div>
             <Medal size={19} className="text-acid" />
           </div>
           <div className="mt-5 space-y-2">
             {profile.ratings.length ? profile.ratings.map((rating) => (
-              <a className="rating-row" href={`/leaderboard?category=${encodeURIComponent(rating.slug)}`} key={rating.slug}>
+              <a className="rating-row" href={`/rating?category=${encodeURIComponent(rating.slug)}`} key={rating.slug}>
                 <div><strong>{rating.name}</strong><span>{rating.gamesPlayed} {pluralRuns(rating.gamesPlayed)}</span></div>
-                <b>{rating.rating}</b>
+                <b>{rating.practiceScore ?? rating.rating}</b>
               </a>
-            )) : <EmptyPanel text="Категорийный рейтинг появится после первой завершённой практики." action={{ href: '/play#practice', label: 'Начать практику' }} />}
+            )) : <EmptyPanel text="Оценка по темам появится после первой завершённой практики." action={{ href: '/play#practice', label: 'Начать практику' }} />}
           </div>
         </section>
 
         <section>
           <div className="flex items-end justify-between gap-4">
-            <div><p className="eyebrow">История</p><h2 className="mt-3 text-2xl font-semibold text-white">Последние забеги</h2></div>
+            <div><p className="eyebrow">История</p><h2 className="mt-3 text-2xl font-semibold text-white">Последние тренировки</h2></div>
             <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">{profile.recentRuns.length} показано</span>
           </div>
           <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
@@ -203,7 +204,7 @@ function RunRow({ run }: { run: RunHistory }) {
       </div>
       <div><b>{run.correct}/{run.total}</b><span>{accuracy}%</span></div>
       <div><b>{run.score}</b><span>очки</span></div>
-      <div className={run.ratingDelta >= 0 ? 'text-acid' : 'text-rose-300'}><b>{run.ratingDelta >= 0 ? '+' : ''}{run.ratingDelta}</b><span>рейтинг</span></div>
+      <div className={(run.practiceScoreDelta ?? run.ratingDelta) >= 0 ? 'text-acid' : 'text-rose-300'}><b>{(run.practiceScoreDelta ?? run.ratingDelta) >= 0 ? '+' : ''}{run.practiceScoreDelta ?? run.ratingDelta}</b><span>оценка</span></div>
     </div>
   );
 }
@@ -217,9 +218,6 @@ function masteryLabel(category: string): string {
 }
 
 
-function modeLabel(mode: string) {
-  return ({ recall: 'Вспомни', quick: 'Быстро', mixed: 'Смешанный', real_shell: 'Shell', typing: 'Набор' } as Record<string, string>)[mode] ?? mode;
-}
 function formatNumber(value: number) { return new Intl.NumberFormat('ru-RU').format(value); }
 function formatDate(value: string) { return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value)); }
 function formatDateTime(value: string) { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }

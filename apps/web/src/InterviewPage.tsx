@@ -2,6 +2,7 @@ import { CheckCircle2, ChevronDown, LoaderCircle, Play, RotateCcw, TerminalSquar
 import { useEffect, useMemo, useState } from 'react';
 import { AppPage, EmptyState, ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
+import { difficultyLabel } from './product-language';
 
 interface Task {
   slug: string; title: string; description: string; difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -133,8 +134,4 @@ function TaskCard({ task, topicName }: { task: Task; topicName: string }) {
 
 function Filter({ value, onChange, label, options }: { value: string; onChange: (value: string) => void; label: string; options: string[][] }) {
   return <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.12em] text-slate-500"><span>{label}</span><select className="rounded border border-line bg-panel px-3 py-2 text-xs normal-case tracking-normal text-slate-200" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>;
-}
-
-function difficultyLabel(value: Task['difficulty']) {
-  return ({ Easy: 'Легко', Medium: 'Средне', Hard: 'Сложно' } as const)[value];
 }

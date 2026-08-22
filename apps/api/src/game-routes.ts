@@ -350,6 +350,7 @@ function publicSession(session: SessionRow) {
     streak: session.streak,
     bestStreak: session.best_streak,
     ratingDelta: session.rating_delta,
+    practiceScoreDelta: session.rating_delta,
     mode: session.mode,
     startedAt: session.started_at.toISOString(),
     completedAt: session.completed_at?.toISOString() ?? null,

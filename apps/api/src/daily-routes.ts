@@ -18,6 +18,7 @@ interface DailyRow {
   category_id: number;
   category_slug: string;
   category_name: string;
+  next_reset_at: Date;
 }
 
 export async function registerDailyRoutes(
@@ -64,6 +65,7 @@ export async function registerDailyRoutes(
         completed: session.status === 'completed',
         score: session.score,
         ratingDelta: session.rating_delta,
+        practiceScoreDelta: session.rating_delta,
         startedAt: session.started_at.toISOString(),
       } : null,
       streak: {
@@ -129,6 +131,7 @@ async function ensureDailyChallenge(dependencies: Dependencies): Promise<DailyRo
   `);
   const result = await dependencies.postgres.query<DailyRow>(`
     SELECT dc.id, dc.challenge_date, dc.bonus_multiplier,
+           (CURRENT_DATE + INTERVAL '1 day')::timestamptz AS next_reset_at,
            c.id AS challenge_id, c.slug, c.title, c.description, c.difficulty, c.type,
            categories.id AS category_id, categories.slug AS category_slug, categories.name AS category_name
     FROM daily_challenges dc
@@ -150,6 +153,7 @@ async function findDailySession(dependencies: Dependencies, userId: string, dail
 function publicDaily(daily: DailyRow) {
   return {
     date: daily.challenge_date,
+    nextResetAt: daily.next_reset_at.toISOString(),
     bonusMultiplier: Number(daily.bonus_multiplier),
     challenge: {
       slug: daily.slug,

@@ -33,7 +33,19 @@ class UserClient {
   }
   async delete() {
     if (!this.cookie) return;
-    await this.request('/api/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) }).catch(() => undefined);
+    let lastStatus = 0;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const { response, body } = await this.request('/api/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) });
+        lastStatus = response.status;
+        if (response.status === 204) { this.cookie = ''; return; }
+        if (response.status !== 429 && response.status < 500) throw new Error(`delete ${this.username}: ${response.status} ${body?.message ?? ''}`);
+      } catch (error) {
+        if (attempt === 2) throw error;
+      }
+      await delay(500 * (attempt + 1));
+    }
+    throw new Error(`delete ${this.username}: cleanup failed with status ${lastStatus}`);
   }
 }
 
@@ -338,7 +350,9 @@ try {
   }, null, 2));
 } finally {
   for (const socket of sockets) socket.close();
-  await Promise.allSettled([a.delete(), b.delete()]);
+  const cleanup = await Promise.allSettled([a.delete(), b.delete()]);
+  const failures = cleanup.filter((result) => result.status === 'rejected');
+  if (failures.length) throw new AggregateError(failures.map((result) => result.reason), 'E2E account cleanup failed.');
 }
 
 async function waitForMatch(user, mode = 'quick') {

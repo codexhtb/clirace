@@ -6,6 +6,8 @@ import { humanizeError } from './errors';
 import { isNewPlayer } from './product-ux';
 import { QuickMatchPanel } from './QuickMatchPanel';
 import { RankedMatchPanel } from './RankedMatchPanel';
+import { PageLoader } from './Ui';
+import { difficultyLabel } from './product-language';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
@@ -17,6 +19,7 @@ interface GameSession {
   streak: number;
   bestStreak: number;
   ratingDelta: number;
+  practiceScoreDelta?: number;
   mode: string;
   startedAt: string;
   completedAt: string | null;
@@ -41,7 +44,7 @@ const modeOptions = [
   { value: 'mixed', label: 'Смешанный', detail: 'Вспомни + быстрые задачи' },
   { value: 'recall', label: 'Вспомни', detail: 'Точная команда по описанию' },
   { value: 'quick', label: 'Быстро', detail: 'Короткая практическая задача' },
-  { value: 'real_shell', label: 'Shell', detail: 'Настоящая Linux-песочница' },
+  { value: 'real_shell', label: 'Терминал', detail: 'Настоящая Linux-песочница' },
 ] as const;
 
 export function PlayPage() {
@@ -134,7 +137,7 @@ export function PlayPage() {
       <CommunityHeader />
 
       <main className="page-width relative z-10 py-10 sm:py-16">
-        {auth === 'loading' && <LoadingState label="Проверяем аккаунт" />}
+        {auth === 'loading' && <PageLoader label="Проверяем аккаунт" />}
         {auth === 'guest' && <GuestState />}
         {auth === 'ready' && !game && (
           <SetupScreen categories={categories} shellEnabled={shellEnabled} busy={busy} error={error} newPlayer={newPlayer} onSubmit={createGame} />
@@ -184,25 +187,9 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
         <div className="onboarding-actions"><a className="primary-button" href="/learn/paths/linux-foundations"><Map size={15} /> Linux Foundations</a><a className="secondary-button" href="/learn/linux-core"><BookOpen size={15} /> Проверить знания</a><a className="secondary-button" href="#practice"><Terminal size={15} /> Первая задача</a></div>
       </section>}
 
-      <div id="competition" className="matchmaking-mode-tabs scroll-mt-28" role="tablist" aria-label="Режим соревнования">
-        <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'quick'} onClick={() => setMatchmakingMode('quick')}>Quick Match <small>без рейтинга</small></button>
-        <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'ranked'} onClick={() => setMatchmakingMode('ranked')}>Ranked <small>влияет на MMR</small></button>
-      </div>
-      {matchmakingMode === 'quick' ? <QuickMatchPanel /> : <RankedMatchPanel />}
-
-      <div className="mb-4 mt-10 flex items-center justify-between gap-4">
-        <p className="eyebrow">Самостоятельно или с другом</p>
-      </div>
-
-      <div className="mb-5 grid gap-3 sm:grid-cols-2">
-        <a className="mode-card border-acid/40 bg-acid/[0.045]" href="#practice"><span className="mode-card-icon"><Terminal size={17} /></span><strong>Практика</strong><p>Короткий одиночный забег с выбранной сложностью.</p><span>2–5 минут · Shell по выбору</span></a>
-        <a className="mode-card" href="/battle"><span className="mode-card-icon"><Swords size={17} /></span><strong>Игра с другом</strong><p>Создайте приватную комнату и отправьте другу код.</p><span>3 / 5 / 10 shell-раундов</span></a>
-      </div>
-      <nav className="context-links mb-10" aria-label="Другие способы практики"><a href="/daily"><CalendarDays size={14} /> Задача дня</a><a href="/interview"><BookOpenCheck size={14} /> Interview 100</a><a href="/learn/linux-core"><BookOpen size={14} /> Linux Core с объяснениями</a></nav>
-
       <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>
         {defaults.challengeSlug && <input type="hidden" name="challengeSlug" value={defaults.challengeSlug} />}
-        <div className="mb-7 border-b border-line pb-6"><p className="eyebrow">{defaults.challengeSlug ? 'Практика из Linux Core' : 'Настройка практики'}</p><h2 className="mt-2 text-2xl font-semibold text-white">{defaults.challengeSlug ? 'Закрепите вопрос в терминале' : 'Соберите свой забег'}</h2></div>
+        <div className="mb-7 border-b border-line pb-6"><p className="eyebrow">{defaults.challengeSlug ? 'Практика из Linux Core' : 'Практика'}</p><h2 className="mt-2 text-2xl font-semibold text-white">{defaults.challengeSlug ? 'Закрепите вопрос в терминале' : 'Настройте тренировку'}</h2></div>
         <div className="grid gap-7 sm:grid-cols-2">
           <label className="play-field">
             <span>Категория</span>
@@ -236,7 +223,7 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
         </fieldset>
 
         <fieldset className="mt-8">
-          <legend className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Длина забега</legend>
+          <legend className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Длина тренировки</legend>
           <div className="flex gap-3">
             {[5, 10].map((count) => (
               <label className="play-count" key={count}>
@@ -252,10 +239,22 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">Обычно 2–5 минут</span>
           <button className="primary-button" type="submit" disabled={busy}>
             {busy ? <LoaderCircle size={16} className="animate-spin" /> : <Terminal size={16} />}
-            {busy ? 'Создаём забег…' : 'Начать забег'}
+            {busy ? 'Готовим тренировку…' : 'Начать практику'}
           </button>
         </div>
       </form>
+
+      <section id="competition" className="mt-12 scroll-mt-28" aria-labelledby="competition-title">
+        <div className="mb-5"><p className="eyebrow">Соревнования</p><h2 id="competition-title" className="mt-2 text-2xl font-semibold text-white">Сыграйте против другого игрока.</h2><p className="mt-2 text-sm text-slate-500">Quick — без MMR. Ranked — с изменением MMR.</p></div>
+        <div className="matchmaking-mode-tabs" role="tablist" aria-label="Режим соревнования">
+          <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'quick'} onClick={() => setMatchmakingMode('quick')}>Quick Match <small>без MMR</small></button>
+          <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'ranked'} onClick={() => setMatchmakingMode('ranked')}>Ranked <small>влияет на MMR</small></button>
+        </div>
+        {matchmakingMode === 'quick' ? <QuickMatchPanel /> : <RankedMatchPanel />}
+        <a className="mt-4 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" href="/battle"><Swords size={15} /> Создать приватный матч с другом <ChevronRight size={14} /></a>
+      </section>
+
+      <nav className="context-links mt-10" aria-label="Другие способы практики"><a href="/daily"><CalendarDays size={14} /> Задача дня</a><a href="/interview"><BookOpenCheck size={14} /> Interview 100</a><a href="/learn/linux-core"><BookOpen size={14} /> Linux Core с объяснениями</a></nav>
     </section>
   );
 }
@@ -363,14 +362,14 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
           <RunMetric icon={Trophy} value={String(game.session.score)} label="очки" />
           <RunMetric icon={Flame} value={String(game.session.streak)} label="серия" />
           <RunMetric icon={Terminal} value={`${task.position} / ${task.total}`} label="задание" />
-          <RunMetric icon={Clock3} value={formatTimer(elapsed)} label="время" />
+          <RunMetric icon={Clock3} value={formatTimer(elapsed)} label="прошло" />
         </div>
         <div className="h-0.5 bg-[#111820]"><div className="h-full bg-acid transition-all" style={{ width: `${progress}%` }} /></div>
 
         <div className="p-5 sm:p-8 lg:p-10">
           <div className="flex flex-wrap items-center gap-2">
             <span className="challenge-category">{task.category.name}</span>
-            <span className="difficulty">{difficultyLabel(task.difficulty)}</span>
+            <span className="difficulty">{difficultyLabel(task.difficulty, true)}</span>
             <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-600">{task.type === 'recall' ? 'Вспомни' : task.type === 'quick' ? 'Быстро' : 'Shell'}</span>
           </div>
           <h1 className="mt-6 text-2xl font-semibold tracking-[-0.025em] text-white sm:text-4xl">{task.title}</h1>
@@ -423,9 +422,9 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
   return (
     <section className="mx-auto max-w-3xl text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-acid/30 bg-acid/10 text-acid"><Trophy size={28} /></div>
-      <p className="eyebrow mt-7">Забег завершён</p>
+      <p className="eyebrow mt-7">Тренировка завершена</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">{game.session.score} очков</h1>
-      <p className="mt-4 text-slate-400">Результат сохранён · рейтинг <span className={game.session.ratingDelta >= 0 ? 'text-acid' : 'text-rose-300'}>{game.session.ratingDelta >= 0 ? '+' : ''}{game.session.ratingDelta}</span></p>
+      <p className="mt-4 text-slate-400">Результат сохранён · оценка практики <span className={(game.session.practiceScoreDelta ?? game.session.ratingDelta) >= 0 ? 'text-acid' : 'text-rose-300'}>{(game.session.practiceScoreDelta ?? game.session.ratingDelta) >= 0 ? '+' : ''}{game.session.practiceScoreDelta ?? game.session.ratingDelta}</span></p>
       <div className="play-panel mt-9 grid grid-cols-2 overflow-hidden sm:grid-cols-4">
         <SummaryMetric value={`${summary.correct}/${summary.total}`} label="верно" />
         <SummaryMetric value={`${accuracy}%`} label="точность" />
@@ -454,10 +453,6 @@ function GuestState() {
   );
 }
 
-function LoadingState({ label }: { label: string }) {
-  return <div className="flex min-h-[55vh] items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.14em] text-slate-500"><LoaderCircle className="animate-spin text-acid" size={18} /> {label}</div>;
-}
-
 function RunMetric({ icon: Icon, value, label }: { icon: typeof Trophy; value: string; label: string }) {
   return <div className="run-metric"><Icon size={14} /><div><strong>{value}</strong><span>{label}</span></div></div>;
 }
@@ -474,10 +469,6 @@ function formatTimer(milliseconds: number): string {
 function formatDuration(milliseconds: number): string {
   const seconds = Math.round(milliseconds / 1000);
   return seconds >= 60 ? `${Math.floor(seconds / 60)}м ${seconds % 60}с` : `${seconds}с`;
-}
-
-function difficultyLabel(value: GameTask['difficulty']): string {
-  return ({ Easy: 'ЛЕГКО', Medium: 'СРЕДНЕ', Hard: 'СЛОЖНО', Expert: 'ЭКСПЕРТ' } as const)[value];
 }
 
 function courseReturnTo(): string | null {

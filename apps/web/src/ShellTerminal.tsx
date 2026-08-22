@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { CheckCircle2, Lightbulb, Play, RotateCcw, ShieldCheck, Square, Target } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { difficultyLabel } from './product-language';
 
 type TerminalStatus = 'idle' | 'connecting' | 'ready' | 'closed' | 'error';
 type CheckStatus = 'idle' | 'checking' | 'passed' | 'failed';
@@ -282,7 +283,7 @@ export function ShellTerminal() {
         <section className="challenge-brief" aria-live="polite">
           <div className="flex flex-wrap items-center gap-2">
             <span className="challenge-category">{challenge.category}</span>
-            <span className="difficulty">{challenge.difficulty}</span>
+            <span className="difficulty">{difficultyLabel(challenge.difficulty, true)}</span>
             <span className="run-counter">задание {taskNumber}</span>
             <span className="run-counter text-acid">серия {streak}</span>
             <span className="font-mono text-[10px] text-slate-600">{challenge.id}</span>

@@ -1,5 +1,6 @@
 import { ArrowUpRight, Boxes, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { difficultyLabel } from './product-language';
 
 interface Category {
   slug: string;
@@ -81,7 +82,7 @@ export function CategoryCatalog() {
             <article className="catalog-card" key={challenge.slug}>
               <div className="flex items-center justify-between gap-3">
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan">{challenge.category_name}</span>
-                <span className="difficulty">{challenge.difficulty}</span>
+                <span className="difficulty">{difficultyLabel(challenge.difficulty, true)}</span>
               </div>
               <h3 className="mt-5 text-base font-semibold text-white">{challenge.title}</h3>
               <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{challenge.description}</p>

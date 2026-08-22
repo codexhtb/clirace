@@ -152,17 +152,27 @@ button { cursor: pointer; }
 .game-shell { @apply overflow-hidden rounded-md border border-[#283441] bg-[#06090c] shadow-inner; }
 .game-shell-status { @apply flex min-h-10 items-center justify-between gap-3 border-b border-line bg-[#0b1016] px-4 font-mono text-[9px] uppercase tracking-[0.12em] text-slate-500; }
 .game-shell-status strong { @apply text-acid; }
-.game-shell-host { @apply h-[360px] w-full p-2 sm:h-[420px] sm:p-4; }
+.game-shell-host { @apply h-[420px] w-full p-2 sm:h-[480px] sm:p-4 lg:h-[520px]; }
 .game-shell-host .xterm { @apply h-full; }
 .game-shell-host .xterm-viewport { scrollbar-color: #334155 #06090c; scrollbar-width: thin; }
 .game-shell-actions { @apply flex flex-col justify-between gap-3 border-t border-line bg-[#0b1016] px-4 py-3 text-xs sm:flex-row sm:items-center; }
 
 .profile-hero { @apply flex flex-col gap-5 rounded-lg border border-[#2a3542] bg-[#0b1016] p-6 shadow-2xl sm:flex-row sm:items-center sm:p-8; }
 .profile-avatar { @apply flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-acid/30 bg-acid/10 font-mono text-2xl font-bold text-acid sm:h-20 sm:w-20 sm:text-3xl; }
-.profile-rating { @apply flex min-w-48 flex-col rounded-md border border-line bg-[#070a0e] px-5 py-4 sm:items-end; }
-.profile-rating > span { @apply font-mono text-[9px] font-semibold tracking-[0.16em] text-slate-600; }
-.profile-rating strong { @apply mt-1 font-mono text-3xl font-semibold text-acid; }
-.profile-rating small { @apply mt-1 text-[10px] text-slate-600; }
+
+.rank-badge { @apply inline-flex min-w-44 items-center gap-3 rounded-md border border-line bg-[#070a0e] px-4 py-3; }
+.rank-badge-mark { @apply block h-7 w-7 shrink-0 rotate-45 rounded-[3px] border-2 border-slate-500 bg-slate-500/10; }
+.rank-badge > span:last-child { @apply flex min-w-0 flex-col; }
+.rank-badge strong { @apply truncate font-mono text-sm font-semibold text-slate-200; }
+.rank-badge small { @apply mt-0.5 font-mono text-[9px] uppercase tracking-[0.1em] text-slate-500; }
+.rank-badge-compact { @apply min-w-0 border-0 bg-transparent p-0; }
+.rank-badge-compact .rank-badge-mark { @apply h-4 w-4 border; }
+.rank-badge-compact strong { @apply text-xs; }
+[class*="rank-badge-bronze"] .rank-badge-mark { @apply border-amber-700 bg-amber-900/20; }
+[class*="rank-badge-silver"] .rank-badge-mark { @apply border-slate-300 bg-slate-300/10; }
+[class*="rank-badge-gold"] .rank-badge-mark { @apply border-amber-300 bg-amber-300/10; }
+[class*="rank-badge-platinum"] .rank-badge-mark { @apply border-cyan bg-cyan/10; }
+[class*="rank-badge-diamond"] .rank-badge-mark, [class*="rank-badge-master"] .rank-badge-mark { @apply border-acid bg-acid/10 shadow-[0_0_12px_rgba(182,240,74,0.16)]; }
 .profile-stat { @apply flex min-h-28 flex-col justify-center gap-1 border-b border-r border-line px-4 text-slate-600 last:border-r-0; }
 .profile-stat strong { @apply mt-1 font-mono text-xl font-semibold text-white; }
 .profile-stat span { @apply font-mono text-[9px] uppercase tracking-[0.12em] text-slate-600; }
@@ -439,8 +449,6 @@ button { cursor: pointer; }
 .matchmaking-mode-tabs button small { @apply mt-0.5 text-[8px] font-medium normal-case tracking-normal opacity-70; }
 .matchmaking-mode-tabs button.active { @apply bg-acid text-ink; }
 .matchmaking-ranked { border-color: rgba(182, 240, 74, .28); background: linear-gradient(135deg, rgba(182,240,74,.045), rgba(15,21,28,.96)); }
-.ranked-badge { @apply mt-4 inline-flex items-center gap-3 rounded border border-acid/20 bg-acid/[.04] px-3 py-2 font-mono text-[10px] uppercase tracking-[.08em]; }
-.ranked-badge strong { @apply text-white; }.ranked-badge span { @apply text-acid; }
 .matchmaking-opponent { @apply mt-4 inline-block font-mono text-[10px] uppercase tracking-[.08em] text-acid; }
 .ranked-result-block { @apply mt-7 grid overflow-hidden rounded border border-acid/25 bg-acid/[.035] text-left sm:grid-cols-3; }
 .ranked-result-block > div { @apply flex min-h-28 flex-col justify-center border-b border-line p-5 sm:border-b-0 sm:border-r; }

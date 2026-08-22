@@ -41,9 +41,9 @@ check(directAuthCalls.length === 1 && directAuthCalls[0] === 'auth-client.ts', '
 const play = await readFile(join(webRoot, 'PlayPage.tsx'), 'utf8');
 const learn = await readFile(join(webRoot, 'LearnPage.tsx'), 'utf8');
 const battle = await readFile(join(webRoot, 'BattlePages.tsx'), 'utf8');
-check(play.includes('Начните здесь') && play.includes('без рейтинга') && play.includes('влияет на MMR'), 'new-user and mode guidance are present');
+check(play.includes('Начните здесь') && play.includes('без MMR') && play.includes('влияет на MMR'), 'new-user and mode guidance are present');
 check(learn.includes('practiceHrefForWeakArea') && learn.includes('Разберём ответ'), 'Learn explanation and next practice action are present');
-check(battle.includes('Матч не повлиял на рейтинг') && battle.includes('Снова Ranked'), 'Ranked no-contest and replay actions are present');
+check(battle.includes('Матч не повлиял на MMR') && battle.includes('Снова Ranked'), 'Ranked no-contest and replay actions are present');
 
 const sitemap = await readFile(join(repoRoot, 'apps', 'web', 'public', 'sitemap.xml'), 'utf8');
 check(publicRoutes.every((path) => sitemap.includes(`<loc>https://clirace.fun${path}</loc>`)), 'all public routes are in sitemap');

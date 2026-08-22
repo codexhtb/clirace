@@ -4,12 +4,15 @@ import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
 import { EmptyState, ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
+import { RankBadge } from './RankBadge';
 
 interface Category { slug: string; name: string; challenge_count: number }
 interface LeaderboardEntry {
   rank: number;
   username: string;
   rating: number;
+  mmr?: number;
+  practiceScore?: number;
   gamesPlayed: number;
   totalScore: number;
   bestStreak: number;
@@ -25,7 +28,7 @@ interface Leaderboard {
   entries: LeaderboardEntry[];
 }
 export function LeaderboardPage() {
-  const initialCategory = new URLSearchParams(window.location.search).get('category') ?? 'overall';
+  const initialCategory = new URLSearchParams(window.location.search).get('category') ?? 'ranked';
   const [selected, setSelected] = useState(initialCategory);
   const [categories, setCategories] = useState<Category[]>([]);
   const [viewer, setViewer] = useState<string | null>(null);
@@ -64,7 +67,7 @@ export function LeaderboardPage() {
 
   const selectCategory = (slug: string) => {
     setSelected(slug);
-    const url = slug === 'overall' ? '/leaderboard' : `/leaderboard?category=${encodeURIComponent(slug)}`;
+    const url = slug === 'ranked' ? '/rating' : `/rating?category=${encodeURIComponent(slug)}`;
     window.history.replaceState(null, '', url);
   };
 
@@ -75,16 +78,16 @@ export function LeaderboardPage() {
       <main className="page-width relative z-10 py-10 sm:py-16">
         <section className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
           <div>
-            <p className="eyebrow">Рейтинг CLIRace</p>
-            <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Таблица сильнейших.</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Рейтинг меняется после каждого завершённого забега. Точность важнее количества бессмысленных попыток.</p>
+            <p className="eyebrow">Соревнования CLIRace</p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Рейтинг игроков.</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">MMR меняется только в Ranked. Результаты обычной практики собраны отдельно и не влияют на подбор соперника.</p>
           </div>
-          <a className="primary-button self-start lg:self-auto" href="/play"><Trophy size={15} /> Улучшить рейтинг</a>
+          <a className="primary-button self-start lg:self-auto" href="/play?compete=ranked#competition"><Trophy size={15} /> Играть Ranked</a>
         </section>
 
         <div className="mt-10 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Категория рейтинга">
-          <button className={`leaderboard-filter ${selected === 'overall' ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory('overall')} type="button">Общий</button>
           <button className={`leaderboard-filter ${selected === 'ranked' ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory('ranked')} type="button">Ranked</button>
+          <button className={`leaderboard-filter ${selected === 'overall' ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory('overall')} type="button">Практика</button>
           {categories.map((category) => <button className={`leaderboard-filter ${selected === category.slug ? 'leaderboard-filter-active' : ''}`} onClick={() => selectCategory(category.slug)} type="button" key={category.slug}>{category.name}</button>)}
         </div>
 
@@ -105,7 +108,7 @@ function LeaderboardTable({ board, viewer }: { board: Leaderboard; viewer: strin
       </div>
       {board.entries.length ? (
         <div className="leaderboard-table">
-          <div className="leaderboard-head"><span>Место</span><span>Игрок</span><span>Рейтинг</span><span>Результаты</span></div>
+          <div className="leaderboard-head"><span>Место</span><span>Игрок</span><span>{board.board.slug === 'ranked' ? 'Ранг' : 'Оценка'}</span><span>Результаты</span></div>
           {board.entries.map((entry) => <LeaderboardRow entry={entry} active={viewer?.toLowerCase() === entry.username.toLowerCase()} key={entry.username} />)}
         </div>
       ) : (
@@ -120,8 +123,8 @@ function LeaderboardRow({ entry, active }: { entry: LeaderboardEntry; active: bo
     <a className={`leaderboard-row ${active ? 'leaderboard-row-active' : ''}`} href={`/profile/${encodeURIComponent(entry.username)}`}>
       <span className="rank-cell">{entry.rank === 1 ? <Crown size={16} /> : entry.rank <= 3 ? <Medal size={16} /> : `#${entry.rank}`}</span>
       <span className="min-w-0"><strong className="truncate">@{entry.username}</strong>{active && <small>это вы</small>}</span>
-      <span><strong>{entry.provisional ? 'Квалификация' : entry.division ?? entry.rating}</strong><small>{entry.division ? `${entry.rating} MMR` : 'CLI'}</small></span>
-      <span><strong>{entry.division ? `${entry.wins ?? 0}П · ${entry.losses ?? 0}ПР` : `${entry.gamesPlayed} · ${entry.accuracy}%`}</strong><small>{entry.division ? 'победы · поражения' : 'забегов · точность'}</small></span>
+      <span>{entry.division || entry.provisional ? <RankBadge compact division={entry.division} mmr={entry.mmr ?? entry.rating} provisional={entry.provisional} /> : <><strong>{entry.practiceScore ?? entry.rating}</strong><small>оценка практики</small></>}</span>
+      <span><strong>{entry.division || entry.provisional ? `${entry.wins ?? 0}П · ${entry.losses ?? 0}ПР` : `${entry.gamesPlayed} · ${entry.accuracy}%`}</strong><small>{entry.division || entry.provisional ? 'победы · поражения' : 'тренировок · точность'}</small></span>
     </a>
   );
 }

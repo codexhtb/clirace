@@ -22,7 +22,7 @@ export function routeMetadata(path: string): RouteMeta {
   if (path === '/learn/linux-core') return meta('Linux Core — обучение Linux с объяснениями | CLIRace', 'Проверьте знания Linux, разберите каждый ответ и закрепите слабые темы в настоящем терминале.', '/learn/linux-core');
   if (path === '/interview') return meta('Interview 100 — подготовка к Linux-собеседованию | CLIRace', 'Сто практических Linux и DevOps задач для подготовки к техническому собеседованию.', '/interview');
   if (path === '/daily') return meta('Задача дня по Linux — CLIRace', 'Решите общую Linux-задачу дня, сохраните серию и сравните результат с другими игроками.', '/daily');
-  if (path === '/rating' || path === '/leaderboard') return meta('Рейтинг игроков CLIRace', 'Таблица результатов практики и Ranked-матчей игроков CLIRace.', '/rating');
+  if (path === '/rating' || path === '/leaderboard') return meta('Ranked-рейтинг CLIRace', 'Таблица Ranked MMR и отдельная оценка практики игроков CLIRace.', '/rating');
   if (path === '/profile') return meta('Профиль игрока — CLIRace', 'Прогресс, результаты практики, обучение и Ranked-статистика игрока CLIRace.', '/profile', false);
   if (path.startsWith('/profile/')) return meta('Профиль игрока — CLIRace', 'Прогресс, результаты практики, обучение и Ranked-статистика игрока CLIRace.', path);
   if (path.startsWith('/admin')) return meta('Панель управления — CLIRace', 'Служебная панель CLIRace.', path, false);

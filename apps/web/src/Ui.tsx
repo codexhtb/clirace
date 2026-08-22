@@ -21,11 +21,8 @@ export function AppPage({ children, className = '' }: { children: ReactNode; cla
 
 export function PageLoader({ label }: { label: string }) {
   return (
-    <div className="mx-auto max-w-3xl py-16" role="status" aria-live="polite">
-      <div className="skeleton-block h-5 w-36" />
-      <div className="skeleton-block mt-5 h-10 w-3/4" />
-      <div className="skeleton-block mt-3 h-4 w-full max-w-xl" />
-      <div className="mt-10 flex items-center gap-3 font-mono text-xs text-slate-500">
+    <div className="flex min-h-48 items-center justify-center py-16" role="status" aria-live="polite">
+      <div className="flex items-center gap-3 font-mono text-xs text-slate-500">
         <LoaderCircle className="animate-spin text-acid" size={17} /> {label}
       </div>
     </div>

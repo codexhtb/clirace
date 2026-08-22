@@ -151,7 +151,7 @@ export function QuickMatchPanel() {
         <p className="eyebrow">Quick Match</p>
         <h2>Найдите соперника автоматически.</h2>
         <p>Быстрый PvP без изменения MMR: три случайных shell-задачи и отдельный терминал для каждого игрока.</p>
-        <div className="matchmaking-trust"><span><ShieldCheck size={13} /> один матч на игрока</span><span>без рейтинга</span><span>результат определяет сервер</span></div>
+        <div className="matchmaking-trust"><span><ShieldCheck size={13} /> один матч на игрока</span><span>без MMR</span><span>результат определяет сервер</span></div>
       </div>
       <button className="primary-button" type="button" disabled={busy} onClick={() => void enqueue()}>
         {busy ? <LoaderCircle className="animate-spin" size={16} /> : <Radar size={16} />}

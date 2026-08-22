@@ -3,11 +3,13 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
+import { difficultyLabel } from './product-language';
 
 interface DailyPayload {
   authenticated: boolean;
   daily: {
     date: string;
+    nextResetAt: string;
     bonusMultiplier: number;
     challenge: {
       slug: string; title: string; description: string; difficulty: string; type: string;
@@ -17,7 +19,7 @@ interface DailyPayload {
   community: { participants: number; completions: number };
   progress: null | {
     gameSessionId: string; status: string; completed: boolean;
-    score: number; ratingDelta: number; startedAt?: string;
+    score: number; ratingDelta: number; practiceScoreDelta?: number; startedAt?: string;
   };
   streak: { current: number; best: number; lastDate: string | null };
 }
@@ -28,20 +30,27 @@ export function DailyPage() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ correct: boolean; text: string; score?: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [remaining, setRemaining] = useState(formatRemaining());
+  const [remaining, setRemaining] = useState('—');
 
   const loadDaily = useCallback(async () => {
     const response = await fetch('/api/daily');
     const data = await response.json() as DailyPayload & { message?: string };
     if (!response.ok) throw new Error(data.message ?? 'Испытание дня недоступно.');
     setPayload(data);
+    setRemaining(formatRemaining(data.daily.nextResetAt));
   }, []);
 
   useEffect(() => {
     void loadDaily().catch((loadError) => setError(humanizeError(loadError, 'Не удалось загрузить испытание дня.')));
-    const timer = window.setInterval(() => setRemaining(formatRemaining()), 1_000);
-    return () => window.clearInterval(timer);
+    return undefined;
   }, [loadDaily]);
+
+  useEffect(() => {
+    const nextResetAt = payload?.daily.nextResetAt;
+    if (!nextResetAt) return;
+    const timer = window.setInterval(() => setRemaining(formatRemaining(nextResetAt)), 1_000);
+    return () => window.clearInterval(timer);
+  }, [payload?.daily.nextResetAt]);
 
   const start = async () => {
     setBusy(true); setError(null);
@@ -107,8 +116,8 @@ function DailyContent({ payload, answer, setAnswer, busy, feedback, error, remai
       <section className="daily-heading">
         <div>
           <p className="eyebrow">Ежедневное испытание · {formatDate(payload.daily.date)}</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-6xl">Одна задача.<br /><span className="text-acid">Один шанс в день.</span></h1>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-slate-400">Одинаковая задача для всех игроков. Решите её сегодня, сохраните дневную серию и получите бонус к очкам.</p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-6xl">Одна задача.<br /><span className="text-acid">Каждый день.</span></h1>
+          <p className="mt-5 max-w-xl text-sm leading-7 text-slate-400">Одинаковая задача для всех. Решите её сегодня и сохраните дневную серию.</p>
         </div>
         <div className="daily-countdown"><Clock3 size={17} /><div><span>Новое задание через</span><strong>{remaining}</strong></div></div>
       </section>
@@ -124,7 +133,7 @@ function DailyContent({ payload, answer, setAnswer, busy, feedback, error, remai
         <div className="daily-challenge-top">
           <div className="flex flex-wrap items-center gap-2">
             <span className="challenge-category">{payload.daily.challenge.category.name}</span>
-            <span className="difficulty">{payload.daily.challenge.difficulty}</span>
+            <span className="difficulty">{difficultyLabel(payload.daily.challenge.difficulty, true)}</span>
           </div>
           <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold text-acid"><Sparkles size={13} /> ×{payload.daily.bonusMultiplier.toFixed(2)} ОЧКОВ</span>
         </div>
@@ -134,7 +143,7 @@ function DailyContent({ payload, answer, setAnswer, busy, feedback, error, remai
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{payload.daily.challenge.description}</p>
 
           {completed ? (
-            <><div className="daily-completed mt-8"><CalendarCheck size={25} /><div><strong>Сегодня выполнено</strong><span>{payload.progress?.score} очков · рейтинг {formatDelta(payload.progress?.ratingDelta ?? 0)}</span></div></div><a className="secondary-button mt-4" href="/play#practice">Продолжить практику <ArrowRight size={14} /></a></>
+            <><div className="daily-completed mt-8"><CalendarCheck size={25} /><div><strong>Сегодня выполнено</strong><span>{payload.progress?.score} очков · оценка практики {formatDelta(payload.progress?.practiceScoreDelta ?? payload.progress?.ratingDelta ?? 0)}</span></div></div><a className="secondary-button mt-4" href="/play#practice">Продолжить практику <ArrowRight size={14} /></a></>
           ) : active ? (
             <form className="game-terminal mt-8" onSubmit={submit}>
               <div className="game-terminal-bar"><span>daily@clirace:~</span><span>проверка готова</span></div>
@@ -158,10 +167,9 @@ function DailyMetric({ icon: Icon, value, label }: { icon: typeof Flame; value: 
   return <div className="daily-metric"><Icon size={15} /><strong>{value}</strong><span>{label}</span></div>;
 }
 
-function formatRemaining() {
-  const now = new Date();
-  const next = new Date(now); next.setHours(24, 0, 0, 0);
-  const seconds = Math.max(0, Math.floor((next.getTime() - now.getTime()) / 1000));
+function formatRemaining(nextResetAt: string) {
+  const next = new Date(nextResetAt);
+  const seconds = Math.max(0, Math.floor((next.getTime() - Date.now()) / 1000));
   return `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
 function formatDate(value: string) {

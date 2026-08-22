@@ -346,7 +346,7 @@ function RankedResultBlock({ battle, result, victory }: { battle: BattleState; r
 }
 
 function RankedNoContest({ reason }: { reason: string | null }) {
-  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на рейтинг.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><a className="primary-button mt-8" href="/play?compete=ranked#competition">Вернуться к Ranked</a></main>;
+  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на MMR.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><a className="primary-button mt-8" href="/play?compete=ranked#competition">Вернуться к Ranked</a></main>;
 }
 
 function noContestMessage(reason: string | null): string {
