@@ -269,12 +269,17 @@ export class LearningService {
     };
     if (row.answered_at && row.selected_answer_ids && row.is_correct !== null) {
       const selectedWrongId = row.is_correct ? undefined : row.selected_answer_ids.find((id) => !snapshot.correctAnswerIds.includes(id));
+      const selectedAnswerExplanation = selectedWrongId
+        ? snapshot.answerExplanations[selectedWrongId]
+        : !row.is_correct && snapshot.type === 'multiple_choice'
+          ? 'Вы выбрали только часть правильного набора. В вопросах с несколькими ответами результат считается верным, когда отмечены все правильные варианты и ни одного лишнего.'
+          : null;
       payload.feedback = {
         isCorrect: row.is_correct,
         selectedAnswerIds: row.selected_answer_ids,
         correctAnswerIds: snapshot.correctAnswerIds,
         explanation: snapshot.explanation,
-        selectedAnswerExplanation: selectedWrongId ? snapshot.answerExplanations[selectedWrongId] : null,
+        selectedAnswerExplanation,
         shellPracticeChallengeSlug: snapshot.shellPracticeChallengeSlug ?? null,
       };
     }
