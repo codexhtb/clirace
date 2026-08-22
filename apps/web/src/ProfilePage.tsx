@@ -32,6 +32,7 @@ interface Profile {
   ratings: Array<{ slug: string; name: string; rating: number; gamesPlayed: number; updatedAt: string }>;
   dailyStreak: { current: number; best: number; lastDate: string | null };
   learning: { assessments: number; answered: number; correct: number; accuracy: number; active: boolean };
+  learningPaths?: Array<{ slug: string; title: string; status: 'active' | 'completed'; progress: number; finalScore: number | null; currentModule: string | null; completedAt: string | null; mastery: Array<{ category: string; score: number }> }>;
   achievements: Array<{ slug: string; title: string; description: string; icon: string; unlockedAt: string }>;
   recentRuns: RunHistory[];
   ranked: {
@@ -123,6 +124,11 @@ function ProfileContent({ profile }: { profile: Profile }) {
         <div className="flex flex-wrap items-center gap-3"><span className="font-mono text-xs text-slate-500">{profile.learning.assessments} завершено</span><a className="secondary-button" href="/learn/linux-core">{profile.learning.active ? 'Продолжить' : 'Начать'} <ArrowRight size={14} /></a></div>
       </section>
 
+      {(profile.learningPaths?.length ?? 0) > 0 && <section className="mt-10">
+        <div><p className="eyebrow">Learning Paths</p><h2 className="mt-3 text-2xl font-semibold text-white">Последовательное обучение</h2></div>
+        <div className="profile-paths mt-5">{profile.learningPaths?.map((course) => <a href={`/learn/paths/${course.slug}`} key={course.slug}><div><strong>{course.title}</strong><span>{course.status === 'completed' ? `Завершён · ${course.finalScore}%` : `${course.progress}% · ${course.currentModule ?? 'Первый модуль'}`}</span></div><div>{course.mastery.map((entry) => <small key={entry.category}>{masteryLabel(entry.category)} {entry.score}%</small>)}</div><ArrowRight size={15} /></a>)}</div>
+      </section>}
+
       <section className="mt-10">
         <div className="flex items-end justify-between gap-4">
           <div><p className="eyebrow">Прогресс</p><h2 className="mt-3 text-2xl font-semibold text-white">Достижения</h2></div>
@@ -204,6 +210,10 @@ function RunRow({ run }: { run: RunHistory }) {
 
 function EmptyPanel({ text, action }: { text: string; action?: { href: string; label: string } }) {
   return <div className="p-6 text-sm leading-6 text-slate-500">{text}{action && <a className="mt-3 flex w-fit items-center gap-1 text-acid hover:underline" href={action.href}>{action.label} <ArrowRight size={13} /></a>}</div>;
+}
+
+function masteryLabel(category: string): string {
+  return ({ knowledge: 'Знания', practice: 'Практика', lab: 'Shell', checkpoint: 'Проверки' } as Record<string, string>)[category] ?? category;
 }
 
 

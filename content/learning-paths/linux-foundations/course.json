@@ -1,0 +1,23 @@
+{
+  "slug": "linux-foundations",
+  "title": "Linux Foundations",
+  "description": "Последовательный путь от базовых команд до диагностики Linux: короткая теория, проверка знаний, практика и настоящие shell-лабораторные.",
+  "version": 1,
+  "enabled": true,
+  "order": 1,
+  "estimatedMinutes": 720,
+  "level": "beginner",
+  "prerequisites": [],
+  "modules": [
+    "01-linux-basics.json",
+    "02-filesystem.json",
+    "03-permissions.json",
+    "04-users-groups.json",
+    "05-processes.json",
+    "06-bash-shell.json",
+    "07-networking.json",
+    "08-storage.json",
+    "09-systemd-logs.json",
+    "10-final-assessment.json"
+  ]
+}

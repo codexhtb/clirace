@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
+import { ArrowLeft, BookOpen, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, Map, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
 import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
@@ -180,8 +180,8 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
       </div>
 
       {newPlayer && <section className="onboarding-card" aria-labelledby="first-step-title">
-        <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Первая тренировка займёт несколько минут.</h2><p>Ниже уже выбраны пять лёгких задач. После них попробуйте Linux Core, а затем Quick Match без изменения рейтинга.</p></div>
-        <a className="primary-button" href="#practice"><Terminal size={15} /> Первая задача</a>
+        <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Выберите подходящий первый шаг.</h2><p>Новичкам подойдёт последовательный Linux Foundations. Если основы знакомы — проверьте знания или сразу откройте практику.</p></div>
+        <div className="onboarding-actions"><a className="primary-button" href="/learn/paths/linux-foundations"><Map size={15} /> Linux Foundations</a><a className="secondary-button" href="/learn/linux-core"><BookOpen size={15} /> Проверить знания</a><a className="secondary-button" href="#practice"><Terminal size={15} /> Первая задача</a></div>
       </section>}
 
       <div id="competition" className="matchmaking-mode-tabs scroll-mt-28" role="tablist" aria-label="Режим соревнования">
@@ -419,6 +419,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
 function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }) {
   const summary = game.summary!;
   const accuracy = summary.total ? Math.round((summary.correct / summary.total) * 100) : 0;
+  const returnTo = courseReturnTo();
   return (
     <section className="mx-auto max-w-3xl text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-acid/30 bg-acid/10 text-acid"><Trophy size={28} /></div>
@@ -432,9 +433,9 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
         <SummaryMetric value={formatDuration(summary.duration_ms)} label="время" />
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <a className="secondary-button" href="/"><ArrowLeft size={14} /> На главную</a>
+        <a className="secondary-button" href={returnTo ?? '/'}><ArrowLeft size={14} /> {returnTo ? 'Вернуться в курс' : 'На главную'}</a>
         <a className="secondary-button" href="/play?compete=quick#competition"><Swords size={15} /> Quick Match</a>
-        <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>
+        {returnTo ? <a className="primary-button" href={returnTo}>Засчитать шаг <CheckCircle2 size={15} /></a> : <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>}
       </div>
     </section>
   );
@@ -477,4 +478,9 @@ function formatDuration(milliseconds: number): string {
 
 function difficultyLabel(value: GameTask['difficulty']): string {
   return ({ Easy: 'ЛЕГКО', Medium: 'СРЕДНЕ', Hard: 'СЛОЖНО', Expert: 'ЭКСПЕРТ' } as const)[value];
+}
+
+function courseReturnTo(): string | null {
+  const value = new URLSearchParams(window.location.search).get('returnTo');
+  return value?.startsWith('/learn/paths/') && !value.startsWith('//') ? value : null;
 }

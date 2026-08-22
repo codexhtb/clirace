@@ -1,0 +1,78 @@
+{
+  "slug": "users-groups",
+  "title": "Пользователи и группы",
+  "description": "Поймите идентичность процессов, основные и дополнительные группы и безопасный доступ к файлам.",
+  "order": 4,
+  "prerequisites": ["permissions"],
+  "estimatedMinutes": 50,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-users-theory",
+      "slug": "identity-and-groups",
+      "title": "UID, GID и группы",
+      "type": "theory",
+      "order": 1,
+      "category": "users_groups",
+      "concept": "effective_identity",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Доступ проверяется по идентичности" },
+        { "type": "paragraph", "text": "Процесс работает с UID и набором GID. Основная группа задаётся для пользователя, дополнительные группы дают доступ к общим ресурсам." },
+        { "type": "bullets", "items": ["id показывает UID и группы", "groups выводит членство", "chown меняет владельца", "chgrp меняет группу"] },
+        { "type": "code", "language": "bash", "code": "id\ngroups\nchown app:developers report.txt" },
+        { "type": "note", "tone": "note", "text": "После изменения членства в группах уже запущенная login-сессия может не получить новую группу до повторного входа." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-users-knowledge",
+      "slug": "users-knowledge",
+      "title": "Проверка групп",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "users_groups",
+      "concept": "effective_groups",
+      "version": 1,
+      "questionSlugs": ["users-effective-groups"],
+      "completion": { "passThreshold": 70 }
+    },
+    {
+      "id": "linux-foundations-users-practice",
+      "slug": "protected-file",
+      "title": "Практика: защищённый файл",
+      "type": "practice",
+      "order": 3,
+      "category": "users_groups",
+      "concept": "ownership",
+      "version": 1,
+      "challengeSlugs": ["shell-readonly-scroll"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-users-lab",
+      "slug": "secret-lab",
+      "title": "Лабораторная: секрет приложения",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "users_groups",
+      "concept": "secure_ownership",
+      "version": 1,
+      "challengeSlugs": ["secure-secret"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-users-checkpoint",
+      "slug": "users-checkpoint",
+      "title": "Checkpoint: идентичность",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "users_groups",
+      "concept": "effective_groups",
+      "version": 1,
+      "questionSlugs": ["users-effective-groups", "permissions-mode-750"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

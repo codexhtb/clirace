@@ -1,0 +1,78 @@
+{
+  "slug": "systemd-logs",
+  "title": "systemd, логи и диагностика",
+  "description": "Свяжите состояние сервиса, журнал и последовательный поиск причины сбоя.",
+  "order": 9,
+  "prerequisites": ["storage"],
+  "estimatedMinutes": 85,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-systemd-theory",
+      "slug": "services-and-journal",
+      "title": "Сервисы и journal",
+      "type": "theory",
+      "order": 1,
+      "category": "systemd",
+      "concept": "service_diagnostics",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Состояние, конфигурация, журнал" },
+        { "type": "paragraph", "text": "systemd управляет unit-объектами. status показывает текущее состояние, is-enabled — автозапуск, а journalctl хранит события сервиса и системы." },
+        { "type": "bullets", "items": ["systemctl status проверяет состояние", "systemctl enable настраивает автозапуск", "journalctl -u читает журнал unit", "journalctl -b ограничивает текущей загрузкой"] },
+        { "type": "code", "language": "bash", "code": "systemctl status nginx\nsystemctl is-enabled nginx\njournalctl -u nginx -b --no-pager | tail -n 50" },
+        { "type": "note", "tone": "note", "text": "Диагностика быстрее, когда сначала фиксируется симптом, затем состояние сервиса, последние ошибки и только после этого конфигурация." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-systemd-knowledge",
+      "slug": "systemd-knowledge",
+      "title": "Проверка сервисов и логов",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "systemd",
+      "concept": "service_diagnostics",
+      "version": 1,
+      "questionSlugs": ["systemd-enable-versus-start", "systemd-view-status", "logs-current-boot-errors", "logs-follow-unit", "troubleshooting-service-first-checks"],
+      "completion": { "passThreshold": 60 }
+    },
+    {
+      "id": "linux-foundations-systemd-practice",
+      "slug": "log-investigation",
+      "title": "Практика: расследование лога",
+      "type": "practice",
+      "order": 3,
+      "category": "logs",
+      "concept": "log_filtering",
+      "version": 1,
+      "challengeSlugs": ["log-investigation"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-systemd-lab",
+      "slug": "recovery-lab",
+      "title": "Лабораторная: восстановление конфигурации",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "troubleshooting",
+      "concept": "configuration_recovery",
+      "version": 1,
+      "challengeSlugs": ["restore-git-file"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-systemd-checkpoint",
+      "slug": "systemd-checkpoint",
+      "title": "Checkpoint: диагностика",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "systemd",
+      "concept": "service_diagnostics",
+      "version": 1,
+      "questionSlugs": ["systemd-view-status", "logs-current-boot-errors", "troubleshooting-service-first-checks"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

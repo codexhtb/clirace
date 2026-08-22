@@ -1,0 +1,78 @@
+{
+  "slug": "processes",
+  "title": "Процессы",
+  "description": "Научитесь находить процессы, читать их состояния и безопасно отправлять сигналы.",
+  "order": 5,
+  "prerequisites": ["users-groups"],
+  "estimatedMinutes": 65,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-processes-theory",
+      "slug": "process-lifecycle",
+      "title": "PID, состояния и сигналы",
+      "type": "theory",
+      "order": 1,
+      "category": "processes",
+      "concept": "process_lifecycle",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Процесс — работающий экземпляр программы" },
+        { "type": "paragraph", "text": "У процесса есть PID, родитель, владелец и состояние. ps показывает снимок, pgrep ищет PID, а сигналы просят процесс выполнить действие." },
+        { "type": "bullets", "items": ["SIGTERM просит корректно завершиться", "SIGKILL завершает без обработки", "zombie уже завершён, но родитель не прочитал статус", "kill принимает PID или спецификацию сигнала"] },
+        { "type": "code", "language": "bash", "code": "pgrep -a worker\nps -o pid,ppid,user,state,cmd -p 1234\nkill -TERM 1234" },
+        { "type": "note", "tone": "warning", "text": "Начинайте с SIGTERM; SIGKILL не даёт приложению сохранить данные и освободить ресурсы штатно." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-processes-knowledge",
+      "slug": "processes-knowledge",
+      "title": "Проверка процессов",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "processes",
+      "concept": "process_lifecycle",
+      "version": 1,
+      "questionSlugs": ["processes-find-pid", "processes-zombie-state", "signals-graceful-stop"],
+      "completion": { "passThreshold": 60 }
+    },
+    {
+      "id": "linux-foundations-processes-practice",
+      "slug": "process-output",
+      "title": "Практика: выбор результата",
+      "type": "practice",
+      "order": 3,
+      "category": "processes",
+      "concept": "process_output",
+      "version": 1,
+      "challengeSlugs": ["shell-last-cookie"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-processes-lab",
+      "slug": "stop-worker-lab",
+      "title": "Лабораторная: остановка worker",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "processes",
+      "concept": "signals",
+      "version": 1,
+      "challengeSlugs": ["stop-worker"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-processes-checkpoint",
+      "slug": "processes-checkpoint",
+      "title": "Checkpoint: процессы",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "processes",
+      "concept": "process_lifecycle",
+      "version": 1,
+      "questionSlugs": ["processes-find-pid", "processes-zombie-state", "signals-graceful-stop"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

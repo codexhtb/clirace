@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, CircleAlert, LoaderCircle, RotateCcw, Terminal, X } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, CircleAlert, LoaderCircle, Map as MapIcon, RotateCcw, Terminal, X } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
@@ -104,12 +104,17 @@ function CourseCatalog({ catalog, error }: { catalog: Catalog | null; error: str
   return <section>
     <p className="eyebrow">CLIRace Learn</p>
     <h1 className="learn-hero-title">Учитесь понимать.<br /><span>Потом ускоряйтесь.</span></h1>
-    <p className="learn-lead">Короткие проверки знаний с объяснением каждой ошибки. Сейчас доступен первый фундаментальный курс.</p>
+    <p className="learn-lead">Выберите формат: быстрые проверки знаний или последовательный путь с теорией, командами и настоящими shell-лабораторными.</p>
     {error && <p className="play-error mt-6" role="alert">{error}</p>}
     <div className="learn-course-grid">
+      <a className="learn-course-card featured" href="/learn/paths/linux-foundations">
+        <span className="mode-card-icon"><MapIcon size={18} /></span><small>Последовательный курс</small>
+        <h2>Linux Foundations</h2><p>10 модулей: теория → проверка → CLI-практика → Shell Lab → checkpoint.</p>
+        <strong>Открыть учебный путь <ArrowRight size={15} /></strong>
+      </a>
       <a className="learn-course-card" href="/learn/linux-core">
-        <span className="mode-card-icon"><Terminal size={18} /></span><small>Доступен сейчас</small>
-        <h2>Linux Core</h2><p>Файлы, права, процессы, сети, systemd, Bash и диагностика.</p>
+        <span className="mode-card-icon"><Terminal size={18} /></span><small>Быстрая проверка</small>
+        <h2>Linux Core</h2><p>Проверьте знания по отдельным темам и разберите каждый ответ.</p>
         <strong>{catalog ? `${catalog.totalQuestions} вопросов` : 'Загружаем…'} <ArrowRight size={15} /></strong>
       </a>
       <a className="learn-course-card" href="/interview"><span className="mode-card-icon"><BookOpen size={18} /></span><small>Проверка навыков</small><h2>Interview 100</h2><p>Сто практических задач для подготовки к Linux и DevOps собеседованию.</p><strong>Открыть коллекцию <ArrowRight size={15} /></strong></a>

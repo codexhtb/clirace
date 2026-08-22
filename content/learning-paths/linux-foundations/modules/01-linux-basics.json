@@ -1,0 +1,78 @@
+{
+  "slug": "linux-basics",
+  "title": "Основы Linux",
+  "description": "Разберитесь с shell, текущим каталогом, абсолютными путями и окружением команд.",
+  "order": 1,
+  "prerequisites": [],
+  "estimatedMinutes": 55,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-basics-theory",
+      "slug": "shell-and-paths",
+      "title": "Shell, команды и пути",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "shell_basics",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Команда работает в контексте" },
+        { "type": "paragraph", "text": "Shell читает команду, находит программу через PATH и запускает её из текущего рабочего каталога. Поэтому одна и та же команда может работать с разными файлами." },
+        { "type": "bullets", "items": ["pwd показывает текущий каталог", "ls перечисляет содержимое", "абсолютный путь начинается с /", "переменная окружения действует в окружении процесса"] },
+        { "type": "code", "language": "bash", "code": "pwd\nls -la\nprintf '%s\\n' \"$PATH\"" },
+        { "type": "note", "tone": "warning", "text": "Не угадывайте текущий каталог: перед изменением файлов проверьте pwd и нужный путь." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-basics-knowledge",
+      "slug": "basics-knowledge",
+      "title": "Проверка основ",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "path_and_environment",
+      "version": 1,
+      "questionSlugs": ["filesystem-absolute-path", "environment-temporary-variable"],
+      "completion": { "passThreshold": 50 }
+    },
+    {
+      "id": "linux-foundations-basics-practice",
+      "slug": "first-command",
+      "title": "Первая команда",
+      "type": "practice",
+      "order": 3,
+      "category": "bash",
+      "concept": "command_execution",
+      "version": 1,
+      "challengeSlugs": ["shell-hello-terminal"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-basics-lab",
+      "slug": "workspace-lab",
+      "title": "Лабораторная: рабочий каталог",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "directory_creation",
+      "version": 1,
+      "challengeSlugs": ["shell-build-castle"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-basics-checkpoint",
+      "slug": "basics-checkpoint",
+      "title": "Checkpoint: основы",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "bash",
+      "concept": "shell_basics",
+      "version": 1,
+      "questionSlugs": ["filesystem-absolute-path", "environment-temporary-variable"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

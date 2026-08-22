@@ -1,0 +1,78 @@
+{
+  "slug": "filesystem",
+  "title": "Файловая система",
+  "description": "Научитесь уверенно работать с файлами, каталогами и символическими ссылками.",
+  "order": 2,
+  "prerequisites": ["linux-basics"],
+  "estimatedMinutes": 60,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-filesystem-theory",
+      "slug": "filesystem-model",
+      "title": "Дерево каталогов и ссылки",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "filesystem_tree",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Одно дерево от корня /" },
+        { "type": "paragraph", "text": "Linux объединяет файловые системы в единое дерево. Относительный путь считается от текущего каталога, абсолютный — от корня /." },
+        { "type": "bullets", "items": ["cp копирует", "mv перемещает или переименовывает", "rm удаляет", "ln -s создаёт символическую ссылку"] },
+        { "type": "code", "language": "bash", "code": "mkdir -p project/data\ncp source.txt project/data/\nln -s project/data current-data" },
+        { "type": "note", "tone": "note", "text": "Символическая ссылка хранит путь к цели; перемещение цели может сделать ссылку нерабочей." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-filesystem-knowledge",
+      "slug": "filesystem-knowledge",
+      "title": "Проверка файловой системы",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "paths_and_links",
+      "version": 1,
+      "questionSlugs": ["filesystem-absolute-path", "filesystem-symlink-behavior"],
+      "completion": { "passThreshold": 50 }
+    },
+    {
+      "id": "linux-foundations-filesystem-practice",
+      "slug": "copy-files",
+      "title": "Практика: копирование",
+      "type": "practice",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "copy_files",
+      "version": 1,
+      "challengeSlugs": ["shell-copy-map"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-filesystem-lab",
+      "slug": "symlink-lab",
+      "title": "Лабораторная: переключение релиза",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "symbolic_links",
+      "version": 1,
+      "challengeSlugs": ["release-symlink"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-filesystem-checkpoint",
+      "slug": "filesystem-checkpoint",
+      "title": "Checkpoint: файлы и ссылки",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "paths_and_links",
+      "version": 1,
+      "questionSlugs": ["filesystem-absolute-path", "filesystem-symlink-behavior"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

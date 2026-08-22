@@ -1,0 +1,78 @@
+{
+  "slug": "networking",
+  "title": "Сети",
+  "description": "Разберите адреса, порты, слушающие сокеты и последовательную диагностику соединения.",
+  "order": 7,
+  "prerequisites": ["bash-shell"],
+  "estimatedMinutes": 65,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-networking-theory",
+      "slug": "connections-and-listeners",
+      "title": "Соединения и слушающие сокеты",
+      "type": "theory",
+      "order": 1,
+      "category": "networking",
+      "concept": "tcp_diagnostics",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Проверяйте сеть по слоям" },
+        { "type": "paragraph", "text": "Connection refused означает, что адрес достигнут, но порт не принимает соединение. Timeout чаще указывает на маршрут, фильтрацию или недоступность узла." },
+        { "type": "bullets", "items": ["ip addr показывает адреса", "ip route показывает маршруты", "ss -lntp показывает TCP listeners", "curl проверяет HTTP-путь целиком"] },
+        { "type": "code", "language": "bash", "code": "ip route\nss -lntp\ncurl -i http://127.0.0.1:8080/health" },
+        { "type": "note", "tone": "note", "text": "Сначала проверьте, слушает ли сервис нужный адрес и порт, затем переходите к DNS, маршруту и firewall." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-networking-knowledge",
+      "slug": "networking-knowledge",
+      "title": "Проверка сетевой диагностики",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "networking",
+      "concept": "tcp_diagnostics",
+      "version": 1,
+      "questionSlugs": ["networking-connection-refused", "networking-listen-sockets", "troubleshooting-dns-order"],
+      "completion": { "passThreshold": 60 }
+    },
+    {
+      "id": "linux-foundations-networking-practice",
+      "slug": "network-output",
+      "title": "Практика: фильтрация вывода",
+      "type": "practice",
+      "order": 3,
+      "category": "networking",
+      "concept": "network_output",
+      "version": 1,
+      "challengeSlugs": ["shell-count-stars"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-networking-lab",
+      "slug": "local-http-lab",
+      "title": "Лабораторная: локальный HTTP-сервис",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "networking",
+      "concept": "http_diagnostics",
+      "version": 1,
+      "challengeSlugs": ["local-http"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-networking-checkpoint",
+      "slug": "networking-checkpoint",
+      "title": "Checkpoint: сети",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "networking",
+      "concept": "tcp_diagnostics",
+      "version": 1,
+      "questionSlugs": ["networking-connection-refused", "networking-listen-sockets", "troubleshooting-dns-order"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

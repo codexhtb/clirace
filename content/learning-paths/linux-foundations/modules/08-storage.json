@@ -1,0 +1,78 @@
+{
+  "slug": "storage",
+  "title": "Хранилище",
+  "description": "Отличайте место от inode, находите крупные файлы и безопасно архивируйте данные.",
+  "order": 8,
+  "prerequisites": ["networking"],
+  "estimatedMinutes": 60,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-storage-theory",
+      "slug": "space-and-inodes",
+      "title": "Блоки, inode и использование диска",
+      "type": "theory",
+      "order": 1,
+      "category": "storage",
+      "concept": "disk_usage",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Свободное место — не единственный лимит" },
+        { "type": "paragraph", "text": "Файловая система может закончить блоки данных или inode. df показывает файловые системы, du измеряет каталоги, find помогает отыскать крупные объекты." },
+        { "type": "bullets", "items": ["df -h показывает место", "df -i показывает inode", "du -sh оценивает каталог", "tar объединяет и архивирует файлы"] },
+        { "type": "code", "language": "bash", "code": "df -h\ndf -i\ndu -sh /var/log/* 2>/dev/null | sort -h" },
+        { "type": "note", "tone": "warning", "text": "Не удаляйте найденный крупный файл вслепую: сначала выясните владельца данных и политику ротации." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-storage-knowledge",
+      "slug": "storage-knowledge",
+      "title": "Проверка хранилища",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "storage",
+      "concept": "disk_usage",
+      "version": 1,
+      "questionSlugs": ["storage-free-filesystems", "storage-inodes-full"],
+      "completion": { "passThreshold": 50 }
+    },
+    {
+      "id": "linux-foundations-storage-practice",
+      "slug": "largest-file",
+      "title": "Практика: самый крупный файл",
+      "type": "practice",
+      "order": 3,
+      "category": "storage",
+      "concept": "file_sizes",
+      "version": 1,
+      "challengeSlugs": ["move-largest-file"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-storage-lab",
+      "slug": "archive-lab",
+      "title": "Лабораторная: архив логов",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "storage",
+      "concept": "archives",
+      "version": 1,
+      "challengeSlugs": ["archive-logs"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-storage-checkpoint",
+      "slug": "storage-checkpoint",
+      "title": "Checkpoint: хранилище",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "storage",
+      "concept": "disk_usage",
+      "version": 1,
+      "questionSlugs": ["storage-free-filesystems", "storage-inodes-full"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

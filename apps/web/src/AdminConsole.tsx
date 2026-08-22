@@ -157,6 +157,16 @@ function Overview() {
           <Stat label="No contest" value={data.ranked.noContestToday} />
         </div>
       </section>
+      <section>
+        <AdminHeading title="Learning Paths" detail="Read-only progression snapshot" />
+        <div className="admin-stat-grid">
+          <Stat label="Активных учеников" value={p.learning_active} />
+          <Stat label="Стартов курса" value={p.learning_course_starts} />
+          <Stat label="Завершений" value={p.learning_course_completions} />
+          <Stat label="Средний итог" value={`${p.learning_average_score ?? 0}%`} />
+          <Stat label="Модулей завершено" value={`${p.learning_module_completion_rate ?? 0}%`} />
+        </div>
+      </section>
       <section className="grid gap-5 xl:grid-cols-2">
         <div className="admin-panel">
           <AdminHeading title="Sandbox capacity" detail={`${data.sandbox.platform.capacity.running} запущено · ${data.sandbox.platform.capacity.starting} запускается`} />

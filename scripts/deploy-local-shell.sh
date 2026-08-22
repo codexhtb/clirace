@@ -172,6 +172,22 @@ for attempt in $(seq 1 30); do
       echo 'Learn V1 platform regressions passed.'
     fi
 
+    learning_paths_validation_marker=/var/lib/clirace/learning-paths-v1-validated
+    if [[ ! -f "$learning_paths_validation_marker" ]]; then
+      echo 'Running one-time Learning Paths V1 validation...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/learning-path-content-cli.js validate
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/learning-path-e2e.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/learning-e2e.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/admin-e2e.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$learning_paths_validation_marker"
+      echo 'Learning Paths V1 validation passed.'
+    fi
+
     ranked_validation_marker=/var/lib/clirace/ranked-mmr-v1-validated
     if [[ ! -f "$ranked_validation_marker" ]]; then
       echo 'Running one-time Ranked / MMR V1 validation...'

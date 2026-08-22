@@ -10,6 +10,7 @@ import { CommunityHeader } from './CommunityHeader';
 import { AdminConsole } from './AdminConsole';
 import { LearnPage } from './LearnPage';
 import { routeMetadata, secondaryNavigation } from './product-ux';
+import { currentUser } from './auth-client';
 
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleCreatePage,
@@ -17,6 +18,7 @@ const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
 const BattleRoomPage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleRoomPage,
 })));
+const LearningPathsPage = lazy(() => import('./LearningPathsPage').then((module) => ({ default: module.LearningPathsPage })));
 
 function BattlePageFallback() {
   return <main className="page-width py-24 font-mono text-sm uppercase tracking-[0.15em] text-slate-500">Загружаем Battle…</main>;
@@ -64,6 +66,20 @@ function SystemStatus() {
       {ready ? 'Системы готовы' : 'Проверка систем'}
     </div>
   );
+}
+
+function LearningPathResume() {
+  const [course, setCourse] = useState<{ slug: string; title: string; enrollment: { status: string; progress: number } } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    currentUser().then(({ user }) => user ? fetch('/api/learn/paths', { signal: controller.signal }) : null)
+      .then(async (response) => response?.ok ? response.json() as Promise<{ courses: Array<{ slug: string; title: string; enrollment: { status: string; progress: number } | null }> }> : null)
+      .then((payload) => setCourse(payload?.courses.find((candidate) => candidate.enrollment?.status === 'active') as typeof course ?? null))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  if (!course?.enrollment) return null;
+  return <section className="page-width pb-16"><a className="home-course-resume" href={`/learn/paths/${course.slug}`}><div><small>Продолжить обучение</small><strong>{course.title}</strong></div><span>{course.enrollment.progress}%</span><ArrowRight size={16} /></a></section>;
 }
 
 function TerminalDemo() {
@@ -159,6 +175,8 @@ function HomePage() {
           </div>
         </section>
 
+        <LearningPathResume />
+
         <QuickStartSection />
 
         <section id="modes" className="border-y border-line bg-[#0a0e13]/90">
@@ -242,6 +260,7 @@ export function App() {
   if (path === '/admin' || path.startsWith('/admin/')) return <AdminConsole />;
   if (path === '/play') return <PlayPage />;
   if (path === '/learn') return <LearnPage catalogOnly />;
+  if (path === '/learn/paths' || path.startsWith('/learn/paths/')) return <Suspense fallback={<BattlePageFallback />}><LearningPathsPage /></Suspense>;
   if (path === '/learn/linux-core') return <LearnPage />;
   if (path === '/daily') return <DailyPage />;
   if (path === '/interview') return <InterviewPage />;

@@ -143,6 +143,61 @@ export class LearningService {
     return this.getSession(userId, sessionId);
   }
 
+  async createPathSession(userId: string, enrollmentId: string, itemId: string, questionSlugs: string[]): Promise<unknown> {
+    const active = await this.database.query<{ id: string }>(`
+      SELECT id FROM learning_sessions
+      WHERE user_id = $1 AND learning_path_item_id = $2 AND status = 'active'
+      ORDER BY started_at DESC LIMIT 1
+    `, [userId, itemId]);
+    if (active.rows[0]) return this.getSession(userId, active.rows[0].id);
+
+    const available = await this.database.query<QuestionRow>(`
+      SELECT id, slug, category_slug, concept_slug, difficulty, question_type, question_text,
+             answer_options, correct_answer_ids, explanation, answer_explanations,
+             shell_practice_challenge_slug, content_version
+      FROM learning_questions
+      WHERE course_slug = 'linux-core' AND enabled AND slug = ANY($1::varchar[])
+    `, [questionSlugs]);
+    const bySlug = new Map(available.rows.map((question) => [question.slug, question]));
+    const selected = questionSlugs.map((slug) => bySlug.get(slug)).filter((question): question is QuestionRow => Boolean(question));
+    if (selected.length !== questionSlugs.length) throw new LearningError(409, 'path_content_unavailable', 'Часть вопросов учебного пути недоступна.');
+
+    const sessionId = randomUUID();
+    const courseSlug = `path-${itemId}`;
+    const client = await this.database.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`
+        INSERT INTO learning_sessions (
+          id, user_id, course_slug, mode, requested_count, total_questions,
+          learning_path_item_id, learning_enrollment_id
+        ) VALUES ($1, $2, $3, 'topic', $4, $4, $5, $6)
+      `, [sessionId, userId, courseSlug, selected.length, itemId, enrollmentId]);
+      for (const [index, question] of selected.entries()) {
+        const snapshot = toSnapshot(question);
+        const order = deterministicOrder(snapshot.answers.map((answer) => answer.id), `${sessionId}:${question.slug}`);
+        await client.query(`
+          INSERT INTO learning_session_questions (session_id, question_id, position, option_order, content_snapshot)
+          VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)
+        `, [sessionId, question.id, index + 1, JSON.stringify(order), JSON.stringify(snapshot)]);
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (isUniqueViolation(error)) {
+        const concurrent = await this.database.query<{ id: string }>(`
+          SELECT id FROM learning_sessions WHERE user_id = $1 AND learning_path_item_id = $2 AND status = 'active'
+          ORDER BY started_at DESC LIMIT 1
+        `, [userId, itemId]);
+        if (concurrent.rows[0]) return this.getSession(userId, concurrent.rows[0].id);
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+    return this.getSession(userId, sessionId);
+  }
+
   async getSession(userId: string, sessionId: string): Promise<unknown> {
     const sessionResult = await this.database.query<SessionRow>(`
       SELECT * FROM learning_sessions WHERE id = $1 AND user_id = $2

@@ -52,6 +52,8 @@ export async function registerAdminRoutes(
         logins_24h: number; active_games: number; active_sandboxes: number;
         battles_today: number; matchmaking_today: number; challenges_today: number;
         ranked_matches_today: number; ranked_no_contest_today: number; ranked_average_mmr: number;
+        learning_active: number; learning_course_starts: number; learning_course_completions: number;
+        learning_average_score: number; learning_module_completion_rate: number;
       }>(`
         SELECT
           (SELECT count(*)::int FROM users) AS users_total,
@@ -66,6 +68,13 @@ export async function registerAdminRoutes(
           (SELECT count(*)::int FROM ranked_match_results WHERE outcome <> 'no_contest' AND created_at >= date_trunc('day', now())) AS ranked_matches_today,
           (SELECT count(*)::int FROM ranked_match_results WHERE outcome = 'no_contest' AND created_at >= date_trunc('day', now())) AS ranked_no_contest_today,
           (SELECT coalesce(round(avg(mmr)), 1000)::int FROM user_ranked_stats WHERE games_played > 0) AS ranked_average_mmr,
+          (SELECT count(*)::int FROM learning_enrollments WHERE status='active') AS learning_active,
+          (SELECT count(*)::int FROM learning_enrollments) AS learning_course_starts,
+          (SELECT count(*)::int FROM learning_enrollments WHERE status='completed') AS learning_course_completions,
+          (SELECT coalesce(round(avg(final_score)),0)::int FROM learning_enrollments WHERE status='completed') AS learning_average_score,
+          (SELECT CASE WHEN count(DISTINCT e.id)=0 THEN 0 ELSE round(
+            100.0 * count(mr.module_id) / nullif(count(DISTINCT e.id) * (SELECT count(*) FROM learning_modules WHERE enabled),0)
+          )::int END FROM learning_enrollments e LEFT JOIN learning_module_results mr ON mr.enrollment_id=e.id) AS learning_module_completion_rate,
           (SELECT count(*)::int FROM results WHERE correct AND created_at >= date_trunc('day', now())) AS challenges_today
       `),
       dependencies.postgres.query(`

@@ -1,0 +1,78 @@
+{
+  "slug": "bash-shell",
+  "title": "Bash и shell",
+  "description": "Соединяйте команды, управляйте потоками и проверяйте результат выполнения.",
+  "order": 6,
+  "prerequisites": ["processes"],
+  "estimatedMinutes": 75,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-bash-theory",
+      "slug": "streams-and-status",
+      "title": "Потоки, pipes и exit status",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "streams_and_status",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Команды сообщаются через потоки" },
+        { "type": "paragraph", "text": "Стандартный вывод и ошибки можно перенаправить в файл или следующую команду. Код возврата сообщает, завершилась ли команда успешно." },
+        { "type": "bullets", "items": ["> перезаписывает файл", ">> дописывает", "| передаёт stdout дальше", "$? содержит статус последней команды"] },
+        { "type": "code", "language": "bash", "code": "grep ERROR app.log | tail -n 20\ncommand >>output.log 2>>error.log\nprintf '%s\\n' \"$?\"" },
+        { "type": "note", "tone": "warning", "text": "Pipeline без pipefail может скрыть ошибку ранней команды; в сценариях учитывайте политику обработки ошибок." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-bash-knowledge",
+      "slug": "bash-knowledge",
+      "title": "Проверка shell",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "bash",
+      "concept": "streams_and_status",
+      "version": 1,
+      "questionSlugs": ["bash-exit-status", "redirection-append-output", "pipes-filter-errors", "environment-temporary-variable"],
+      "completion": { "passThreshold": 60 }
+    },
+    {
+      "id": "linux-foundations-bash-practice",
+      "slug": "text-replacement",
+      "title": "Практика: замена текста",
+      "type": "practice",
+      "order": 3,
+      "category": "bash",
+      "concept": "text_processing",
+      "version": 1,
+      "challengeSlugs": ["shell-replace-moon"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-bash-lab",
+      "slug": "config-lab",
+      "title": "Лабораторная: production-конфигурация",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "bash",
+      "concept": "configuration_editing",
+      "version": 1,
+      "challengeSlugs": ["production-config"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-bash-checkpoint",
+      "slug": "bash-checkpoint",
+      "title": "Checkpoint: shell",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "bash",
+      "concept": "streams_and_status",
+      "version": 1,
+      "questionSlugs": ["bash-exit-status", "redirection-append-output", "pipes-filter-errors"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

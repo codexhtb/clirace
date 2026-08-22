@@ -1,0 +1,78 @@
+{
+  "slug": "final-assessment",
+  "title": "Итоговая проверка",
+  "description": "Подтвердите знания и практические навыки на компактной итоговой проверке Linux Foundations.",
+  "order": 10,
+  "prerequisites": ["systemd-logs"],
+  "estimatedMinutes": 130,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-final-theory",
+      "slug": "assessment-briefing",
+      "title": "Как устроена итоговая проверка",
+      "type": "theory",
+      "order": 1,
+      "category": "troubleshooting",
+      "concept": "final_assessment",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Знания плюс работа в shell" },
+        { "type": "paragraph", "text": "Итоговая проверка объединяет вопросы по ключевым темам, несколько практических заданий и одну комплексную shell-лабораторную." },
+        { "type": "bullets", "items": ["каждый раздел сохраняется отдельно", "пройденные ранее совместимые challenges засчитываются", "checkpoint можно повторить", "итоговый результат рассчитывает сервер"] },
+        { "type": "code", "language": "bash", "code": "# Работайте последовательно:\n# условие -> проверка -> команда -> итоговое состояние" },
+        { "type": "note", "tone": "note", "text": "Курс не требует идеального результата: цель — подтвердить базовую самостоятельность и увидеть темы для повторения." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-final-knowledge",
+      "slug": "final-knowledge",
+      "title": "Итоговая проверка знаний",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "troubleshooting",
+      "concept": "final_knowledge",
+      "version": 1,
+      "questionSlugs": ["filesystem-symlink-behavior", "permissions-mode-750", "users-effective-groups", "processes-find-pid", "bash-exit-status", "pipes-filter-errors", "networking-listen-sockets", "storage-inodes-full", "systemd-view-status", "logs-current-boot-errors"],
+      "completion": { "passThreshold": 70 }
+    },
+    {
+      "id": "linux-foundations-final-practice",
+      "slug": "final-practice",
+      "title": "Итоговая практика",
+      "type": "practice",
+      "order": 3,
+      "category": "bash",
+      "concept": "final_practice",
+      "version": 1,
+      "challengeSlugs": ["shell-copy-treasure", "shell-sort-pets", "filter-json"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-final-lab",
+      "slug": "final-shell-lab",
+      "title": "Итоговая shell-лабораторная",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "final_lab",
+      "version": 1,
+      "challengeSlugs": ["rename-backups"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-final-checkpoint",
+      "slug": "final-checkpoint",
+      "title": "Финальный checkpoint",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "troubleshooting",
+      "concept": "final_checkpoint",
+      "version": 1,
+      "questionSlugs": ["troubleshooting-service-first-checks", "networking-connection-refused", "storage-free-filesystems", "systemd-enable-versus-start", "signals-graceful-stop"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

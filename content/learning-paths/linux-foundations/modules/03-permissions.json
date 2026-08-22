@@ -1,0 +1,78 @@
+{
+  "slug": "permissions",
+  "title": "Права доступа",
+  "description": "Освойте rwx, chmod, владельца и различия прав для файлов и каталогов.",
+  "order": 3,
+  "prerequisites": ["filesystem"],
+  "estimatedMinutes": 75,
+  "version": 1,
+  "completion": { "allItemsRequired": true },
+  "items": [
+    {
+      "id": "linux-foundations-permissions-theory",
+      "slug": "rwx-model",
+      "title": "Модель rwx",
+      "type": "theory",
+      "order": 1,
+      "category": "permissions",
+      "concept": "unix_file_mode",
+      "version": 1,
+      "content": [
+        { "type": "heading", "text": "Владелец, группа, остальные" },
+        { "type": "paragraph", "text": "Каждый объект имеет три набора прав: для владельца, группы и остальных. r читает, w изменяет, x запускает файл или разрешает проход через каталог." },
+        { "type": "bullets", "items": ["r = 4", "w = 2", "x = 1", "750 означает rwx для владельца, r-x для группы и --- для остальных"] },
+        { "type": "code", "language": "bash", "code": "chmod 750 deploy.sh\nchmod u+x deploy.sh\nchown app:ops deploy.sh" },
+        { "type": "note", "tone": "warning", "text": "Право x у каталога означает возможность прохода к вложенному имени, а не запуск каталога." }
+      ],
+      "completion": { "explicitContinue": true }
+    },
+    {
+      "id": "linux-foundations-permissions-knowledge",
+      "slug": "permissions-knowledge",
+      "title": "Проверка rwx",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "permissions",
+      "concept": "unix_file_mode",
+      "version": 1,
+      "questionSlugs": ["permissions-mode-750", "permissions-directory-execute"],
+      "completion": { "passThreshold": 50 }
+    },
+    {
+      "id": "linux-foundations-permissions-practice",
+      "slug": "executable-practice",
+      "title": "Практика: исполняемый файл",
+      "type": "practice",
+      "order": 3,
+      "category": "permissions",
+      "concept": "chmod_symbolic",
+      "version": 1,
+      "challengeSlugs": ["shell-executable-spell"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-permissions-lab",
+      "slug": "permissions-lab",
+      "title": "Лабораторная: закрытый каталог",
+      "type": "shell_lab",
+      "order": 4,
+      "category": "permissions",
+      "concept": "chmod_octal",
+      "version": 1,
+      "challengeSlugs": ["directory-mode"],
+      "completion": { "requireAll": true }
+    },
+    {
+      "id": "linux-foundations-permissions-checkpoint",
+      "slug": "permissions-checkpoint",
+      "title": "Checkpoint: права доступа",
+      "type": "checkpoint",
+      "order": 5,
+      "category": "permissions",
+      "concept": "unix_file_mode",
+      "version": 1,
+      "questionSlugs": ["permissions-mode-750", "permissions-directory-execute"],
+      "completion": { "passThreshold": 70 }
+    }
+  ]
+}

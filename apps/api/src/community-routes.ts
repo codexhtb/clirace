@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { visibleDivision } from './ranked-config.js';
 import { RankedService } from './ranked-service.js';
+import { LearningPathService } from './learning-path-service.js';
 import type { Dependencies } from './services.js';
 
 const usernameSchema = z.object({
@@ -60,13 +61,14 @@ export async function registerCommunityRoutes(
   dependencies: Dependencies,
   rankedService = new RankedService(dependencies),
 ): Promise<void> {
+  const learningPaths = new LearningPathService(dependencies.postgres);
   app.get('/api/profiles/:username', async (request, reply) => {
     const params = usernameSchema.safeParse(request.params);
     if (!params.success) return invalidRequest(reply);
     const user = await findPublicUser(dependencies, params.data.username);
     if (!user) return notFound(reply);
 
-    const [overallResult, statsResult, ranked, rankedHistory, ratingsResult, rankResult, historyResult, progressResult, achievementResult, learningResult] = await Promise.all([
+    const [overallResult, statsResult, ranked, rankedHistory, ratingsResult, rankResult, historyResult, progressResult, achievementResult, learningResult, pathProgress] = await Promise.all([
       dependencies.postgres.query<{ rating: number; games_played: number }>(`
         SELECT rating, games_played FROM user_ratings
         WHERE user_id = $1 AND category_id IS NULL
@@ -145,6 +147,7 @@ export async function registerCommunityRoutes(
         WHERE u.id = $1
         GROUP BY u.id
       `, [user.id]),
+      learningPaths.profile(user.id),
     ]);
 
     const overall = overallResult.rows[0] ?? { rating: 1000, games_played: 0 };
@@ -213,6 +216,7 @@ export async function registerCommunityRoutes(
           accuracy: learning.answered > 0 ? Math.round((learning.correct / learning.answered) * 100) : 0,
           active: learning.active,
         },
+        learningPaths: pathProgress,
       },
     });
   });
