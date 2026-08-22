@@ -156,7 +156,7 @@ async function createUsers(dependencies: Dependencies, suffix: string, count: nu
     const username = `rank${index}${suffix}`.slice(0, 24);
     const row = await dependencies.postgres.query<{ id: string; username: string }>(`
       INSERT INTO users (username, username_normalized, email, email_normalized, password_hash)
-      VALUES ($1, lower($1), $2, lower($2), 'ranked-e2e-not-loginable') RETURNING id, username
+      VALUES ($1::varchar(24), lower($1::text), $2::varchar(254), lower($2::text), 'ranked-e2e-not-loginable') RETURNING id, username
     `, [username, `${username}@e2e.invalid`]).then((result) => result.rows[0]!);
     users.push(row);
   }
