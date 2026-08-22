@@ -59,7 +59,7 @@
       "category": "networking",
       "concept": "http_diagnostics",
       "version": 1,
-      "challengeSlugs": ["local-http"],
+      "challengeSlugs": ["shell-local-http"],
       "completion": { "requireAll": true }
     },
     {

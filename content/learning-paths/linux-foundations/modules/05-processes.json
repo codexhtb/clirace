@@ -59,7 +59,7 @@
       "category": "processes",
       "concept": "signals",
       "version": 1,
-      "challengeSlugs": ["stop-worker"],
+      "challengeSlugs": ["shell-stop-worker"],
       "completion": { "requireAll": true }
     },
     {

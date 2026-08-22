@@ -6,10 +6,6 @@ import { loadAndValidateLinuxCoreContent } from './learning-content.js';
 import { listSandboxChallenges } from './sandbox-challenges.js';
 
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120);
-const legacyChallengeSlugs = new Set([
-  'directory-mode', 'move-largest-file', 'secure-secret', 'log-investigation', 'archive-logs', 'release-symlink',
-  'production-config', 'stop-worker', 'restore-git-file', 'filter-json', 'local-http', 'rename-backups',
-]);
 const theoryBlockSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('heading'), text: z.string().trim().min(2).max(120) }).strict(),
   z.object({ type: z.literal('paragraph'), text: z.string().trim().min(10).max(1_000) }).strict(),
@@ -88,7 +84,8 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
   const linuxCore = await loadAndValidateLinuxCoreContent();
   const questionSlugs = new Set(linuxCore.questions.filter((question) => question.enabled).map((question) => question.slug));
   const challengeSlugs = new Set(listSandboxChallenges().map((challenge) =>
-    challenge.id.startsWith('interview-') || legacyChallengeSlugs.has(challenge.id) ? challenge.id : `shell-${challenge.id}`));
+    challenge.id === 'directory-mode' ? 'linux-directory-mode'
+      : challenge.id.startsWith('interview-') ? challenge.id : `shell-${challenge.id}`));
   const courses: LearningPathCourseContent[] = [];
   const allCourseSlugs = new Set<string>();
   const allItemIds = new Set<string>();

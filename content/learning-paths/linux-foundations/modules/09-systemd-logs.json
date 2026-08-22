@@ -47,7 +47,7 @@
       "category": "logs",
       "concept": "log_filtering",
       "version": 1,
-      "challengeSlugs": ["log-investigation"],
+      "challengeSlugs": ["shell-log-investigation"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "troubleshooting",
       "concept": "configuration_recovery",
       "version": 1,
-      "challengeSlugs": ["restore-git-file"],
+      "challengeSlugs": ["shell-restore-git-file"],
       "completion": { "requireAll": true }
     },
     {

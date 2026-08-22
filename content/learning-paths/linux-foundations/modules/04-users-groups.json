@@ -59,7 +59,7 @@
       "category": "users_groups",
       "concept": "secure_ownership",
       "version": 1,
-      "challengeSlugs": ["secure-secret"],
+      "challengeSlugs": ["shell-secure-secret"],
       "completion": { "requireAll": true }
     },
     {

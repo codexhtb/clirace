@@ -59,7 +59,7 @@
       "category": "permissions",
       "concept": "chmod_octal",
       "version": 1,
-      "challengeSlugs": ["directory-mode"],
+      "challengeSlugs": ["linux-directory-mode"],
       "completion": { "requireAll": true }
     },
     {

@@ -47,7 +47,7 @@
       "category": "storage",
       "concept": "file_sizes",
       "version": 1,
-      "challengeSlugs": ["move-largest-file"],
+      "challengeSlugs": ["shell-move-largest-file"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "storage",
       "concept": "archives",
       "version": 1,
-      "challengeSlugs": ["archive-logs"],
+      "challengeSlugs": ["shell-archive-logs"],
       "completion": { "requireAll": true }
     },
     {

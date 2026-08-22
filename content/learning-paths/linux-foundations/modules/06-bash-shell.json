@@ -59,7 +59,7 @@
       "category": "bash",
       "concept": "configuration_editing",
       "version": 1,
-      "challengeSlugs": ["production-config"],
+      "challengeSlugs": ["shell-production-config"],
       "completion": { "requireAll": true }
     },
     {

@@ -47,7 +47,7 @@
       "category": "bash",
       "concept": "final_practice",
       "version": 1,
-      "challengeSlugs": ["shell-copy-treasure", "shell-sort-pets", "filter-json"],
+      "challengeSlugs": ["shell-copy-treasure", "shell-sort-pets", "shell-filter-json"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "filesystem",
       "concept": "final_lab",
       "version": 1,
-      "challengeSlugs": ["rename-backups"],
+      "challengeSlugs": ["shell-rename-backups"],
       "completion": { "requireAll": true }
     },
     {
