@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
 import { EmptyState, ErrorState, PageLoader } from './Ui';
+import { Link } from 'react-router-dom';
 import { humanizeError } from './errors';
 import { RankBadge } from './RankBadge';
 
@@ -82,7 +83,7 @@ export function LeaderboardPage() {
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Рейтинг игроков.</h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">MMR меняется только в Ranked. Результаты обычной практики собраны отдельно и не влияют на подбор соперника.</p>
           </div>
-          <a className="primary-button self-start lg:self-auto" href="/play?compete=ranked#competition"><Trophy size={15} /> Играть Ranked</a>
+          <Link className="primary-button self-start lg:self-auto" to="/play?compete=ranked#competition"><Trophy size={15} /> Играть Ranked</Link>
         </section>
 
         <div className="mt-10 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Категория рейтинга">
@@ -120,11 +121,11 @@ function LeaderboardTable({ board, viewer }: { board: Leaderboard; viewer: strin
 
 function LeaderboardRow({ entry, active }: { entry: LeaderboardEntry; active: boolean }) {
   return (
-    <a className={`leaderboard-row ${active ? 'leaderboard-row-active' : ''}`} href={`/profile/${encodeURIComponent(entry.username)}`}>
+    <Link className={`leaderboard-row ${active ? 'leaderboard-row-active' : ''}`} to={`/profile/${encodeURIComponent(entry.username)}`}>
       <span className="rank-cell">{entry.rank === 1 ? <Crown size={16} /> : entry.rank <= 3 ? <Medal size={16} /> : `#${entry.rank}`}</span>
       <span className="min-w-0"><strong className="truncate">@{entry.username}</strong>{active && <small>это вы</small>}</span>
       <span>{entry.division || entry.provisional ? <RankBadge compact division={entry.division} mmr={entry.mmr ?? entry.rating} provisional={entry.provisional} /> : <><strong>{entry.practiceScore ?? entry.rating}</strong><small>оценка практики</small></>}</span>
       <span><strong>{entry.division || entry.provisional ? `${entry.wins ?? 0}П · ${entry.losses ?? 0}ПР` : `${entry.gamesPlayed} · ${entry.accuracy}%`}</strong><small>{entry.division || entry.provisional ? 'победы · поражения' : 'тренировок · точность'}</small></span>
-    </a>
+    </Link>
   );
 }

@@ -37,6 +37,14 @@ const sourceFiles = (await readdir(webRoot)).filter((name) => name.endsWith('.ts
 const sources = await Promise.all(sourceFiles.map(async (name) => [name, await readFile(join(webRoot, name), 'utf8')] as const));
 const directAuthCalls = sources.flatMap(([name, source]) => source.includes("fetch('/api/auth/me") ? [name] : []);
 check(directAuthCalls.length === 1 && directAuthCalls[0] === 'auth-client.ts', 'auth request is deduplicated through auth-client');
+const hardInternalAnchors = sources.flatMap(([name, source]) => /<a\b[^>]*\bhref\s*=\s*(?:["']\/|\{["'`]\/)/.test(source) ? [name] : []);
+const hardNavigation = sources.flatMap(([name, source]) => /(?:window\.)?location\.(?:assign|replace|reload)|window\.location\.href\s*=/.test(source) ? [name] : []);
+check(hardInternalAnchors.length === 0, `internal routes use React Router links: ${hardInternalAnchors.join(', ')}`);
+check(hardNavigation.length === 0, `frontend contains no hard navigation: ${hardNavigation.join(', ')}`);
+const main = await readFile(join(webRoot, 'main.tsx'), 'utf8');
+const app = await readFile(join(webRoot, 'App.tsx'), 'utf8');
+check(main.includes('<BrowserRouter>') && app.includes('useLocation()'), 'BrowserRouter owns SPA location updates');
+check(app.includes('<AppPage><PageLoader label="Загружаем раздел" /></AppPage>'), 'lazy route fallback stays inside the application shell');
 
 const play = await readFile(join(webRoot, 'PlayPage.tsx'), 'utf8');
 const learn = await readFile(join(webRoot, 'LearnPage.tsx'), 'utf8');

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppPage, EmptyState, ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
 import { difficultyLabel } from './product-language';
+import { useNavigate } from 'react-router-dom';
 
 interface Task {
   slug: string; title: string; description: string; difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -17,6 +18,7 @@ interface Payload {
 }
 
 export function InterviewPage() {
+  const navigate = useNavigate();
   const [payload, setPayload] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('all');
@@ -43,7 +45,7 @@ export function InterviewPage() {
 
   const startRun = async (taskCount: 10 | 25 | 50) => {
     if (!payload?.authenticated) {
-      window.location.href = `/?auth=1&returnTo=${encodeURIComponent('/interview')}`;
+      navigate(`/?auth=1&returnTo=${encodeURIComponent('/interview')}`);
       return;
     }
     setBusy(taskCount); setError(null);
@@ -53,7 +55,7 @@ export function InterviewPage() {
       });
       const body = await response.json() as { session?: { id: string }; message?: string };
       if (!response.ok || !body.session) throw new Error(body.message ?? 'Не удалось начать тренировку к собеседованию.');
-      window.location.href = `/play?session=${encodeURIComponent(body.session.id)}`;
+      navigate(`/play?session=${encodeURIComponent(body.session.id)}`);
     } catch (reason) {
       setError(humanizeError(reason, 'Не удалось начать тренировку. Попробуйте ещё раз.'));
       setBusy(null);

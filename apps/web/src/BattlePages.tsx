@@ -4,6 +4,7 @@ import { BattleTerminal } from './BattleTerminal';
 import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
 import { humanizeError } from './errors';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface AuthUser { id: string; username: string; email: string; }
 interface BattleOptions { categories: Array<{ slug: string; name: string; challengeCount: number }> }
@@ -39,6 +40,7 @@ interface BattleState {
 }
 
 export function BattleCreatePage() {
+  const navigate = useNavigate();
   const [auth, setAuth] = useState<'loading' | 'guest' | 'ready'>('loading');
   const [options, setOptions] = useState<BattleOptions>({ categories: [] });
   const [sandboxEnabled, setSandboxEnabled] = useState(false);
@@ -70,7 +72,7 @@ export function BattleCreatePage() {
       });
       const payload = await response.json() as { battle?: BattleState; message?: string };
       if (!response.ok || !payload.battle) throw new Error(payload.message ?? 'Не удалось создать Battle.');
-      window.location.assign(`/battle/${payload.battle.roomCode}`);
+      navigate(`/battle/${payload.battle.roomCode}`);
     } catch (createError) {
       setError(humanizeError(createError, 'Не удалось создать Battle. Попробуйте ещё раз.'));
       setBusy(false);
@@ -89,12 +91,12 @@ export function BattleCreatePage() {
             <p className="eyebrow mt-7">Private Battle</p>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-6xl">Нужны два аккаунта.<br /><span className="text-acid">И один терминал на каждого.</span></h1>
             <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-slate-400">Войдите, создайте комнату и отправьте другу короткую ссылку.</p>
-            <a className="primary-button mt-8" href="/?auth=1&returnTo=%2Fbattle">Войти и создать Battle</a>
+            <Link className="primary-button mt-8" to="/?auth=1&returnTo=%2Fbattle">Войти и создать Battle</Link>
           </section>
         )}
         {auth === 'ready' && (
           <section className="mx-auto max-w-5xl">
-            <a className="mb-8 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-white" href="/"><ArrowLeft size={14} /> На главную</a>
+            <Link className="mb-8 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-white" to="/"><ArrowLeft size={14} /> На главную</Link>
             <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
               <div>
                 <p className="eyebrow">Real-time · Private Battle</p>
@@ -247,7 +249,7 @@ function BattleTopbar({ battle, realtime }: { battle: BattleState; realtime: boo
   const elapsed = battle.startedAt ? formatRaceTime(Math.max(0, (battle.finishedAt ? new Date(battle.finishedAt).getTime() : now) - new Date(battle.startedAt).getTime())) : '00:00.0';
   return (
     <header className="battle-topbar">
-      <a href="/" className="flex items-center gap-2.5"><span className="logo-mark"><span>&gt;_</span></span><span className="font-mono text-sm font-bold tracking-[0.12em] text-white">CLIRACE</span></a>
+      <Link to="/" className="flex items-center gap-2.5"><span className="logo-mark"><span>&gt;_</span></span><span className="font-mono text-sm font-bold tracking-[0.12em] text-white">CLIRACE</span></Link>
       <div className="battle-topbar-center"><span>BATTLE {battle.roomCode}</span><strong>{elapsed}</strong><span>{battle.status === 'waiting' ? 'ЛОББИ' : `РАУНД ${Math.min(...battle.players.map((player) => player.currentRound))}/${battle.roundCount}`}</span></div>
       <div className={`battle-live ${realtime ? 'is-online' : ''}`}>{realtime ? <Wifi size={13} /> : <WifiOff size={13} />} {realtime ? 'СИНХРОНИЗИРОВАНО' : 'ПЕРЕПОДКЛЮЧЕНИЕ'}</div>
     </header>
@@ -324,7 +326,7 @@ function BattleResults({ battle }: { battle: BattleState }) {
           {rows.map((round) => <div className="battle-result-row" key={round}><span>{String(round).padStart(2, '0')}</span>{battle.results?.map((result) => { const item = result.rounds.find((entry) => entry.round === round); return <strong className={item?.success ? 'text-white' : 'text-slate-600'} key={result.userId}>{item?.success && item.durationMs !== null ? formatCompactDuration(item.durationMs) : 'DNF'}</strong>; })}</div>)}
         </div>
         {battle.mode === 'ranked' && battle.rankedResult && <RankedResultBlock battle={battle} result={battle.rankedResult} victory={victory} />}
-        <div className="mt-8 flex flex-wrap justify-center gap-3"><a className="secondary-button" href="/"><ArrowLeft size={14} /> На главную</a>{battle.mode === 'ranked' && <a className="secondary-button" href="/rating?category=ranked"><Trophy size={14} /> Рейтинг</a>}<a className="primary-button" href={battle.mode === 'ranked' ? '/play?compete=ranked#competition' : battle.mode === 'quick' ? '/play?compete=quick#competition' : '/battle'}><RefreshCw size={14} /> {battle.mode === 'ranked' ? 'Снова Ranked' : battle.mode === 'quick' ? 'Снова Quick Match' : 'Новая игра с другом'}</a></div>
+        <div className="mt-8 flex flex-wrap justify-center gap-3"><Link className="secondary-button" to="/"><ArrowLeft size={14} /> На главную</Link>{battle.mode === 'ranked' && <Link className="secondary-button" to="/rating?category=ranked"><Trophy size={14} /> Рейтинг</Link>}<Link className="primary-button" to={battle.mode === 'ranked' ? '/play?compete=ranked#competition' : battle.mode === 'quick' ? '/play?compete=quick#competition' : '/battle'}><RefreshCw size={14} /> {battle.mode === 'ranked' ? 'Снова Ranked' : battle.mode === 'quick' ? 'Снова Quick Match' : 'Новая игра с другом'}</Link></div>
       </section>
     </main>
   );
@@ -346,7 +348,7 @@ function RankedResultBlock({ battle, result, victory }: { battle: BattleState; r
 }
 
 function RankedNoContest({ reason }: { reason: string | null }) {
-  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на MMR.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><a className="primary-button mt-8" href="/play?compete=ranked#competition">Вернуться к Ranked</a></main>;
+  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на MMR.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><Link className="primary-button mt-8" to="/play?compete=ranked#competition">Вернуться к Ranked</Link></main>;
 }
 
 function noContestMessage(reason: string | null): string {
@@ -369,8 +371,8 @@ function ProgressPlayer({ player, total, label }: { player: BattlePlayer; total:
 
 function BattleFact({ icon: Icon, title, detail }: { icon: typeof Terminal; title: string; detail: string }) { return <div className="battle-fact"><Icon size={15} /><div><strong>{title}</strong><span>{detail}</span></div></div>; }
 function Loading({ label }: { label: string }) { return <div className="flex min-h-[65vh] items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.14em] text-slate-500"><LoaderCircle size={18} className="animate-spin text-acid" />{label}</div>; }
-function BattleGuest({ roomCode }: { roomCode: string }) { return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><Users size={26} /></div><p className="eyebrow mt-7">Invite · {roomCode}</p><h1 className="mt-4 text-4xl font-semibold text-white">Войдите, чтобы присоединиться.</h1><a className="primary-button mt-8" href={`/?auth=1&returnTo=${encodeURIComponent(`/battle/${roomCode}`)}`}>Войти в Battle</a></main>; }
-function BattleError({ message }: { message: string }) { return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto text-rose-300"><WifiOff size={25} /></div><h1 className="mt-6 text-3xl font-semibold text-white">Battle недоступен</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{message}</p><a className="secondary-button mt-8" href="/battle">Создать новую комнату</a></main>; }
+function BattleGuest({ roomCode }: { roomCode: string }) { return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><Users size={26} /></div><p className="eyebrow mt-7">Invite · {roomCode}</p><h1 className="mt-4 text-4xl font-semibold text-white">Войдите, чтобы присоединиться.</h1><Link className="primary-button mt-8" to={`/?auth=1&returnTo=${encodeURIComponent(`/battle/${roomCode}`)}`}>Войти в Battle</Link></main>; }
+function BattleError({ message }: { message: string }) { return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto text-rose-300"><WifiOff size={25} /></div><h1 className="mt-6 text-3xl font-semibold text-white">Battle недоступен</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{message}</p><Link className="secondary-button mt-8" to="/battle">Создать новую комнату</Link></main>; }
 
 function useCountdown(startAt: string | null, status: BattleState['status']) {
   const [now, setNow] = useState(Date.now());

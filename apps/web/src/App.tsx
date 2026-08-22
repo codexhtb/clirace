@@ -4,6 +4,8 @@ import { QuickStartSection } from './QuickStartSection';
 import { CommunityHeader } from './CommunityHeader';
 import { routeMetadata, secondaryNavigation } from './product-ux';
 import { currentUser } from './auth-client';
+import { Link, useLocation } from 'react-router-dom';
+import { AppPage, PageLoader } from './Ui';
 
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleCreatePage,
@@ -21,7 +23,7 @@ const AdminConsole = lazy(() => import('./AdminConsole').then((module) => ({ def
 const LearnPage = lazy(() => import('./LearnPage').then((module) => ({ default: module.LearnPage })));
 
 function BattlePageFallback() {
-  return <main className="page-width py-24 font-mono text-sm uppercase tracking-[0.15em] text-slate-500">Загружаем Battle…</main>;
+  return <AppPage><PageLoader label="Загружаем раздел" /></AppPage>;
 }
 
 type Health = {
@@ -79,11 +81,11 @@ function LearningPathResume() {
     return () => controller.abort();
   }, []);
   if (!course?.enrollment) return null;
-  return <section className="page-width pb-16"><a className="home-course-resume" href={`/learn/paths/${course.slug}`}><div><small>Продолжить обучение</small><strong>{course.title}</strong></div><span>{course.enrollment.progress}%</span><ArrowRight size={16} /></a></section>;
+  return <section className="page-width pb-16"><Link className="home-course-resume" to={`/learn/paths/${course.slug}`}><div><small>Продолжить обучение</small><strong>{course.title}</strong></div><span>{course.enrollment.progress}%</span><ArrowRight size={16} /></Link></section>;
 }
 
 function RouteFallback() {
-  return <main className="page-width py-24 font-mono text-xs text-slate-500" role="status">Загружаем страницу…</main>;
+  return <AppPage><PageLoader label="Загружаем раздел" /></AppPage>;
 }
 
 function TerminalDemo() {
@@ -158,8 +160,8 @@ function HomePage() {
                 Решайте короткие задачи, разбирайте ошибки и соревнуйтесь с другими — без настройки окружения.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
-                <a className="primary-button" href="/play">Начать практику <ArrowRight size={16} /></a>
-                <a className="secondary-button" href="/play?compete=quick#competition"><Swords size={15} /> Найти соперника</a>
+                <Link className="primary-button" to="/play">Начать практику <ArrowRight size={16} /></Link>
+                <Link className="secondary-button" to="/play?compete=quick#competition"><Swords size={15} /> Найти соперника</Link>
               </div>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">
                 <SystemStatus /><span>Задачи по 30–180 секунд</span><span>Без настройки окружения</span>
@@ -173,9 +175,9 @@ function HomePage() {
           <p className="eyebrow">Выберите направление</p>
           <h2 id="product-paths-title" className="mt-3 text-2xl font-semibold text-white sm:text-3xl">Начните с одного понятного шага.</h2>
           <div className="product-paths mt-6">
-            <a href="/play#practice"><Terminal size={19} /><div><strong>Практика</strong><span>Короткие задачи в настоящем Linux shell.</span></div><ArrowRight size={15} /></a>
-            <a href="/learn"><BookOpen size={19} /><div><strong>Обучение</strong><span>Вопросы с разбором каждого ответа.</span></div><ArrowRight size={15} /></a>
-            <a href="/play?compete=quick#competition"><Trophy size={19} /><div><strong>Соревнования</strong><span>Quick без MMR или Ranked с MMR.</span></div><ArrowRight size={15} /></a>
+            <Link to="/play#practice"><Terminal size={19} /><div><strong>Практика</strong><span>Короткие задачи в настоящем Linux shell.</span></div><ArrowRight size={15} /></Link>
+            <Link to="/learn"><BookOpen size={19} /><div><strong>Обучение</strong><span>Вопросы с разбором каждого ответа.</span></div><ArrowRight size={15} /></Link>
+            <Link to="/play?compete=quick#competition"><Trophy size={19} /><div><strong>Соревнования</strong><span>Quick без MMR или Ranked с MMR.</span></div><ArrowRight size={15} /></Link>
           </div>
         </section>
 
@@ -236,7 +238,7 @@ function HomePage() {
         <section className="border-t border-line">
           <div className="page-width flex flex-col gap-4 py-8 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="font-mono font-semibold tracking-[0.14em] text-slate-300">CLIRACE</span>
-            <nav className="footer-links" aria-label="Дополнительные разделы">{secondaryNavigation.map((item) => <a href={item.href} key={item.href}>{item.label}</a>)}</nav>
+            <nav className="footer-links" aria-label="Дополнительные разделы">{secondaryNavigation.map((item) => <Link to={item.href} key={item.href}>{item.label}</Link>)}</nav>
           </div>
         </section>
       </main>
@@ -245,7 +247,7 @@ function HomePage() {
 }
 
 export function App() {
-  const path = window.location.pathname;
+  const { pathname: path } = useLocation();
   useEffect(() => {
     const metadata = routeMetadata(path);
     document.title = metadata.title;
@@ -291,7 +293,7 @@ function NotFoundPage() {
           <p className="eyebrow">Ошибка 404</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">Страница не найдена.</h1>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-slate-500">Возможно, ссылка устарела или в адресе есть опечатка.</p>
-          <a className="primary-button mt-8" href="/">Вернуться в CLIRace <ArrowRight size={15} /></a>
+          <Link className="primary-button mt-8" to="/">Вернуться в CLIRace <ArrowRight size={15} /></Link>
         </section>
       </main>
     </div>

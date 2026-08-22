@@ -6,6 +6,7 @@ import {
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { currentUser } from './auth-client';
 import { difficultyLabel, modeLabel } from './product-language';
+import { Link, useLocation } from 'react-router-dom';
 
 interface AdminUser {
   id: string;
@@ -63,9 +64,10 @@ const nav: Array<{ key: Section; label: string; icon: typeof Gauge }> = [
 ];
 
 export function AdminConsole() {
+  const { pathname } = useLocation();
   const [user, setUser] = useState<AdminUser | null | undefined>(undefined);
   const [authStatus, setAuthStatus] = useState(200);
-  const section = currentSection();
+  const section = currentSection(pathname);
 
   useEffect(() => {
     const existing = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
@@ -86,22 +88,22 @@ export function AdminConsole() {
   }, []);
 
   if (user === undefined) return <AdminState icon={<LoaderCircle className="animate-spin" />} title="Проверяем доступ" />;
-  if (!user) return <AdminState icon={<ShieldAlert />} title="Нужна авторизация" detail={authStatus === 503 ? 'Сервис авторизации временно недоступен.' : 'Войдите в аккаунт администратора.'} action={<a className="primary-button" href={`/?auth=1&returnTo=${encodeURIComponent(window.location.pathname)}`}>Войти</a>} />;
-  if (user.role !== 'admin') return <AdminState icon={<Ban />} title="Доступ запрещён" detail="Operations Console доступна только пользователям с ролью admin." action={<a className="secondary-button" href="/">Вернуться на сайт</a>} />;
+  if (!user) return <AdminState icon={<ShieldAlert />} title="Нужна авторизация" detail={authStatus === 503 ? 'Сервис авторизации временно недоступен.' : 'Войдите в аккаунт администратора.'} action={<Link className="primary-button" to={`/?auth=1&returnTo=${encodeURIComponent(pathname)}`}>Войти</Link>} />;
+  if (user.role !== 'admin') return <AdminState icon={<Ban />} title="Доступ запрещён" detail="Operations Console доступна только пользователям с ролью admin." action={<Link className="secondary-button" to="/">Вернуться на сайт</Link>} />;
 
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-brand"><span>CR</span><div><strong>OPERATIONS</strong><small>production console</small></div></div>
         <nav className="admin-nav" aria-label="Разделы Operations Console">
-          {nav.map(({ key, label, icon: Icon }) => <a key={key} className={section === key ? 'active' : ''} href={key === 'overview' ? '/admin' : `/admin/${key}`}><Icon size={15} />{label}</a>)}
+          {nav.map(({ key, label, icon: Icon }) => <Link key={key} className={section === key ? 'active' : ''} to={key === 'overview' ? '/admin' : `/admin/${key}`}><Icon size={15} />{label}</Link>)}
         </nav>
         <div className="admin-identity"><ShieldCheck size={15} /><div><strong>@{user.username}</strong><small>administrator</small></div></div>
       </aside>
       <main className="admin-main">
         <header className="admin-topbar">
           <div><p>CLIRACE / ADMIN</p><h1>{nav.find((item) => item.key === section)?.label}</h1></div>
-          <div className="flex items-center gap-2"><span className="admin-live"><i /> LIVE</span><a className="admin-icon-link" href="/" title="Вернуться на сайт"><LogOut size={15} /></a></div>
+          <div className="flex items-center gap-2"><span className="admin-live"><i /> LIVE</span><Link className="admin-icon-link" to="/" title="Вернуться на сайт"><LogOut size={15} /></Link></div>
         </header>
         {section === 'overview' ? <Overview /> : <Collection section={section} />}
       </main>
@@ -317,8 +319,9 @@ function tableColumns(section: Exclude<Section, 'overview'>, requestAction: (act
 }
 
 function Pagination({ payload }: { payload: PagePayload }) {
-  const href = (page: number) => { const params = new URLSearchParams(window.location.search); params.set('page', String(page)); return `${window.location.pathname}?${params}`; };
-  return <div className="admin-pagination"><span>{payload.total} записей · страница {payload.page} из {payload.pages}</span><div>{payload.page > 1 && <a href={href(payload.page - 1)}>← Назад</a>}{payload.page < payload.pages && <a href={href(payload.page + 1)}>Дальше →</a>}</div></div>;
+  const { pathname, search } = useLocation();
+  const href = (page: number) => { const params = new URLSearchParams(search); params.set('page', String(page)); return `${pathname}?${params}`; };
+  return <div className="admin-pagination"><span>{payload.total} записей · страница {payload.page} из {payload.pages}</span><div>{payload.page > 1 && <Link to={href(payload.page - 1)}>← Назад</Link>}{payload.page < payload.pages && <Link to={href(payload.page + 1)}>Дальше →</Link>}</div></div>;
 }
 
 function ConfirmModal({ action, onCancel, onConfirm }: { action: ActionRequest; onCancel: () => void; onConfirm: () => void }) {
@@ -341,7 +344,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) throw new Error(payload?.message ?? `HTTP ${response.status}`); return payload as T;
 }
 
-function currentSection(): Section { const value = window.location.pathname.split('/')[2]; return nav.some((item) => item.key === value) ? value as Section : 'overview'; }
+function currentSection(pathname: string): Section { const value = pathname.split('/')[2]; return nav.some((item) => item.key === value) ? value as Section : 'overview'; }
 function text(value: unknown, fallback = '—') { return value === null || value === undefined || value === '' ? fallback : String(value); }
 function shortId(value: unknown) { const raw = text(value); return raw.length > 14 ? `${raw.slice(0, 8)}…${raw.slice(-4)}` : raw; }
 function arrayText(value: unknown) { return Array.isArray(value) && value.length ? value.join(', ') : '—'; }

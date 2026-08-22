@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowRight, LoaderCircle, Terminal } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { CommunityHeader } from './CommunityHeader';
 import { secondaryNavigation } from './product-ux';
 
@@ -12,7 +13,7 @@ export function AppPage({ children, className = '' }: { children: ReactNode; cla
       <footer className="relative z-10 border-t border-line">
         <div className="page-width flex flex-col gap-2 py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
           <span className="font-mono font-semibold tracking-[0.12em] text-slate-400">CLIRACE</span>
-          <nav className="footer-links" aria-label="Дополнительные разделы">{secondaryNavigation.map((item) => <a href={item.href} key={item.href}>{item.label}</a>)}</nav>
+          <nav className="footer-links" aria-label="Дополнительные разделы">{secondaryNavigation.map((item) => <Link to={item.href} key={item.href}>{item.label}</Link>)}</nav>
         </div>
       </footer>
     </div>
@@ -39,7 +40,7 @@ export function ErrorState({ title = 'Что-то пошло не так', messa
         <h1>{title}</h1>
         <p>{message ?? 'Попробуйте ещё раз через несколько секунд.'}</p>
       </div>
-      <a className="secondary-button" href={retryHref ?? window.location.pathname}>Повторить <ArrowRight size={14} /></a>
+      <Link className="secondary-button" to={retryHref ?? window.location.pathname}>Повторить <ArrowRight size={14} /></Link>
     </section>
   );
 }
@@ -51,7 +52,7 @@ export function EmptyState({ title, text, action }: {
     <section className="state-panel state-panel-compact">
       <Terminal size={22} className="text-acid" />
       <div><h2>{title}</h2><p>{text}</p></div>
-      {action && <a className="secondary-button" href={action.href}>{action.label} <ArrowRight size={14} /></a>}
+      {action && <Link className="secondary-button" to={action.href}>{action.label} <ArrowRight size={14} /></Link>}
     </section>
   );
 }

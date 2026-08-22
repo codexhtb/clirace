@@ -8,6 +8,7 @@ import { QuickMatchPanel } from './QuickMatchPanel';
 import { RankedMatchPanel } from './RankedMatchPanel';
 import { PageLoader } from './Ui';
 import { difficultyLabel } from './product-language';
+import { Link } from 'react-router-dom';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
@@ -184,7 +185,7 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
 
       {newPlayer && <section className="onboarding-card" aria-labelledby="first-step-title">
         <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Выберите подходящий первый шаг.</h2><p>Новичкам подойдёт последовательный Linux Foundations. Если основы знакомы — проверьте знания или сразу откройте практику.</p></div>
-        <div className="onboarding-actions"><a className="primary-button" href="/learn/paths/linux-foundations"><Map size={15} /> Linux Foundations</a><a className="secondary-button" href="/learn/linux-core"><BookOpen size={15} /> Проверить знания</a><a className="secondary-button" href="#practice"><Terminal size={15} /> Первая задача</a></div>
+        <div className="onboarding-actions"><Link className="primary-button" to="/learn/paths/linux-foundations"><Map size={15} /> Linux Foundations</Link><Link className="secondary-button" to="/learn/linux-core"><BookOpen size={15} /> Проверить знания</Link><Link className="secondary-button" to="#practice"><Terminal size={15} /> Первая задача</Link></div>
       </section>}
 
       <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>
@@ -251,10 +252,10 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
           <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'ranked'} onClick={() => setMatchmakingMode('ranked')}>Ranked <small>влияет на MMR</small></button>
         </div>
         {matchmakingMode === 'quick' ? <QuickMatchPanel /> : <RankedMatchPanel />}
-        <a className="mt-4 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" href="/battle"><Swords size={15} /> Создать приватный матч с другом <ChevronRight size={14} /></a>
+        <Link className="mt-4 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" to="/battle"><Swords size={15} /> Создать приватный матч с другом <ChevronRight size={14} /></Link>
       </section>
 
-      <nav className="context-links mt-10" aria-label="Другие способы практики"><a href="/daily"><CalendarDays size={14} /> Задача дня</a><a href="/interview"><BookOpenCheck size={14} /> Interview 100</a><a href="/learn/linux-core"><BookOpen size={14} /> Linux Core с объяснениями</a></nav>
+      <nav className="context-links mt-10" aria-label="Другие способы практики"><Link to="/daily"><CalendarDays size={14} /> Задача дня</Link><Link to="/interview"><BookOpenCheck size={14} /> Interview 100</Link><Link to="/learn/linux-core"><BookOpen size={14} /> Linux Core с объяснениями</Link></nav>
     </section>
   );
 }
@@ -354,7 +355,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
   return (
     <section className="mx-auto max-w-5xl">
       <div className="mb-5 flex items-center justify-between">
-        <a href="/" className="inline-flex items-center gap-2 text-xs text-slate-500 transition-colors hover:text-white"><ArrowLeft size={14} /> Выйти</a>
+        <Link to="/" className="inline-flex items-center gap-2 text-xs text-slate-500 transition-colors hover:text-white"><ArrowLeft size={14} /> Выйти</Link>
         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Задание {game.task?.position ?? 0} из {game.task?.total ?? 0}</span>
       </div>
       <div className="play-panel overflow-hidden">
@@ -432,9 +433,9 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
         <SummaryMetric value={formatDuration(summary.duration_ms)} label="время" />
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <a className="secondary-button" href={returnTo ?? '/'}><ArrowLeft size={14} /> {returnTo ? 'Вернуться в курс' : 'На главную'}</a>
-        <a className="secondary-button" href="/play?compete=quick#competition"><Swords size={15} /> Quick Match</a>
-        {returnTo ? <a className="primary-button" href={returnTo}>Засчитать шаг <CheckCircle2 size={15} /></a> : <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>}
+        <Link className="secondary-button" to={returnTo ?? '/'}><ArrowLeft size={14} /> {returnTo ? 'Вернуться в курс' : 'На главную'}</Link>
+        <Link className="secondary-button" to="/play?compete=quick#competition"><Swords size={15} /> Quick Match</Link>
+        {returnTo ? <Link className="primary-button" to={returnTo}>Засчитать шаг <CheckCircle2 size={15} /></Link> : <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>}
       </div>
     </section>
   );
@@ -448,7 +449,7 @@ function GuestState() {
       <p className="eyebrow mt-7">Нужен аккаунт</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-white">Войдите перед стартом.</h1>
       <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-slate-400">Так сервер сможет сохранить очки, серию и результаты каждого задания.</p>
-      <a className="primary-button mt-8" href={`/?auth=1&returnTo=${returnTo}`}>Войти или зарегистрироваться <ChevronRight size={16} /></a>
+      <Link className="primary-button mt-8" to={`/?auth=1&returnTo=${returnTo}`}>Войти или зарегистрироваться <ChevronRight size={16} /></Link>
     </section>
   );
 }

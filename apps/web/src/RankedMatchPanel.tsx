@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { humanizeError } from './errors';
 import { RankBadge } from './RankBadge';
 import { formatElapsed } from './product-language';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface RankedStats {
   mmr: number;
@@ -21,6 +22,7 @@ type RankedStatus =
   | { status: 'matched'; pool: 'ranked'; battleId: string; roomCode: string; opponent: { username: string; ranked?: RankedStats } | null; source: 'ranked_match' | 'active_battle'; ranked?: RankedStats };
 
 export function RankedMatchPanel() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<RankedStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +46,9 @@ export function RankedMatchPanel() {
   }, [load, status?.status]);
   useEffect(() => {
     if (status?.status !== 'matched' || status.source !== 'ranked_match') return;
-    const timer = window.setTimeout(() => window.location.assign(`/battle/${status.roomCode}`), 1_200);
+    const timer = window.setTimeout(() => navigate(`/battle/${status.roomCode}`), 1_200);
     return () => window.clearTimeout(timer);
-  }, [status]);
+  }, [navigate, status]);
 
   const enqueue = async () => {
     setBusy(true); setError(null);
@@ -76,7 +78,7 @@ export function RankedMatchPanel() {
       </div>
       {status.status === 'idle' && <button className="primary-button" type="button" disabled={busy} onClick={() => void enqueue()}>{busy ? <LoaderCircle className="animate-spin" size={16} /> : <Radar size={16} />}{busy ? 'Входим в очередь…' : 'Играть Ranked'}</button>}
       {status.status === 'searching' && <><div className="matchmaking-search-meta"><strong>{elapsed(now, status.queuedAt)}</strong><span>в поиске</span></div><button className="secondary-button" type="button" disabled={busy || status.phase === 'pairing'} onClick={() => void cancel()}>{busy ? <LoaderCircle className="animate-spin" size={15} /> : <X size={15} />} Отменить</button></>}
-      {status.status === 'matched' && <a className="primary-button" href={`/battle/${status.roomCode}`}>Открыть Battle <ArrowRight size={15} /></a>}
+      {status.status === 'matched' && <Link className="primary-button" to={`/battle/${status.roomCode}`}>Открыть Battle <ArrowRight size={15} /></Link>}
       {error && <p className="matchmaking-error">{error}</p>}
     </section>
   );

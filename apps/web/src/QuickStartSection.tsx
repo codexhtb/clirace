@@ -1,5 +1,6 @@
 import { ArrowRight, Bolt, Shuffle, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const presets = [
   {
@@ -53,7 +54,7 @@ export function QuickStartSection() {
 
         <div className="mt-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {presets.map(({ icon: Icon, eyebrow, title, description, tags, href }) => (
-            <a className="quick-start-card group" href={href} key={title}>
+            <Link className="quick-start-card group" to={href} key={title}>
               <div className="flex items-start justify-between gap-4">
                 <span className="quick-start-icon"><Icon size={18} /></span>
                 <ArrowRight className="text-slate-700 transition-transform group-hover:translate-x-1 group-hover:text-acid" size={16} />
@@ -64,7 +65,7 @@ export function QuickStartSection() {
               <div className="mt-auto flex flex-wrap gap-2 pt-6">
                 {tags.map((tag) => <span className="quick-start-tag" key={tag}>{tag}</span>)}
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       </div>

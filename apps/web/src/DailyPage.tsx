@@ -2,6 +2,7 @@ import { ArrowRight, CalendarCheck, CheckCircle2, Clock3, Flame, LoaderCircle, S
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { ErrorState, PageLoader } from './Ui';
+import { Link } from 'react-router-dom';
 import { humanizeError } from './errors';
 import { difficultyLabel } from './product-language';
 
@@ -143,7 +144,7 @@ function DailyContent({ payload, answer, setAnswer, busy, feedback, error, remai
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{payload.daily.challenge.description}</p>
 
           {completed ? (
-            <><div className="daily-completed mt-8"><CalendarCheck size={25} /><div><strong>Сегодня выполнено</strong><span>{payload.progress?.score} очков · оценка практики {formatDelta(payload.progress?.practiceScoreDelta ?? payload.progress?.ratingDelta ?? 0)}</span></div></div><a className="secondary-button mt-4" href="/play#practice">Продолжить практику <ArrowRight size={14} /></a></>
+            <><div className="daily-completed mt-8"><CalendarCheck size={25} /><div><strong>Сегодня выполнено</strong><span>{payload.progress?.score} очков · оценка практики {formatDelta(payload.progress?.practiceScoreDelta ?? payload.progress?.ratingDelta ?? 0)}</span></div></div><Link className="secondary-button mt-4" to="/play#practice">Продолжить практику <ArrowRight size={14} /></Link></>
           ) : active ? (
             <form className="game-terminal mt-8" onSubmit={submit}>
               <div className="game-terminal-bar"><span>daily@clirace:~</span><span>проверка готова</span></div>
@@ -153,7 +154,7 @@ function DailyContent({ payload, answer, setAnswer, busy, feedback, error, remai
           ) : payload.authenticated ? (
             <button className="primary-button mt-8" type="button" onClick={start} disabled={busy}>{busy ? <LoaderCircle size={15} className="animate-spin" /> : <Target size={15} />} Начать испытание</button>
           ) : (
-            <a className="primary-button mt-8" href="/?auth=1&returnTo=%2Fdaily">Войти и участвовать</a>
+            <Link className="primary-button mt-8" to="/?auth=1&returnTo=%2Fdaily">Войти и участвовать</Link>
           )}
           {feedback && !completed && <div className={`game-feedback ${feedback.correct ? 'game-feedback-correct' : 'game-feedback-wrong'}`}><span>{feedback.text}</span>{feedback.score ? <strong>+{feedback.score}</strong> : null}</div>}
           {error && <p className="play-error mt-4">{error}</p>}

@@ -3,16 +3,19 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { currentUser, rememberCurrentUser, type CurrentUser } from './auth-client';
 import { humanizeError } from './errors';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type AuthUser = CurrentUser;
 
 type AuthMode = 'login' | 'register';
 
 export function AuthControl() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get('auth') === '1' || ['/login', '/register'].includes(window.location.pathname));
-  const [mode, setMode] = useState<AuthMode>(() => window.location.pathname === '/register' ? 'register' : 'login');
+  const [open, setOpen] = useState(() => new URLSearchParams(location.search).get('auth') === '1' || ['/login', '/register'].includes(location.pathname));
+  const [mode, setMode] = useState<AuthMode>(() => location.pathname === '/register' ? 'register' : 'login');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLElement>(null);
@@ -22,6 +25,13 @@ export function AuthControl() {
     currentUser().then((payload) => { if (active) setUser(payload.user); }).catch(() => { if (active) setUser(null); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('auth') === '1' || ['/login', '/register'].includes(location.pathname)) {
+      setMode(location.pathname === '/register' ? 'register' : 'login');
+      setOpen(true);
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (!open) return;
@@ -65,8 +75,8 @@ export function AuthControl() {
       setUser(payload.user);
       rememberCurrentUser(payload.user);
       setOpen(false);
-      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
-      if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) window.location.assign(returnTo);
+      const returnTo = new URLSearchParams(location.search).get('returnTo');
+      if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) navigate(returnTo);
     } catch (submitError) {
       setError(humanizeError(submitError, 'Не удалось выполнить вход. Попробуйте ещё раз.'));
     } finally {
@@ -85,8 +95,8 @@ export function AuthControl() {
     <>
       {user ? (
         <div className="flex items-center gap-2">
-          {user.role === 'admin' && <a className="header-action" href="/admin"><ShieldCheck size={14} /><span className="hidden lg:inline">Admin</span></a>}
-          <a className="hidden font-mono text-[11px] text-slate-300 transition-colors hover:text-acid sm:inline" href={`/profile/${encodeURIComponent(user.username)}`}>@{user.username}</a>
+          {user.role === 'admin' && <Link className="header-action" to="/admin"><ShieldCheck size={14} /><span className="hidden lg:inline">Admin</span></Link>}
+          <Link className="hidden font-mono text-[11px] text-slate-300 transition-colors hover:text-acid sm:inline" to={`/profile/${encodeURIComponent(user.username)}`}>@{user.username}</Link>
           <button type="button" className="header-action" onClick={() => void logout()} aria-label="Выйти">
             <LogOut size={14} /> <span className="hidden sm:inline">Выйти</span>
           </button>

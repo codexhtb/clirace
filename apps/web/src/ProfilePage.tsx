@@ -6,6 +6,7 @@ import { ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
 import { RankBadge } from './RankBadge';
 import { modeLabel } from './product-language';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface RunHistory {
   id: string;
@@ -46,7 +47,9 @@ interface Profile {
 }
 
 export function ProfilePage() {
-  const username = decodeURIComponent(window.location.pathname.slice('/profile/'.length));
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const username = decodeURIComponent(pathname.slice('/profile/'.length));
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guest, setGuest] = useState(false);
@@ -56,7 +59,7 @@ export function ProfilePage() {
       let active = true;
       currentUser().then(({ user }) => {
         if (!active) return;
-        if (user) window.location.replace(`/profile/${encodeURIComponent(user.username)}`);
+        if (user) navigate(`/profile/${encodeURIComponent(user.username)}`, { replace: true });
         else setGuest(true);
       }).catch(() => { if (active) setGuest(true); });
       return () => { active = false; };
@@ -82,7 +85,7 @@ export function ProfilePage() {
       <CommunityHeader />
       <main className="page-width relative z-10 py-10 sm:py-16">
         {!profile && !error && !guest && <PageLoader label="Загружаем профиль" />}
-        {guest && <section className="state-panel"><BookOpen size={24} className="text-acid" /><div><h1>Войдите, чтобы открыть профиль</h1><p>В профиле хранятся результаты практики, обучение и Ranked-статистика.</p></div><a className="primary-button" href="/?auth=1&returnTo=%2Fprofile">Войти <ArrowRight size={14} /></a></section>}
+        {guest && <section className="state-panel"><BookOpen size={24} className="text-acid" /><div><h1>Войдите, чтобы открыть профиль</h1><p>В профиле хранятся результаты практики, обучение и Ranked-статистика.</p></div><Link className="primary-button" to="/?auth=1&returnTo=%2Fprofile">Войти <ArrowRight size={14} /></Link></section>}
         {error && <ErrorState title="Профиль не найден" message={error} retryHref="/rating" />}
         {profile && <ProfileContent profile={profile} />}
       </main>
@@ -105,7 +108,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
       </section>
 
       {profile.stats.runs === 0 && profile.ranked.gamesPlayed === 0 ? <section className="state-panel mt-6">
-        <Terminal size={22} className="text-acid" /><div><h2>Профиль готов к первой тренировке</h2><p>Решите короткую задачу или начните квалификацию — здесь появится ваш прогресс.</p></div><a className="primary-button" href="/play#practice">Начать практику <ArrowRight size={14} /></a>
+        <Terminal size={22} className="text-acid" /><div><h2>Профиль готов к первой тренировке</h2><p>Решите короткую задачу или начните квалификацию — здесь появится ваш прогресс.</p></div><Link className="primary-button" to="/play#practice">Начать практику <ArrowRight size={14} /></Link>
       </section> : <section className="mt-6 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-panel sm:grid-cols-3 lg:grid-cols-6">
         <Stat icon={Activity} value={String(profile.stats.runs)} label="забегов" />
         <Stat icon={Target} value={`${profile.stats.accuracy}%`} label="точность" />
@@ -122,18 +125,18 @@ function ProfileContent({ profile }: { profile: Profile }) {
 
       <section className="learning-profile-card mt-4">
         <div><p className="eyebrow">Обучение</p><h2>Linux Core</h2><span>{profile.learning.answered ? `${profile.learning.accuracy}% точность · ${profile.learning.answered} ответов` : 'Обучение ещё не начато'}</span></div>
-        <div className="flex flex-wrap items-center gap-3"><span className="font-mono text-xs text-slate-500">{profile.learning.assessments} завершено</span><a className="secondary-button" href="/learn/linux-core">{profile.learning.active ? 'Продолжить' : 'Начать'} <ArrowRight size={14} /></a></div>
+        <div className="flex flex-wrap items-center gap-3"><span className="font-mono text-xs text-slate-500">{profile.learning.assessments} завершено</span><Link className="secondary-button" to="/learn/linux-core">{profile.learning.active ? 'Продолжить' : 'Начать'} <ArrowRight size={14} /></Link></div>
       </section>
 
       {(profile.learningPaths?.length ?? 0) > 0 && <section className="mt-10">
         <div><p className="eyebrow">Учебные маршруты</p><h2 className="mt-3 text-2xl font-semibold text-white">Последовательное обучение</h2></div>
-        <div className="profile-paths mt-5">{profile.learningPaths?.map((course) => <a href={`/learn/paths/${course.slug}`} key={course.slug}><div><strong>{course.title}</strong><span>{course.status === 'completed' ? `Завершён · ${course.finalScore}%` : `${course.progress}% · ${course.currentModule ?? 'Первый модуль'}`}</span></div><div>{course.mastery.map((entry) => <small key={entry.category}>{masteryLabel(entry.category)} {entry.score}%</small>)}</div><ArrowRight size={15} /></a>)}</div>
+        <div className="profile-paths mt-5">{profile.learningPaths?.map((course) => <Link to={`/learn/paths/${course.slug}`} key={course.slug}><div><strong>{course.title}</strong><span>{course.status === 'completed' ? `Завершён · ${course.finalScore}%` : `${course.progress}% · ${course.currentModule ?? 'Первый модуль'}`}</span></div><div>{course.mastery.map((entry) => <small key={entry.category}>{masteryLabel(entry.category)} {entry.score}%</small>)}</div><ArrowRight size={15} /></Link>)}</div>
       </section>}
 
       <section className="mt-10">
         <div className="flex items-end justify-between gap-4">
           <div><p className="eyebrow">Прогресс</p><h2 className="mt-3 text-2xl font-semibold text-white">Достижения</h2></div>
-          <a className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-slate-500 transition-colors hover:text-acid" href="/daily"><Flame size={14} /> Задача дня: {profile.dailyStreak.current} дней</a>
+          <Link className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-slate-500 transition-colors hover:text-acid" to="/daily"><Flame size={14} /> Задача дня: {profile.dailyStreak.current} дней</Link>
         </div>
         {profile.achievements.length ? (
           <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -144,7 +147,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
               </div>
             ))}
           </div>
-        ) : <div className="mt-5 rounded-lg border border-line bg-panel p-6 text-sm text-slate-500">Первое достижение откроется после завершённой практики. <a className="ml-1 text-acid hover:underline" href="/play#practice">Начать первую задачу</a></div>}
+        ) : <div className="mt-5 rounded-lg border border-line bg-panel p-6 text-sm text-slate-500">Первое достижение откроется после завершённой практики. <Link className="ml-1 text-acid hover:underline" to="/play#practice">Начать первую задачу</Link></div>}
       </section>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[0.72fr_1.28fr]">
@@ -155,10 +158,10 @@ function ProfileContent({ profile }: { profile: Profile }) {
           </div>
           <div className="mt-5 space-y-2">
             {profile.ratings.length ? profile.ratings.map((rating) => (
-              <a className="rating-row" href={`/rating?category=${encodeURIComponent(rating.slug)}`} key={rating.slug}>
+              <Link className="rating-row" to={`/rating?category=${encodeURIComponent(rating.slug)}`} key={rating.slug}>
                 <div><strong>{rating.name}</strong><span>{rating.gamesPlayed} {pluralRuns(rating.gamesPlayed)}</span></div>
                 <b>{rating.practiceScore ?? rating.rating}</b>
-              </a>
+              </Link>
             )) : <EmptyPanel text="Оценка по темам появится после первой завершённой практики." action={{ href: '/play#practice', label: 'Начать практику' }} />}
           </div>
         </section>
@@ -178,11 +181,11 @@ function ProfileContent({ profile }: { profile: Profile }) {
         <div><p className="eyebrow">История Ranked</p><h2 className="mt-3 text-2xl font-semibold text-white">Последние рейтинговые матчи</h2></div>
         <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
           {profile.ranked.recentMatches.length ? profile.ranked.recentMatches.map((match) => (
-            <a className="ranked-history-row" href={`/battle/${match.roomCode}`} key={match.battleId}>
+            <Link className="ranked-history-row" to={`/battle/${match.roomCode}`} key={match.battleId}>
               <div><strong>@{match.opponent}</strong><span>{formatDateTime(match.playedAt)}</span></div>
               <b className={match.result === 'win' ? 'text-acid' : match.result === 'loss' ? 'text-rose-300' : 'text-slate-400'}>{match.result === 'win' ? 'ПОБЕДА' : match.result === 'loss' ? 'ПОРАЖЕНИЕ' : 'БЕЗ РЕЗУЛЬТАТА'}</b>
               <div><strong>{match.mmrBefore} → {match.mmrAfter}</strong><span>{match.delta >= 0 ? '+' : ''}{match.delta} MMR</span></div>
-            </a>
+            </Link>
           )) : <EmptyPanel text="Здесь появятся завершённые рейтинговые матчи." action={{ href: '/play?compete=ranked#competition', label: 'Играть Ranked' }} />}
         </div>
       </section>
@@ -210,7 +213,7 @@ function RunRow({ run }: { run: RunHistory }) {
 }
 
 function EmptyPanel({ text, action }: { text: string; action?: { href: string; label: string } }) {
-  return <div className="p-6 text-sm leading-6 text-slate-500">{text}{action && <a className="mt-3 flex w-fit items-center gap-1 text-acid hover:underline" href={action.href}>{action.label} <ArrowRight size={13} /></a>}</div>;
+  return <div className="p-6 text-sm leading-6 text-slate-500">{text}{action && <Link className="mt-3 flex w-fit items-center gap-1 text-acid hover:underline" to={action.href}>{action.label} <ArrowRight size={13} /></Link>}</div>;
 }
 
 function masteryLabel(category: string): string {

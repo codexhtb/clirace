@@ -1,5 +1,6 @@
 import { ArrowRight, LoaderCircle, Radar, ShieldCheck, Swords, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 type MatchmakingStatus =
   | { status: 'idle'; pool: 'quick' }
@@ -16,6 +17,7 @@ type MatchmakingStatus =
 interface ApiError { code?: string; message?: string; battleId?: string; roomCode?: string }
 
 export function QuickMatchPanel() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<MatchmakingStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,10 +66,10 @@ export function QuickMatchPanel() {
   useEffect(() => {
     if (status?.status !== 'matched' || status.source !== 'quick_match') return;
     const transition = window.setTimeout(() => {
-      window.location.assign(`/battle/${status.roomCode}`);
+      navigate(`/battle/${status.roomCode}`);
     }, 1_200);
     return () => window.clearTimeout(transition);
-  }, [status]);
+  }, [navigate, status]);
 
   const enqueue = async () => {
     setBusy(true);
@@ -139,7 +141,7 @@ export function QuickMatchPanel() {
           <h2>{status.opponent ? `@${status.opponent.username} готов к гонке` : quick ? 'Матч готов' : 'Вернитесь в матч'}</h2>
           <p>{quick ? 'Открываем матч из трёх одинаковых shell-задач.' : 'Новый поиск не создавался: сервер восстановил ваш текущий матч.'}</p>
         </div>
-        <a className="primary-button" href={`/battle/${status.roomCode}`}>{quick ? 'Открыть Battle' : 'Вернуться'} <ArrowRight size={15} /></a>
+        <Link className="primary-button" to={`/battle/${status.roomCode}`}>{quick ? 'Открыть Battle' : 'Вернуться'} <ArrowRight size={15} /></Link>
       </section>
     );
   }
