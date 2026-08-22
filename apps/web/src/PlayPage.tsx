@@ -1,7 +1,9 @@
 import { ArrowLeft, BookOpen, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
 import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { currentUser } from './auth-client';
 import { humanizeError } from './errors';
+import { isNewPlayer } from './product-ux';
 import { QuickMatchPanel } from './QuickMatchPanel';
 import { RankedMatchPanel } from './RankedMatchPanel';
 
@@ -46,6 +48,7 @@ export function PlayPage() {
   const [auth, setAuth] = useState<'loading' | 'guest' | 'ready'>('loading');
   const [categories, setCategories] = useState<Category[]>([]);
   const [shellEnabled, setShellEnabled] = useState(false);
+  const [newPlayer, setNewPlayer] = useState(false);
   const [game, setGame] = useState<GameState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,13 +57,20 @@ export function PlayPage() {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: { id: string } | null }>),
+      currentUser(),
       fetch('/api/categories', { signal: controller.signal }).then((response) => response.json() as Promise<{ categories: Category[] }>),
       fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean; healthy?: boolean }>),
-    ]).then(([authPayload, categoryPayload, sandboxPayload]) => {
+    ]).then(async ([authPayload, categoryPayload, sandboxPayload]) => {
       setAuth(authPayload.user ? 'ready' : 'guest');
       setCategories(categoryPayload.categories ?? []);
       setShellEnabled(sandboxPayload.enabled === true && sandboxPayload.healthy !== false);
+      if (authPayload.user) {
+        const response = await fetch(`/api/profiles/${encodeURIComponent(authPayload.user.username)}`, { cache: 'no-store', signal: controller.signal });
+        if (response.ok) {
+          const payload = await response.json() as { profile?: Parameters<typeof isNewPlayer>[0] };
+          setNewPlayer(isNewPlayer(payload.profile ?? null));
+        }
+      }
     }).catch(() => {
       setAuth('guest');
       setCategories([]);
@@ -127,7 +137,7 @@ export function PlayPage() {
         {auth === 'loading' && <LoadingState label="Проверяем аккаунт" />}
         {auth === 'guest' && <GuestState />}
         {auth === 'ready' && !game && (
-          <SetupScreen categories={categories} shellEnabled={shellEnabled} busy={busy} error={error} onSubmit={createGame} />
+          <SetupScreen categories={categories} shellEnabled={shellEnabled} busy={busy} error={error} newPlayer={newPlayer} onSubmit={createGame} />
         )}
         {auth === 'ready' && game?.session.status === 'active' && game.task && (
           <RunScreen game={game} busy={busy} feedback={feedback} setBusy={setBusy} setGame={setGame} setFeedback={setFeedback} setError={setError} />
@@ -141,11 +151,13 @@ export function PlayPage() {
   );
 }
 
-function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
-  categories: Category[]; shellEnabled: boolean; busy: boolean; error: string | null; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmit }: {
+  categories: Category[]; shellEnabled: boolean; busy: boolean; error: string | null; newPlayer: boolean; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const [matchmakingMode, setMatchmakingMode] = useState<'quick' | 'ranked'>('quick');
+  const requestedCompetition = new URLSearchParams(window.location.search).get('compete');
+  const [matchmakingMode, setMatchmakingMode] = useState<'quick' | 'ranked'>(requestedCompetition === 'ranked' ? 'ranked' : 'quick');
   useEffect(() => {
+    if (requestedCompetition === 'quick' || requestedCompetition === 'ranked') return;
     const controller = new AbortController();
     fetch('/api/matchmaking/status?mode=quick', { cache: 'no-store', signal: controller.signal })
       .then((response) => response.ok ? response.json() : null)
@@ -154,7 +166,7 @@ function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, []);
+  }, [requestedCompetition]);
   const requestedDefaults = getPlayDefaults();
   const defaults = requestedDefaults.mode === 'real_shell' && !shellEnabled
     ? { ...requestedDefaults, mode: 'mixed' as const }
@@ -162,29 +174,31 @@ function SetupScreen({ categories, shellEnabled, busy, error, onSubmit }: {
   return (
     <section className="mx-auto max-w-4xl">
       <div className="mb-10">
-        <p className="eyebrow">Играть</p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Выберите формат.</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Быстрая практика, собеседование, задача дня или соревнование с другом — каждый режим использует реальные серверные результаты.</p>
+        <p className="eyebrow">Практика и соревнования</p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Выберите следующий шаг.</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Тренируйтесь самостоятельно или сыграйте три одинаковых shell-раунда против другого игрока.</p>
       </div>
 
-      <div className="matchmaking-mode-tabs" role="tablist" aria-label="Публичный PvP режим">
-        <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" onClick={() => setMatchmakingMode('quick')}>Quick Match</button>
-        <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" onClick={() => setMatchmakingMode('ranked')}>Ranked</button>
+      {newPlayer && <section className="onboarding-card" aria-labelledby="first-step-title">
+        <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Первая тренировка займёт несколько минут.</h2><p>Ниже уже выбраны пять лёгких задач. После них попробуйте Linux Core, а затем Quick Match без изменения рейтинга.</p></div>
+        <a className="primary-button" href="#practice"><Terminal size={15} /> Первая задача</a>
+      </section>}
+
+      <div id="competition" className="matchmaking-mode-tabs scroll-mt-28" role="tablist" aria-label="Режим соревнования">
+        <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'quick'} onClick={() => setMatchmakingMode('quick')}>Quick Match <small>без рейтинга</small></button>
+        <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'ranked'} onClick={() => setMatchmakingMode('ranked')}>Ranked <small>влияет на MMR</small></button>
       </div>
       {matchmakingMode === 'quick' ? <QuickMatchPanel /> : <RankedMatchPanel />}
 
       <div className="mb-4 mt-10 flex items-center justify-between gap-4">
-        <p className="eyebrow">Другие режимы</p>
-        <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-slate-600">solo / private</span>
+        <p className="eyebrow">Самостоятельно или с другом</p>
       </div>
 
-      <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <a className="mode-card border-acid/40 bg-acid/[0.045]" href="#practice"><span className="mode-card-icon"><Terminal size={17} /></span><strong>Практика</strong><p>Короткий одиночный забег с выбранной сложностью.</p><span>2–5 минут · Shell по выбору</span></a>
-        <a className="mode-card" href="/interview"><span className="mode-card-icon"><BookOpenCheck size={17} /></span><strong>Interview 100</strong><p>Подготовка к Linux и DevOps собеседованию.</p><span>10 / 25 / 50 задач</span></a>
-        <a className="mode-card" href="/learn/linux-core"><span className="mode-card-icon"><BookOpen size={17} /></span><strong>Linux Core</strong><p>Проверьте понимание Linux и разберите каждую ошибку.</p><span>10 / 25 вопросов · с объяснениями</span></a>
-        <a className="mode-card" href="/daily"><span className="mode-card-icon"><CalendarDays size={17} /></span><strong>Daily</strong><p>Одна общая задача дня и серия прохождений.</p><span>1 задача · бонусные очки</span></a>
-        <a className="mode-card" href="/battle"><span className="mode-card-icon"><Swords size={17} /></span><strong>Private Battle</strong><p>Одинаковые Shell-задачи для двух игроков.</p><span>3 / 5 / 10 раундов</span></a>
+        <a className="mode-card" href="/battle"><span className="mode-card-icon"><Swords size={17} /></span><strong>Игра с другом</strong><p>Создайте приватную комнату и отправьте другу код.</p><span>3 / 5 / 10 shell-раундов</span></a>
       </div>
+      <nav className="context-links mb-10" aria-label="Другие способы практики"><a href="/daily"><CalendarDays size={14} /> Задача дня</a><a href="/interview"><BookOpenCheck size={14} /> Interview 100</a><a href="/learn/linux-core"><BookOpen size={14} /> Linux Core с объяснениями</a></nav>
 
       <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>
         {defaults.challengeSlug && <input type="hidden" name="challengeSlug" value={defaults.challengeSlug} />}
@@ -419,7 +433,8 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <a className="secondary-button" href="/"><ArrowLeft size={14} /> На главную</a>
-        <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Новый забег</button>
+        <a className="secondary-button" href="/play?compete=quick#competition"><Swords size={15} /> Quick Match</a>
+        <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>
       </div>
     </section>
   );

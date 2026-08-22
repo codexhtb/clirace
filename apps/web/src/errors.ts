@@ -12,6 +12,7 @@ export function humanizeError(value: unknown, fallback = 'Что-то пошло
   if (message.includes('unauthorized') || message.includes('authentication')) return 'Сессия завершилась. Войдите снова.';
   if (message.includes('sandbox') || message.includes('docker') || message.includes('socket') || message.includes('econn')) return 'Shell временно недоступен. Попробуйте снова через несколько секунд.';
   if (message.includes('fetch') || message.includes('network') || /^5\d\d/.test(message)) return 'Не удалось связаться с сервером. Проверьте соединение и повторите попытку.';
+  if (message.includes('unexpected end') || message.includes('json') || message.includes('timeout') || message.includes('aborted')) return fallback;
   if (/^[a-z0-9_.:-]+$/i.test(raw)) return fallback;
   return raw;
 }

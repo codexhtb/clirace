@@ -1,4 +1,4 @@
-import { CalendarCheck, CheckCircle2, Clock3, Flame, LoaderCircle, Send, Sparkles, Target, Trophy, Users } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CheckCircle2, Clock3, Flame, LoaderCircle, Send, Sparkles, Target, Trophy, Users } from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { ErrorState, PageLoader } from './Ui';
@@ -88,7 +88,7 @@ export function DailyPage() {
       <CommunityHeader />
       <main className="page-width relative z-10 py-10 sm:py-16">
         {!payload && !error && <PageLoader label="Выбираем испытание дня" />}
-        {error && !payload && <ErrorState title="Daily временно недоступен" message={error} />}
+        {error && !payload && <ErrorState title="Задача дня временно недоступна" message={error} />}
         {payload && <DailyContent payload={payload} answer={answer} setAnswer={setAnswer} busy={busy} feedback={feedback} error={error} remaining={remaining} start={() => void start()} submit={submit} />}
       </main>
     </div>
@@ -134,7 +134,7 @@ function DailyContent({ payload, answer, setAnswer, busy, feedback, error, remai
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{payload.daily.challenge.description}</p>
 
           {completed ? (
-            <div className="daily-completed mt-8"><CalendarCheck size={25} /><div><strong>Сегодня выполнено</strong><span>{payload.progress?.score} очков · рейтинг {formatDelta(payload.progress?.ratingDelta ?? 0)}</span></div></div>
+            <><div className="daily-completed mt-8"><CalendarCheck size={25} /><div><strong>Сегодня выполнено</strong><span>{payload.progress?.score} очков · рейтинг {formatDelta(payload.progress?.ratingDelta ?? 0)}</span></div></div><a className="secondary-button mt-4" href="/play#practice">Продолжить практику <ArrowRight size={14} /></a></>
           ) : active ? (
             <form className="game-terminal mt-8" onSubmit={submit}>
               <div className="game-terminal-bar"><span>daily@clirace:~</span><span>проверка готова</span></div>

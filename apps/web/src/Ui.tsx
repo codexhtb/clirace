@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight, LoaderCircle, Terminal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { secondaryNavigation } from './product-ux';
 
 export function AppPage({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
@@ -11,7 +12,7 @@ export function AppPage({ children, className = '' }: { children: ReactNode; cla
       <footer className="relative z-10 border-t border-line">
         <div className="page-width flex flex-col gap-2 py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
           <span className="font-mono font-semibold tracking-[0.12em] text-slate-400">CLIRACE</span>
-          <span>Практика Linux и DevOps в настоящем терминале.</span>
+          <nav className="footer-links" aria-label="Дополнительные разделы">{secondaryNavigation.map((item) => <a href={item.href} key={item.href}>{item.label}</a>)}</nav>
         </div>
       </footer>
     </div>

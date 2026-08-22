@@ -1,11 +1,11 @@
 import { Crown, Medal, Trophy, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { currentUser } from './auth-client';
 import { EmptyState, ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
 
 interface Category { slug: string; name: string; challenge_count: number }
-interface AuthUser { username: string }
 interface LeaderboardEntry {
   rank: number;
   username: string;
@@ -36,7 +36,7 @@ export function LeaderboardPage() {
     const controller = new AbortController();
     Promise.all([
       fetch('/api/categories', { signal: controller.signal }).then((response) => response.json() as Promise<{ categories: Category[] }>),
-      fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: AuthUser | null }>),
+      currentUser(),
     ]).then(([catalog, auth]) => {
       setCategories(catalog.categories ?? []);
       setViewer(auth.user?.username ?? null);
@@ -75,7 +75,7 @@ export function LeaderboardPage() {
       <main className="page-width relative z-10 py-10 sm:py-16">
         <section className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
           <div>
-            <p className="eyebrow">CLIRace leaderboard</p>
+            <p className="eyebrow">Рейтинг CLIRace</p>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Таблица сильнейших.</h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Рейтинг меняется после каждого завершённого забега. Точность важнее количества бессмысленных попыток.</p>
           </div>
@@ -120,8 +120,8 @@ function LeaderboardRow({ entry, active }: { entry: LeaderboardEntry; active: bo
     <a className={`leaderboard-row ${active ? 'leaderboard-row-active' : ''}`} href={`/profile/${encodeURIComponent(entry.username)}`}>
       <span className="rank-cell">{entry.rank === 1 ? <Crown size={16} /> : entry.rank <= 3 ? <Medal size={16} /> : `#${entry.rank}`}</span>
       <span className="min-w-0"><strong className="truncate">@{entry.username}</strong>{active && <small>это вы</small>}</span>
-      <span><strong>{entry.provisional ? 'Unranked' : entry.division ?? entry.rating}</strong><small>{entry.division ? `${entry.rating} MMR` : 'CLI'}</small></span>
-      <span><strong>{entry.division ? `${entry.wins ?? 0}W · ${entry.losses ?? 0}L` : `${entry.gamesPlayed} · ${entry.accuracy}%`}</strong><small>{entry.division ? 'победы · поражения' : 'забегов · точность'}</small></span>
+      <span><strong>{entry.provisional ? 'Квалификация' : entry.division ?? entry.rating}</strong><small>{entry.division ? `${entry.rating} MMR` : 'CLI'}</small></span>
+      <span><strong>{entry.division ? `${entry.wins ?? 0}П · ${entry.losses ?? 0}ПР` : `${entry.gamesPlayed} · ${entry.accuracy}%`}</strong><small>{entry.division ? 'победы · поражения' : 'забегов · точность'}</small></span>
     </a>
   );
 }

@@ -116,9 +116,9 @@ export function QuickMatchPanel() {
       <section id="quick-match" className="matchmaking-panel" aria-live="polite">
         <div className="matchmaking-radar"><Radar size={28} /></div>
         <div className="min-w-0 flex-1">
-          <p className="eyebrow">Quick Match / searching</p>
-          <h2>{status.phase === 'pairing' ? 'Соперник найден — создаём Battle…' : status.waitingCapacity ? 'Ждём свободную песочницу' : 'Ищем соперника'}</h2>
-          <p>{status.waitingCapacity ? 'Вы остались в очереди. Матч начнёт создаваться, когда Sandbox Platform сможет принять двух игроков.' : 'Можно обновить страницу или открыть вторую вкладку — состояние поиска хранится на сервере.'}</p>
+          <p className="eyebrow">Quick Match · поиск</p>
+          <h2>{status.phase === 'pairing' ? 'Соперник найден — готовим матч…' : status.waitingCapacity ? 'Ждём два свободных терминала' : 'Ищем соперника'}</h2>
+          <p>{status.waitingCapacity ? 'Место в очереди сохранено. Матч начнётся, когда освободятся две игровые среды.' : 'Поиск продолжится после обновления страницы — состояние хранится на сервере.'}</p>
         </div>
         <div className="matchmaking-search-meta"><strong>{formatElapsed(elapsed)}</strong><span>в поиске</span></div>
         <button className="secondary-button" type="button" disabled={busy || status.phase === 'pairing'} onClick={() => void cancel()}>
@@ -135,9 +135,9 @@ export function QuickMatchPanel() {
       <section id="quick-match" className="matchmaking-panel matchmaking-found" aria-live="assertive">
         <div className="matchmaking-radar"><Swords size={28} /></div>
         <div className="min-w-0 flex-1">
-          <p className="eyebrow">{quick ? 'Соперник найден' : 'Активный Battle'}</p>
-          <h2>{status.opponent ? `@${status.opponent.username} готов к гонке` : quick ? 'Battle готов' : 'Вернитесь в матч'}</h2>
-          <p>{quick ? 'Открываем существующий Battle Engine. Дальше работают обычные Ready, countdown и real shell.' : 'Новый поиск не создавался: сервер восстановил ваш текущий матч.'}</p>
+          <p className="eyebrow">{quick ? 'Соперник найден' : 'Активный матч'}</p>
+          <h2>{status.opponent ? `@${status.opponent.username} готов к гонке` : quick ? 'Матч готов' : 'Вернитесь в матч'}</h2>
+          <p>{quick ? 'Открываем матч из трёх одинаковых shell-задач.' : 'Новый поиск не создавался: сервер восстановил ваш текущий матч.'}</p>
         </div>
         <a className="primary-button" href={`/battle/${status.roomCode}`}>{quick ? 'Открыть Battle' : 'Вернуться'} <ArrowRight size={15} /></a>
       </section>
@@ -150,8 +150,8 @@ export function QuickMatchPanel() {
       <div className="min-w-0 flex-1">
         <p className="eyebrow">Quick Match</p>
         <h2>Найдите соперника автоматически.</h2>
-        <p>Одна общая очередь · 3 случайных Shell-раунда · существующий Battle Engine и изолированные песочницы.</p>
-        <div className="matchmaking-trust"><span><ShieldCheck size={13} /> один матч на игрока</span><span>FIFO без MMR</span><span>результат определяет сервер</span></div>
+        <p>Быстрый PvP без изменения MMR: три случайных shell-задачи и отдельный терминал для каждого игрока.</p>
+        <div className="matchmaking-trust"><span><ShieldCheck size={13} /> один матч на игрока</span><span>без рейтинга</span><span>результат определяет сервер</span></div>
       </div>
       <button className="primary-button" type="button" disabled={busy} onClick={() => void enqueue()}>
         {busy ? <LoaderCircle className="animate-spin" size={16} /> : <Radar size={16} />}

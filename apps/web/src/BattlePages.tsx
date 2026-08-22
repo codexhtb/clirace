@@ -2,6 +2,7 @@ import { ArrowLeft, Check, Clipboard, Clock3, Copy, Crown, Flame, LoaderCircle, 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { BattleTerminal } from './BattleTerminal';
 import { CommunityHeader } from './CommunityHeader';
+import { currentUser } from './auth-client';
 import { humanizeError } from './errors';
 
 interface AuthUser { id: string; username: string; email: string; }
@@ -47,7 +48,7 @@ export function BattleCreatePage() {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: AuthUser | null }>),
+      currentUser() as Promise<{ user: AuthUser | null }>,
       fetch('/api/battles/options', { signal: controller.signal }).then((response) => response.json() as Promise<BattleOptions>),
       fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean; healthy?: boolean }>),
     ]).then(([me, battleOptions, sandbox]) => {
@@ -229,7 +230,7 @@ export function BattleRoomPage() {
         <>
           <BattleTopbar battle={battle} realtime={realtime} />
           {battle.status === 'finished' ? <BattleResults battle={battle} />
-            : battle.status === 'cancelled' && battle.rankedResult?.outcome === 'no_contest' ? <RankedNoContest />
+            : battle.status === 'cancelled' && battle.rankedResult?.outcome === 'no_contest' ? <RankedNoContest reason={battle.rankedResult.noContestReason} />
               : battle.status === 'cancelled' ? <BattleError message="Комната закрыта по таймауту." />
               : battle.preparing || battle.status === 'countdown' || battle.status === 'running'
                 ? <BattleArena battle={battle} realtime={realtime} error={error} />
@@ -323,7 +324,7 @@ function BattleResults({ battle }: { battle: BattleState }) {
           {rows.map((round) => <div className="battle-result-row" key={round}><span>{String(round).padStart(2, '0')}</span>{battle.results?.map((result) => { const item = result.rounds.find((entry) => entry.round === round); return <strong className={item?.success ? 'text-white' : 'text-slate-600'} key={result.userId}>{item?.success && item.durationMs !== null ? formatCompactDuration(item.durationMs) : 'DNF'}</strong>; })}</div>)}
         </div>
         {battle.mode === 'ranked' && battle.rankedResult && <RankedResultBlock battle={battle} result={battle.rankedResult} victory={victory} />}
-        <div className="mt-8 flex flex-wrap justify-center gap-3"><a className="secondary-button" href="/"><ArrowLeft size={14} /> На главную</a><a className="primary-button" href="/battle"><RefreshCw size={14} /> Новый Battle</a></div>
+        <div className="mt-8 flex flex-wrap justify-center gap-3"><a className="secondary-button" href="/"><ArrowLeft size={14} /> На главную</a>{battle.mode === 'ranked' && <a className="secondary-button" href="/rating?category=ranked"><Trophy size={14} /> Рейтинг</a>}<a className="primary-button" href={battle.mode === 'ranked' ? '/play?compete=ranked#competition' : battle.mode === 'quick' ? '/play?compete=quick#competition' : '/battle'}><RefreshCw size={14} /> {battle.mode === 'ranked' ? 'Снова Ranked' : battle.mode === 'quick' ? 'Снова Quick Match' : 'Новая игра с другом'}</a></div>
       </section>
     </main>
   );
@@ -334,17 +335,27 @@ function RankedResultBlock({ battle, result, victory }: { battle: BattleState; r
   if (!mine) return null;
   const changedDivision = mine.divisionBefore !== mine.divisionAfter;
   const provisional = battle.rankedStats?.provisional === true;
+  const placementComplete = !provisional && battle.rankedStats?.placementGamesCompleted === battle.rankedStats?.placementGamesRequired;
   return (
     <section className="ranked-result-block">
-      <div><span>RANKED RESULT</span><strong>{victory ? 'Victory' : 'Defeat'}</strong></div>
-      <div><span>Rating</span><strong>{provisional ? 'Provisional' : `${mine.mmrBefore} → ${mine.mmrAfter}`}</strong><b className={mine.delta >= 0 ? 'text-acid' : 'text-rose-300'}>{provisional ? 'MMR откроется после placements' : `${mine.delta >= 0 ? '+' : ''}${mine.delta} MMR`}</b></div>
-      <div><span>Division</span><strong>{provisional ? `Placement ${battle.rankedStats?.placementGamesCompleted}/${battle.rankedStats?.placementGamesRequired}` : changedDivision ? `${mine.divisionBefore} → ${mine.divisionAfter}` : mine.divisionAfter}</strong>{!provisional && changedDivision && <b>{mine.delta > 0 ? 'PROMOTION' : 'DEMOTION'}</b>}</div>
+      <div><span>Результат Ranked</span><strong>{victory ? 'Победа' : 'Поражение'}</strong></div>
+      <div><span>MMR</span><strong>{provisional ? 'Пока скрыт' : `${mine.mmrBefore} → ${mine.mmrAfter}`}</strong><b className={mine.delta >= 0 ? 'text-acid' : 'text-rose-300'}>{provisional ? 'Откроется после квалификации' : `${mine.delta >= 0 ? '+' : ''}${mine.delta} MMR`}</b></div>
+      <div><span>Дивизион</span><strong>{provisional ? `Квалификация ${battle.rankedStats?.placementGamesCompleted}/${battle.rankedStats?.placementGamesRequired}` : changedDivision ? `${mine.divisionBefore} → ${mine.divisionAfter}` : mine.divisionAfter}</strong>{placementComplete ? <b>Квалификация 5/5 · дивизион открыт</b> : !provisional && changedDivision && <b>{mine.delta > 0 ? 'Повышение' : 'Понижение'}</b>}</div>
     </section>
   );
 }
 
-function RankedNoContest() {
-  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Ranked / no contest</p><h1 className="mt-4 text-4xl font-semibold text-white">MMR не изменён.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">Матч отменён из-за технической проблемы платформы. Ни один игрок не получил поражение.</p><a className="primary-button mt-8" href="/play">Вернуться к поиску</a></main>;
+function RankedNoContest({ reason }: { reason: string | null }) {
+  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на рейтинг.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><a className="primary-button mt-8" href="/play?compete=ranked#competition">Вернуться к Ranked</a></main>;
+}
+
+function noContestMessage(reason: string | null): string {
+  return ({
+    admin_terminated: 'Матч завершён системой.',
+    both_players_disconnected: 'Оба игрока отключились до завершения.',
+    battle_expired: 'Время матча истекло.',
+    internal_failure: 'Игровая среда завершилась с технической ошибкой.',
+  } as Record<string, string>)[reason ?? ''] ?? 'Матч завершён из-за проблемы игровой среды.';
 }
 
 function LobbyPlayer({ player, isMe }: { player: BattlePlayer; isMe: boolean }) {

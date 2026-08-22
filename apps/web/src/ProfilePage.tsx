@@ -1,6 +1,7 @@
-import { Activity, Award, CalendarDays, Flame, Gauge, Medal, Target, Terminal, Trophy } from 'lucide-react';
+import { Activity, ArrowRight, Award, BookOpen, CalendarDays, Flame, Gauge, Medal, Target, Terminal, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { currentUser } from './auth-client';
 import { ErrorState, PageLoader } from './Ui';
 import { humanizeError } from './errors';
 
@@ -30,6 +31,7 @@ interface Profile {
   };
   ratings: Array<{ slug: string; name: string; rating: number; gamesPlayed: number; updatedAt: string }>;
   dailyStreak: { current: number; best: number; lastDate: string | null };
+  learning: { assessments: number; answered: number; correct: number; accuracy: number; active: boolean };
   achievements: Array<{ slug: string; title: string; description: string; icon: string; unlockedAt: string }>;
   recentRuns: RunHistory[];
   ranked: {
@@ -43,8 +45,18 @@ export function ProfilePage() {
   const username = decodeURIComponent(window.location.pathname.slice('/profile/'.length));
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [guest, setGuest] = useState(false);
 
   useEffect(() => {
+    if (!username) {
+      let active = true;
+      currentUser().then(({ user }) => {
+        if (!active) return;
+        if (user) window.location.replace(`/profile/${encodeURIComponent(user.username)}`);
+        else setGuest(true);
+      }).catch(() => { if (active) setGuest(true); });
+      return () => { active = false; };
+    }
     const controller = new AbortController();
     fetch(`/api/profiles/${encodeURIComponent(username)}`, { signal: controller.signal })
       .then(async (response) => {
@@ -65,7 +77,8 @@ export function ProfilePage() {
       <div className="grid-noise fixed inset-0 pointer-events-none" />
       <CommunityHeader />
       <main className="page-width relative z-10 py-10 sm:py-16">
-        {!profile && !error && <PageLoader label="Загружаем профиль" />}
+        {!profile && !error && !guest && <PageLoader label="Загружаем профиль" />}
+        {guest && <section className="state-panel"><BookOpen size={24} className="text-acid" /><div><h1>Войдите, чтобы открыть профиль</h1><p>В профиле хранятся результаты практики, обучение и Ranked-статистика.</p></div><a className="primary-button" href="/?auth=1&returnTo=%2Fprofile">Войти <ArrowRight size={14} /></a></section>}
         {error && <ErrorState title="Профиль не найден" message={error} retryHref="/leaderboard" />}
         {profile && <ProfileContent profile={profile} />}
       </main>
@@ -101,8 +114,13 @@ function ProfileContent({ profile }: { profile: Profile }) {
       </section>
 
       <section className="ranked-profile-card mt-6">
-        <div><p className="eyebrow">Ranked</p><h2>{profile.ranked.provisional ? 'Unranked' : profile.ranked.division}</h2><span>{profile.ranked.provisional ? `Placement ${profile.ranked.placementGamesCompleted}/${profile.ranked.placementGamesRequired}` : `${profile.ranked.mmr} MMR`}</span></div>
+        <div><p className="eyebrow">Ranked</p><h2>{profile.ranked.provisional ? 'Квалификация' : profile.ranked.division}</h2><span>{profile.ranked.provisional ? `${profile.ranked.placementGamesCompleted}/${profile.ranked.placementGamesRequired} квалификационных игр` : `${profile.ranked.mmr} MMR`}</span></div>
         <div className="ranked-profile-stats"><span><strong>{profile.ranked.gamesPlayed}</strong> игр</span><span><strong>{profile.ranked.wins}</strong> побед</span><span><strong>{profile.ranked.losses}</strong> поражений</span></div>
+      </section>
+
+      <section className="learning-profile-card mt-4">
+        <div><p className="eyebrow">Обучение</p><h2>Linux Core</h2><span>{profile.learning.answered ? `${profile.learning.accuracy}% точность · ${profile.learning.answered} ответов` : 'Обучение ещё не начато'}</span></div>
+        <div className="flex flex-wrap items-center gap-3"><span className="font-mono text-xs text-slate-500">{profile.learning.assessments} завершено</span><a className="secondary-button" href="/learn/linux-core">{profile.learning.active ? 'Продолжить' : 'Начать'} <ArrowRight size={14} /></a></div>
       </section>
 
       <section className="mt-10">
@@ -119,7 +137,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
               </div>
             ))}
           </div>
-        ) : <div className="mt-5 rounded-lg border border-line bg-panel p-6 text-sm text-slate-500">Первое достижение откроется после завершённого забега.</div>}
+        ) : <div className="mt-5 rounded-lg border border-line bg-panel p-6 text-sm text-slate-500">Первое достижение откроется после завершённой практики. <a className="ml-1 text-acid hover:underline" href="/play#practice">Начать первую задачу</a></div>}
       </section>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[0.72fr_1.28fr]">
@@ -134,7 +152,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
                 <div><strong>{rating.name}</strong><span>{rating.gamesPlayed} {pluralRuns(rating.gamesPlayed)}</span></div>
                 <b>{rating.rating}</b>
               </a>
-            )) : <EmptyPanel text="Категорийный рейтинг появится после первого завершённого забега." />}
+            )) : <EmptyPanel text="Категорийный рейтинг появится после первой завершённой практики." action={{ href: '/play#practice', label: 'Начать практику' }} />}
           </div>
         </section>
 
@@ -145,20 +163,20 @@ function ProfileContent({ profile }: { profile: Profile }) {
           </div>
           <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
             {profile.recentRuns.length ? profile.recentRuns.map((run) => <RunRow run={run} key={run.id} />)
-              : <EmptyPanel text="Здесь появятся результаты завершённых тренировок." />}
+              : <EmptyPanel text="Здесь появятся результаты завершённых тренировок." action={{ href: '/play#practice', label: 'Первая задача' }} />}
           </div>
         </section>
       </div>
       <section className="mt-10">
-        <div><p className="eyebrow">Ranked history</p><h2 className="mt-3 text-2xl font-semibold text-white">Последние рейтинговые матчи</h2></div>
+        <div><p className="eyebrow">История Ranked</p><h2 className="mt-3 text-2xl font-semibold text-white">Последние рейтинговые матчи</h2></div>
         <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
           {profile.ranked.recentMatches.length ? profile.ranked.recentMatches.map((match) => (
             <a className="ranked-history-row" href={`/battle/${match.roomCode}`} key={match.battleId}>
               <div><strong>@{match.opponent}</strong><span>{formatDateTime(match.playedAt)}</span></div>
-              <b className={match.result === 'win' ? 'text-acid' : match.result === 'loss' ? 'text-rose-300' : 'text-slate-400'}>{match.result === 'win' ? 'ПОБЕДА' : match.result === 'loss' ? 'ПОРАЖЕНИЕ' : 'NO CONTEST'}</b>
+              <b className={match.result === 'win' ? 'text-acid' : match.result === 'loss' ? 'text-rose-300' : 'text-slate-400'}>{match.result === 'win' ? 'ПОБЕДА' : match.result === 'loss' ? 'ПОРАЖЕНИЕ' : 'БЕЗ РЕЗУЛЬТАТА'}</b>
               <div><strong>{match.mmrBefore} → {match.mmrAfter}</strong><span>{match.delta >= 0 ? '+' : ''}{match.delta} MMR</span></div>
             </a>
-          )) : <EmptyPanel text="Здесь появятся завершённые Ranked Battles." />}
+          )) : <EmptyPanel text="Здесь появятся завершённые рейтинговые матчи." action={{ href: '/play?compete=ranked#competition', label: 'Играть Ranked' }} />}
         </div>
       </section>
     </>
@@ -184,8 +202,8 @@ function RunRow({ run }: { run: RunHistory }) {
   );
 }
 
-function EmptyPanel({ text }: { text: string }) {
-  return <div className="p-6 text-sm leading-6 text-slate-500">{text}</div>;
+function EmptyPanel({ text, action }: { text: string; action?: { href: string; label: string } }) {
+  return <div className="p-6 text-sm leading-6 text-slate-500">{text}{action && <a className="mt-3 flex w-fit items-center gap-1 text-acid hover:underline" href={action.href}>{action.label} <ArrowRight size={13} /></a>}</div>;
 }
 
 

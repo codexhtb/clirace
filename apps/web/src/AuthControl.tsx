@@ -1,15 +1,10 @@
 import { LogOut, ShieldCheck, UserRound, X } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { currentUser, rememberCurrentUser, type CurrentUser } from './auth-client';
 import { humanizeError } from './errors';
 
-interface AuthUser {
-  id: string;
-  username: string;
-  email: string;
-  createdAt: string;
-  role?: 'user' | 'admin';
-}
+type AuthUser = CurrentUser;
 
 type AuthMode = 'login' | 'register';
 
@@ -20,21 +15,25 @@ export function AuthControl() {
   const [mode, setMode] = useState<AuthMode>(() => window.location.pathname === '/register' ? 'register' : 'login');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/auth/me', { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('auth unavailable')))
-      .then((payload: { user: AuthUser | null }) => setUser(payload.user))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-    return () => controller.abort();
+    let active = true;
+    currentUser().then((payload) => { if (active) setUser(payload.user); }).catch(() => { if (active) setUser(null); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
     if (!open) return;
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), a[href], select:not([disabled])'));
+      const first = focusable[0]; const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -42,6 +41,7 @@ export function AuthControl() {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
+      returnFocus?.focus();
     };
   }, [open]);
 
@@ -63,6 +63,7 @@ export function AuthControl() {
       const payload = await response.json().catch(() => null) as { user?: AuthUser; message?: string } | null;
       if (!response.ok || !payload?.user) throw new Error(payload?.message ?? 'Не удалось выполнить вход.');
       setUser(payload.user);
+      rememberCurrentUser(payload.user);
       setOpen(false);
       const returnTo = new URLSearchParams(window.location.search).get('returnTo');
       if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) window.location.assign(returnTo);
@@ -75,7 +76,7 @@ export function AuthControl() {
 
   const logout = async () => {
     const response = await fetch('/api/auth/logout', { method: 'POST' });
-    if (response.ok) setUser(null);
+    if (response.ok) { setUser(null); rememberCurrentUser(null); }
   };
 
   if (loading) return <div className="h-8 w-24 animate-pulse rounded border border-line bg-white/[0.03]" />;
@@ -100,7 +101,7 @@ export function AuthControl() {
         <div className="auth-overlay" role="presentation" onMouseDown={(event) => {
           if (event.currentTarget === event.target) setOpen(false);
         }}>
-          <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+          <section ref={dialogRef} className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-description">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="eyebrow">Аккаунт CLIRace</p>
@@ -156,7 +157,7 @@ export function AuthControl() {
                 {submitting ? 'Проверяем…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
               </button>
             </form>
-            <p className="mt-4 text-center text-[11px] leading-5 text-slate-600">
+            <p id="auth-description" className="mt-4 text-center text-[11px] leading-5 text-slate-600">
               Сессия хранится в защищённой HttpOnly cookie. Пароль никогда не сохраняется в открытом виде.
             </p>
           </section>

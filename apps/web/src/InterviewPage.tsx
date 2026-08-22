@@ -51,10 +51,10 @@ export function InterviewPage() {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ taskCount }),
       });
       const body = await response.json() as { session?: { id: string }; message?: string };
-      if (!response.ok || !body.session) throw new Error(body.message ?? 'Не удалось начать Interview Run.');
+      if (!response.ok || !body.session) throw new Error(body.message ?? 'Не удалось начать тренировку к собеседованию.');
       window.location.href = `/play?session=${encodeURIComponent(body.session.id)}`;
     } catch (reason) {
-      setError(humanizeError(reason, 'Не удалось начать Interview Run. Попробуйте ещё раз.'));
+      setError(humanizeError(reason, 'Не удалось начать тренировку. Попробуйте ещё раз.'));
       setBusy(null);
     }
   };
@@ -96,7 +96,7 @@ export function InterviewPage() {
     <section className="mt-14">
       <div className="flex flex-col gap-3 border-y border-line py-5 lg:flex-row">
         <Filter value={status} onChange={setStatus} label="Статус" options={[['all','Все'],['unsolved','Не решены'],['solved','Решены']]} />
-        <Filter value={difficulty} onChange={setDifficulty} label="Сложность" options={[['all','Любая'],['Easy','Easy · 30'],['Medium','Medium · 50'],['Hard','Hard · 20']]} />
+        <Filter value={difficulty} onChange={setDifficulty} label="Сложность" options={[['all','Любая'],['Easy','Легко · 30'],['Medium','Средне · 50'],['Hard','Сложно · 20']]} />
         <Filter value={topic} onChange={setTopic} label="Тема" options={[['all','Все темы'], ...payload.topics.map((item) => [item.slug, item.name])]} />
         <span className="ml-auto self-center font-mono text-[10px] uppercase tracking-[.14em] text-slate-500">Показано: {tasks.length}</span>
         {(status !== 'all' || difficulty !== 'all' || topic !== 'all') && <button type="button" className="inline-flex items-center gap-1.5 self-center font-mono text-[10px] uppercase tracking-[.12em] text-slate-500 hover:text-white" onClick={() => { setStatus('all'); setDifficulty('all'); setTopic('all'); }}><RotateCcw size={12} /> Сбросить</button>}

@@ -1,7 +1,9 @@
 import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, CircleAlert, LoaderCircle, RotateCcw, Terminal, X } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
+import { currentUser } from './auth-client';
 import { humanizeError } from './errors';
+import { learningDifficulty, learningQuestionType, practiceHrefForWeakArea } from './product-ux';
 
 type LearningMode = 'quick' | 'standard' | 'full' | 'topic';
 type Stat = { answered: number; correct: number; accuracy: number; sufficientData: boolean };
@@ -51,7 +53,7 @@ export function LearnPage({ catalogOnly = false }: { catalogOnly?: boolean }) {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      fetch('/api/auth/me', { signal: controller.signal }).then((response) => response.json() as Promise<{ user: unknown | null }>),
+      currentUser(),
       fetch('/api/learn/linux-core', { signal: controller.signal }).then(readJson<Catalog>),
     ]).then(async ([authPayload, catalogPayload]) => {
       setCatalog(catalogPayload);
@@ -110,7 +112,7 @@ function CourseCatalog({ catalog, error }: { catalog: Catalog | null; error: str
         <h2>Linux Core</h2><p>Файлы, права, процессы, сети, systemd, Bash и диагностика.</p>
         <strong>{catalog ? `${catalog.totalQuestions} вопросов` : 'Загружаем…'} <ArrowRight size={15} /></strong>
       </a>
-      <div className="learn-course-card learn-course-soon"><span className="mode-card-icon"><BookOpen size={18} /></span><small>Следующие направления</small><h2>Продолжение</h2><p>Networking, Docker, Git и Kubernetes появятся отдельными курсами.</p><strong>Скоро</strong></div>
+      <a className="learn-course-card" href="/interview"><span className="mode-card-icon"><BookOpen size={18} /></span><small>Проверка навыков</small><h2>Interview 100</h2><p>Сто практических задач для подготовки к Linux и DevOps собеседованию.</p><strong>Открыть коллекцию <ArrowRight size={15} /></strong></a>
     </div>
   </section>;
 }
@@ -120,15 +122,15 @@ function CourseStart({ catalog, auth, busy, error, onStart }: { catalog: Catalog
   return <section>
     <a className="eyebrow hover:text-white" href="/learn">CLIRace Learn / Linux Core</a>
     <div className="learn-intro-grid">
-      <div><h1 className="learn-hero-title">Linux Core.<br /><span>С объяснениями.</span></h1><p className="learn-lead">Ответьте один раз, разберите причину и двигайтесь дальше. Прогресс хранится на сервере и переживает обновление страницы.</p></div>
-      <div className="learn-method"><span>QUESTION</span><i>→</i><span>ANSWER</span><i>→</i><span>WHY?</span><i>→</i><span>NEXT</span></div>
+      <div><h1 className="learn-hero-title">Linux Core.<br /><span>С объяснениями.</span></h1><p className="learn-lead">Ответьте один раз, разберите причину и двигайтесь дальше. Это обучающий режим: главное здесь — понять ответ, а не угадать.</p></div>
+      <div className="learn-method"><span>ВОПРОС</span><i>→</i><span>ОТВЕТ</span><i>→</i><span>РАЗБОР</span><i>→</i><span>ПРАКТИКА</span></div>
     </div>
     {catalog.progress && catalog.progress.answered > 0 && <p className="learn-progress-note">Ваш прогресс: {catalog.progress.correct} верных из {catalog.progress.answered} ответов</p>}
     <div className="learn-mode-grid">
       {catalog.modes.filter((mode) => mode.id !== 'topic').map((mode) => <button key={mode.id} type="button" className="learn-mode" disabled={!mode.available || busy || auth === 'guest'} onClick={() => onStart(mode.id)}>
         <small>{mode.available ? 'Доступен' : 'Недостаточно вопросов'}</small><strong>{mode.title}</strong><span>{mode.questions} уникальных вопросов</span><ChevronRight size={18} />
       </button>)}
-      <div className="learn-mode learn-topic"><small>По одной теме</small><strong>Topic Practice</strong><select aria-label="Тема практики" value={topic} onChange={(event) => setTopic(event.target.value)}>{catalog.categories.map((category) => <option key={category.slug} value={category.slug}>{categoryNames[category.slug] ?? category.slug} · {category.count}</option>)}</select><button type="button" disabled={!topic || busy || auth === 'guest'} onClick={() => onStart('topic', topic)}>Начать <ChevronRight size={15} /></button></div>
+      <div className="learn-mode learn-topic"><small>По одной теме</small><strong>Практика по теме</strong><select aria-label="Тема практики" value={topic} onChange={(event) => setTopic(event.target.value)}>{catalog.categories.map((category) => <option key={category.slug} value={category.slug}>{categoryNames[category.slug] ?? category.slug} · {category.count}</option>)}</select><button type="button" disabled={!topic || busy || auth === 'guest'} onClick={() => onStart('topic', topic)}>Начать <ChevronRight size={15} /></button></div>
     </div>
     {auth === 'guest' && <div className="learn-auth"><strong>Чтобы сохранить обучение, нужен аккаунт.</strong><a className="primary-button" href={`/?auth=1&returnTo=${encodeURIComponent('/learn/linux-core')}`}>Войти <ArrowRight size={15} /></a></div>}
     {error && <p className="play-error mt-6" role="alert">{error}</p>}
@@ -151,7 +153,7 @@ function QuestionScreen({ session, busy, error, onRequest }: { session: LearnSes
   return <section className="learn-session">
     <div className="learn-session-top"><div><span>LINUX CORE</span><strong>{progress.current} / {progress.total}</strong></div><div className="learn-progress-track"><i style={{ width: `${((progress.current - (feedback ? 0 : 1)) / progress.total) * 100}%` }} /></div><span>{categoryNames[question.category] ?? question.category}</span></div>
     <div className="learn-question-card">
-      <div className="learn-question-meta"><span>{question.type.replace('_', ' ')}</span><span>{question.difficulty}</span><span>{question.concept}</span></div>
+      <div className="learn-question-meta"><span>{learningQuestionType(question.type)}</span><span>{learningDifficulty(question.difficulty)}</span><span>{categoryNames[question.category] ?? question.category}</span></div>
       <h1>{question.text}</h1>
       {multiple && !feedback && <p className="learn-hint">Можно выбрать несколько вариантов.</p>}
       <form onSubmit={submit}>
@@ -168,7 +170,7 @@ function QuestionScreen({ session, busy, error, onRequest }: { session: LearnSes
         {!feedback && <div className="learn-submit-row"><span>Ответ фиксируется один раз</span><button className="primary-button" type="submit" disabled={selected.length === 0 || busy}>{busy ? <LoaderCircle className="animate-spin" size={16} /> : <Check size={16} />} Проверить</button></div>}
       </form>
       {feedback && <div className={`learn-feedback ${feedback.isCorrect ? 'is-correct' : 'is-wrong'}`}>
-        <div className="learn-feedback-title">{feedback.isCorrect ? <CheckCircle2 size={21} /> : <CircleAlert size={21} />}<strong>{feedback.isCorrect ? 'Верно' : 'Неверно'}</strong></div>
+        <div className="learn-feedback-title">{feedback.isCorrect ? <CheckCircle2 size={21} /> : <CircleAlert size={21} />}<strong>{feedback.isCorrect ? 'Верно — закрепите вывод' : 'Разберём ответ'}</strong></div>
         <section><small>Почему это правильно</small><p>{feedback.explanation}</p></section>
         {!feedback.isCorrect && feedback.selectedAnswerExplanation && <section><small>Почему твой вариант неверен</small><p><strong>Вы выбрали: «{answerMap.get(feedback.selectedAnswerIds[0] ?? '') ?? 'вариант ответа'}»</strong><br />{feedback.selectedAnswerExplanation}</p></section>}
         <div className="learn-feedback-actions">
@@ -184,10 +186,10 @@ function QuestionScreen({ session, busy, error, onRequest }: { session: LearnSes
 function ResultScreen({ session, busy, onStart }: { session: LearnSession; busy: boolean; onStart: (mode: LearningMode, category?: string) => void }) {
   const result = session.result!;
   return <section className="learn-results">
-    <p className="eyebrow">Assessment завершён</p><h1>Linux Core Score</h1><div className="learn-score"><strong>{result.percent}%</strong><span>{result.correct} / {result.total} верно</span></div>
+    <p className="eyebrow">Проверка завершена</p><h1>Результат Linux Core</h1><div className="learn-score"><strong>{result.percent}%</strong><span>{result.correct} / {result.total} верно</span></div>
     <div className="learn-breakdown"><h2>Разбор по темам</h2>{Object.entries(result.categories).map(([slug, stat]) => <div key={slug}><span>{categoryNames[slug] ?? slug}</span><div><i style={{ width: `${stat.accuracy}%` }} /></div><strong>{stat.accuracy}%</strong><small>{stat.answered < 2 ? 'мало данных' : `${stat.correct}/${stat.answered}`}</small></div>)}</div>
     <div className="learn-area-grid"><section><small>Сильные темы</small><p>{result.strongAreas.length ? result.strongAreas.map((slug) => categoryNames[slug] ?? slug).join(' · ') : 'Нужно больше ответов для уверенного вывода.'}</p></section><section><small>Слабые темы</small><p>{result.weakAreas.length ? result.weakAreas.map((slug) => categoryNames[slug] ?? slug).join(' · ') : 'Нет тем с достаточной выборкой ниже 60%.'}</p></section></div>
-    <div className="mt-8 flex flex-wrap justify-center gap-3"><a className="secondary-button" href="/learn">Все курсы</a><button className="primary-button" type="button" disabled={busy} onClick={() => onStart('quick')}><RotateCcw size={15} /> Новый Quick Check</button></div>
+    <div className="mt-8 flex flex-wrap justify-center gap-3"><a className="secondary-button" href="/learn">Все курсы</a>{result.weakAreas[0] && <a className="secondary-button" href={practiceHrefForWeakArea(result.weakAreas[0])}><Terminal size={15} /> Практиковать: {categoryNames[result.weakAreas[0]] ?? result.weakAreas[0]}</a>}<button className="primary-button" type="button" disabled={busy} onClick={() => onStart('quick')}><RotateCcw size={15} /> Ещё 10 вопросов</button></div>
   </section>;
 }
 

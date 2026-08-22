@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Activity, ArrowRight, Check, Command, Library, Swords, Terminal, Trophy } from 'lucide-react';
+import { Activity, ArrowRight, BookOpen, Check, Command, Swords, Terminal, Trophy } from 'lucide-react';
 import { LeaderboardPage } from './LeaderboardPage';
 import { DailyPage } from './DailyPage';
 import { PlayPage } from './PlayPage';
@@ -9,6 +9,7 @@ import { InterviewPage } from './InterviewPage';
 import { CommunityHeader } from './CommunityHeader';
 import { AdminConsole } from './AdminConsole';
 import { LearnPage } from './LearnPage';
+import { routeMetadata, secondaryNavigation } from './product-ux';
 
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
   default: module.BattleCreatePage,
@@ -131,14 +132,14 @@ function HomePage() {
                 <Activity size={12} className="text-acid" /> Измеримая мышечная память Linux
               </div>
               <h1 className="max-w-3xl text-4xl font-semibold leading-[1.02] tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
-                Соревновательная практика Linux и DevOps <span className="text-acid">в настоящем терминале.</span>
+                Практикуйте Linux и DevOps <span className="text-acid">в настоящем терминале.</span>
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 lg:text-lg">
-                Не тест и не теория: получите задачу, откройте одноразовый Linux shell, выполните команду и сразу увидите результат.
+                Решайте короткие задачи, разбирайте ошибки и соревнуйтесь с другими — без настройки окружения.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <a className="primary-button" href="/play">Начать практику <ArrowRight size={16} /></a>
-                <a className="secondary-button" href="/battle"><Swords size={15} /> Сыграть с другом</a>
+                <a className="secondary-button" href="/play?compete=quick#competition"><Swords size={15} /> Найти соперника</a>
               </div>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">
                 <SystemStatus /><span>Задачи по 30–180 секунд</span><span>Без настройки окружения</span>
@@ -148,12 +149,13 @@ function HomePage() {
           </div>
         </section>
 
-        <section className="page-width pb-16">
-          <div className="feature-strip">
-            <div className="feature-item"><strong>229</strong><span>практических задач, включая Interview 100</span></div>
-            <div className="feature-item"><strong>Real Shell</strong><span>одноразовая rootless Linux-песочница</span></div>
-            <div className="feature-item"><strong>Daily</strong><span>общее испытание и серия дней</span></div>
-            <div className="feature-item"><strong>Private Battle</strong><span>одинаковые задачи для двух игроков</span></div>
+        <section className="page-width pb-16" aria-labelledby="product-paths-title">
+          <p className="eyebrow">Выберите направление</p>
+          <h2 id="product-paths-title" className="mt-3 text-2xl font-semibold text-white sm:text-3xl">Начните с одного понятного шага.</h2>
+          <div className="product-paths mt-6">
+            <a href="/play#practice"><Terminal size={19} /><div><strong>Практика</strong><span>Короткие задачи в настоящем Linux shell.</span></div><ArrowRight size={15} /></a>
+            <a href="/learn"><BookOpen size={19} /><div><strong>Обучение</strong><span>Вопросы с разбором каждого ответа.</span></div><ArrowRight size={15} /></a>
+            <a href="/play?compete=quick#competition"><Trophy size={19} /><div><strong>Соревнования</strong><span>Quick без рейтинга или Ranked с MMR.</span></div><ArrowRight size={15} /></a>
           </div>
         </section>
 
@@ -192,11 +194,11 @@ function HomePage() {
             </div>
             <div className="architecture-flow">
               {[
-                [Library, 'Получите задачу', 'короткое условие и понятная цель'],
+                [BookOpen, 'Получите задачу', 'короткое условие и понятная цель'],
                 [Terminal, 'Решите в Linux shell', 'настоящие команды без доступа к хосту'],
                 [Trophy, 'Получите результат', 'очки, время, серия и прогресс'],
               ].map(([Icon, label, detail], index) => {
-                const FlowIcon = Icon as typeof Library;
+                const FlowIcon = Icon as typeof BookOpen;
                 return (
                   <div className="flow-node" key={String(label)}>
                     <div className="flow-number">0{index + 1}</div>
@@ -212,7 +214,7 @@ function HomePage() {
         <section className="border-t border-line">
           <div className="page-width flex flex-col gap-4 py-8 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="font-mono font-semibold tracking-[0.14em] text-slate-300">CLIRACE</span>
-            <span>Linux · DevOps · Shell · Interview · Battle</span>
+            <nav className="footer-links" aria-label="Дополнительные разделы">{secondaryNavigation.map((item) => <a href={item.href} key={item.href}>{item.label}</a>)}</nav>
           </div>
         </section>
       </main>
@@ -223,27 +225,18 @@ function HomePage() {
 export function App() {
   const path = window.location.pathname;
   useEffect(() => {
-    const title = path === '/learn/linux-core' ? 'Linux Core — обучение Linux с объяснениями | CLIRace'
-      : path === '/learn' ? 'CLIRace Learn — обучение Linux и DevOps'
-      : path.startsWith('/admin') ? 'Operations Console — CLIRace'
-      : path === '/play' ? 'Играть — CLIRace'
-      : path === '/interview' ? 'Interview 100 — CLIRace'
-        : path === '/daily' ? 'Daily Challenge — CLIRace'
-          : path === '/leaderboard' || path === '/rating' ? 'Рейтинг — CLIRace'
-            : path.startsWith('/profile/') ? 'Профиль — CLIRace'
-              : path.startsWith('/battle') ? 'Private Battle — CLIRace'
-                : path === '/' || path === '/login' || path === '/register' ? 'CLIRace — практика Linux и DevOps в терминале'
-                  : 'Страница не найдена — CLIRace';
-    document.title = title;
-    const description = path.startsWith('/learn')
-      ? 'Изучайте основы Linux: отвечайте на вопросы, разбирайте ошибки и закрепляйте знания в настоящем терминале CLIRace.'
-      : 'CLIRace — практика Linux и DevOps в настоящем терминале.';
+    const metadata = routeMetadata(path);
+    document.title = metadata.title;
     let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.append(meta); }
-    meta.content = description;
+    meta.content = metadata.description;
     let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.append(canonical); }
-    canonical.href = `https://clirace.fun${path}`;
+    canonical.href = metadata.canonical;
+    setMeta('property', 'og:title', metadata.title);
+    setMeta('property', 'og:description', metadata.description);
+    setMeta('property', 'og:url', metadata.canonical);
+    setMeta('name', 'robots', metadata.indexable ? 'index, follow' : 'noindex, nofollow');
   }, [path]);
   if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
   if (path === '/admin' || path.startsWith('/admin/')) return <AdminConsole />;
@@ -255,8 +248,14 @@ export function App() {
   if (path === '/battle') return <Suspense fallback={<BattlePageFallback />}><BattleCreatePage /></Suspense>;
   if (/^\/battle\/[A-HJ-NP-Z2-9]{5}$/i.test(path)) return <Suspense fallback={<BattlePageFallback />}><BattleRoomPage /></Suspense>;
   if (path === '/leaderboard' || path === '/rating') return <LeaderboardPage />;
-  if (path.startsWith('/profile/')) return <ProfilePage />;
+  if (path === '/profile' || path.startsWith('/profile/')) return <ProfilePage />;
   return <NotFoundPage />;
+}
+
+function setMeta(attribute: 'name' | 'property', key: string, content: string) {
+  let element = document.querySelector<HTMLMetaElement>(`meta[${attribute}="${key}"]`);
+  if (!element) { element = document.createElement('meta'); element.setAttribute(attribute, key); document.head.append(element); }
+  element.content = content;
 }
 
 function NotFoundPage() {

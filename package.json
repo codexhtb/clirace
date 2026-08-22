@@ -28,6 +28,7 @@
     "test:ranked-matchmaking": "pnpm --filter @clirace/api test:ranked-matchmaking",
     "test:ranked-service": "pnpm --filter @clirace/api test:ranked-e2e",
     "test:ranked-e2e": "node scripts/test-ranked-e2e.mjs",
+    "test:production-polish": "pnpm --filter @clirace/api exec tsx ../../scripts/test-production-polish.mts",
     "start": "pnpm --filter @clirace/api start"
   },
   "engines": {

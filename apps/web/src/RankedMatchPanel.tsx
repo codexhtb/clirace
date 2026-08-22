@@ -1,5 +1,6 @@
 import { ArrowRight, LoaderCircle, Radar, ShieldCheck, Trophy, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { humanizeError } from './errors';
 
 interface RankedStats {
   mmr: number;
@@ -66,10 +67,10 @@ export function RankedMatchPanel() {
     <section id="ranked-match" className={`matchmaking-panel matchmaking-ranked ${status.status === 'matched' ? 'matchmaking-found' : ''}`} aria-live="polite">
       <div className="matchmaking-radar"><Trophy size={28} /></div>
       <div className="min-w-0 flex-1">
-        <p className="eyebrow">Ranked / {status.status}</p>
-        {status.status === 'idle' && <><h2>Рейтинговый матч.</h2><p>Победы и поражения изменяют MMR. Quick Match и Private Battle остаются casual.</p><RankedBadge stats={status.ranked} /><div className="matchmaking-trust"><span><ShieldCheck size={13} /> server-authoritative</span><span>подбор по MMR</span><span>5 placements</span></div></>}
-        {status.status === 'searching' && <><h2>{status.phase === 'pairing' ? 'Соперник найден — создаём Battle…' : status.waitingCapacity ? 'Ждём свободную песочницу' : 'Ищем близкого соперника'}</h2><p>Диапазон MMR расширяется со временем, поэтому очередь не зависнет навсегда.</p><RankedBadge stats={status.ranked} /></>}
-        {status.status === 'matched' && <><h2>{status.opponent ? `@${status.opponent.username} готов к гонке` : 'Ranked Battle готов'}</h2><p>Победителя определяет существующий Battle Engine. MMR применит сервер ровно один раз.</p>{status.opponent?.ranked && <span className="matchmaking-opponent">Соперник: {rankLabel(status.opponent.ranked)}</span>}</>}
+        <p className="eyebrow">Ranked · {statusLabel(status.status)}</p>
+        {status.status === 'idle' && <><h2>Рейтинговый матч.</h2><p>Победа повышает MMR, поражение снижает. Quick Match и игра с другом на рейтинг не влияют.</p><RankedBadge stats={status.ranked} /><div className="matchmaking-trust"><span><ShieldCheck size={13} /> результат фиксирует сервер</span><span>подбор по MMR</span><span>5 квалификационных игр</span></div></>}
+        {status.status === 'searching' && <><h2>{status.phase === 'pairing' ? 'Соперник найден — готовим матч…' : status.waitingCapacity ? 'Ждём два свободных терминала' : 'Ищем близкого соперника'}</h2><p>Диапазон рейтинга постепенно расширяется, чтобы поиск не затянулся.</p><RankedBadge stats={status.ranked} /></>}
+        {status.status === 'matched' && <><h2>{status.opponent ? `@${status.opponent.username} готов к гонке` : 'Рейтинговый матч готов'}</h2><p>Открываем матч. Изменение MMR будет показано после результата.</p>{status.opponent?.ranked && <span className="matchmaking-opponent">Соперник: {rankLabel(status.opponent.ranked)}</span>}</>}
       </div>
       {status.status === 'idle' && <button className="primary-button" type="button" disabled={busy} onClick={() => void enqueue()}>{busy ? <LoaderCircle className="animate-spin" size={16} /> : <Radar size={16} />}{busy ? 'Входим в очередь…' : 'Играть Ranked'}</button>}
       {status.status === 'searching' && <><div className="matchmaking-search-meta"><strong>{elapsed(now, status.queuedAt)}</strong><span>в поиске</span></div><button className="secondary-button" type="button" disabled={busy || status.phase === 'pairing'} onClick={() => void cancel()}>{busy ? <LoaderCircle className="animate-spin" size={15} /> : <X size={15} />} Отменить</button></>}
@@ -80,7 +81,8 @@ export function RankedMatchPanel() {
 }
 
 function RankedBadge({ stats }: { stats: RankedStats }) { return <div className="ranked-badge"><strong>{rankLabel(stats)}</strong>{!stats.provisional && <span>{stats.mmr} MMR</span>}</div>; }
-function rankLabel(stats: RankedStats) { return stats.provisional ? `Placement ${stats.placementGamesCompleted}/${stats.placementGamesRequired}` : `${stats.division} · ${stats.mmr} MMR`; }
+function rankLabel(stats: RankedStats) { return stats.provisional ? `Квалификация ${stats.placementGamesCompleted}/${stats.placementGamesRequired}` : `${stats.division} · ${stats.mmr} MMR`; }
+function statusLabel(status: RankedStatus['status']) { return ({ idle: 'готово к поиску', searching: 'поиск', matched: 'соперник найден' } as const)[status]; }
 function elapsed(now: number, queuedAt: string) { const seconds = Math.max(0, Math.floor((now - new Date(queuedAt).getTime()) / 1_000)); return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
-function message(reason: unknown) { return reason instanceof Error ? reason.message : 'Ranked временно недоступен.'; }
+function message(reason: unknown) { return humanizeError(reason, 'Рейтинговый матч временно недоступен. Попробуйте ещё раз.'); }
 async function request(url: string, init: RequestInit): Promise<RankedStatus> { const response = await fetch(url, init); const payload = await response.json() as RankedStatus & { message?: string }; if (!response.ok) throw new Error(payload.message ?? 'Ranked временно недоступен.'); return payload; }

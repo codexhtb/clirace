@@ -66,7 +66,7 @@ export async function registerCommunityRoutes(
     const user = await findPublicUser(dependencies, params.data.username);
     if (!user) return notFound(reply);
 
-    const [overallResult, statsResult, ranked, rankedHistory, ratingsResult, rankResult, historyResult, progressResult, achievementResult] = await Promise.all([
+    const [overallResult, statsResult, ranked, rankedHistory, ratingsResult, rankResult, historyResult, progressResult, achievementResult, learningResult] = await Promise.all([
       dependencies.postgres.query<{ rating: number; games_played: number }>(`
         SELECT rating, games_played FROM user_ratings
         WHERE user_id = $1 AND category_id IS NULL
@@ -131,6 +131,20 @@ export async function registerCommunityRoutes(
         WHERE ua.user_id = $1
         ORDER BY a.sort_order, ua.unlocked_at
       `, [user.id]),
+      dependencies.postgres.query<{
+        assessments: number; answered: number; correct: number; active: boolean;
+      }>(`
+        SELECT
+          count(DISTINCT ls.id) FILTER (WHERE ls.status = 'completed')::int AS assessments,
+          count(lsq.question_id) FILTER (WHERE lsq.answered_at IS NOT NULL)::int AS answered,
+          count(lsq.question_id) FILTER (WHERE lsq.is_correct)::int AS correct,
+          coalesce(bool_or(ls.status = 'active'), false) AS active
+        FROM users u
+        LEFT JOIN learning_sessions ls ON ls.user_id = u.id
+        LEFT JOIN learning_session_questions lsq ON lsq.session_id = ls.id
+        WHERE u.id = $1
+        GROUP BY u.id
+      `, [user.id]),
     ]);
 
     const overall = overallResult.rows[0] ?? { rating: 1000, games_played: 0 };
@@ -138,6 +152,7 @@ export async function registerCommunityRoutes(
       runs: 0, total_score: 0, best_streak: 0, tasks: 0, correct: 0, duration_ms: '0',
     };
     const progress = progressResult.rows[0];
+    const learning = learningResult.rows[0] ?? { assessments: 0, answered: 0, correct: 0, active: false };
     return reply.header('cache-control', 'public, max-age=30').send({
       profile: {
         username: user.username,
@@ -190,6 +205,13 @@ export async function registerCommunityRoutes(
             divisionAfter: match.division_after,
             playedAt: match.created_at.toISOString(),
           })),
+        },
+        learning: {
+          assessments: learning.assessments,
+          answered: learning.answered,
+          correct: learning.correct,
+          accuracy: learning.answered > 0 ? Math.round((learning.correct / learning.answered) * 100) : 0,
+          active: learning.active,
         },
       },
     });

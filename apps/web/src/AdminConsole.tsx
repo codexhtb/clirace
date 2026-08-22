@@ -4,6 +4,7 @@ import {
   UserCog, Users, XCircle,
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { currentUser } from './auth-client';
 
 interface AdminUser {
   id: string;
@@ -74,15 +75,13 @@ export function AdminConsole() {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/auth/me', { signal: controller.signal })
-      .then(async (response) => {
-        setAuthStatus(response.status);
-        const payload = await response.json() as { user: AdminUser | null };
-        setUser(payload.user);
-      })
-      .catch(() => { setAuthStatus(503); setUser(null); });
-    return () => controller.abort();
+    let active = true;
+    currentUser().then((payload) => {
+      if (!active) return;
+      setAuthStatus(200);
+      setUser(payload.user as AdminUser | null);
+    }).catch(() => { if (active) { setAuthStatus(503); setUser(null); } });
+    return () => { active = false; };
   }, []);
 
   if (user === undefined) return <AdminState icon={<LoaderCircle className="animate-spin" />} title="Проверяем доступ" />;

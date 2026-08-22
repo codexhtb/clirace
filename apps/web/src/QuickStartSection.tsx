@@ -1,4 +1,4 @@
-import { ArrowRight, Bolt, Boxes, GitBranch, Shuffle, Terminal, TimerReset } from 'lucide-react';
+import { ArrowRight, Bolt, Shuffle, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const presets = [
@@ -11,36 +11,12 @@ const presets = [
     href: '/play?category=linux&difficulty=Easy&mode=mixed&count=5',
   },
   {
-    icon: TimerReset,
-    eyebrow: 'Быстрый темп',
-    title: 'Скоростной круг',
-    description: 'Десять коротких задач без длинной теории. Ответ обычно помещается в одну команду.',
-    tags: ['Все темы', 'Быстро', '10 заданий'],
-    href: '/play?category=all&difficulty=Easy&mode=quick&count=10',
-  },
-  {
     icon: Terminal,
     eyebrow: 'Настоящий терминал',
     title: 'Shell-разминка',
     description: 'Простые действия с настоящими файлами в безопасной Linux-песочнице и понятные подсказки.',
     tags: ['Shell', 'Легко', '5 заданий'],
     href: '/play?category=all&difficulty=Easy&mode=real_shell&count=5',
-  },
-  {
-    icon: GitBranch,
-    eyebrow: 'Без паники',
-    title: 'Git для новичка',
-    description: 'Статус, история, добавление файлов и базовые действия без сложных ветвлений.',
-    tags: ['Git', 'Легко', '5 заданий'],
-    href: '/play?category=git&difficulty=Easy&mode=mixed&count=5',
-  },
-  {
-    icon: Boxes,
-    eyebrow: 'Текстовые фокусы',
-    title: 'Bash-конструктор',
-    description: 'grep, head, tail, sort и другие маленькие инструменты на весёлых файлах-примерах.',
-    tags: ['Bash', 'Легко', '10 заданий'],
-    href: '/play?category=bash&difficulty=Easy&mode=quick&count=10',
   },
   {
     icon: Shuffle,
@@ -70,9 +46,9 @@ export function QuickStartSection() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">Быстрый старт</p>
-            <h2>Выберите настроение. Остальное уже настроено.</h2>
+            <h2>Три простых способа начать.</h2>
           </div>
-          <p>Мы собрали {total ? `${total} заданий` : 'большую библиотеку заданий'} в короткие понятные забеги. Начните с простого и повышайте сложность, когда станет легко.</p>
+          <p>{total ? `${total} заданий` : 'Большая библиотека заданий'} уже разложены по темам и сложности. Для первого раза достаточно выбрать один вариант.</p>
         </div>
 
         <div className="mt-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
