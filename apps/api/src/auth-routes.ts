@@ -154,7 +154,7 @@ export async function registerAuthRoutes(
       max: 5,
       timeWindow: '1 hour',
       keyGenerator: (request) => {
-        const token = request.cookies[config.AUTH_COOKIE_NAME];
+        const token = request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${config.AUTH_COOKIE_NAME}=`));
         return token ? createHash('sha256').update(token).digest('hex') : request.ip;
       },
     } },
