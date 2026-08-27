@@ -1,5 +1,6 @@
 import Docker, { type Container } from 'dockerode';
 import { Pool } from 'pg';
+import { PassThrough } from 'node:stream';
 import { listSandboxChallenges, type SandboxChallenge } from './sandbox-challenges.js';
 import { CheckerService, type CheckerExecOptions, type CheckerExecResult } from './checker-service.js';
 import { checkerContract, linuxCoreRuntime, type ChallengeCheckerContract } from './checker-contract.js';
@@ -52,7 +53,9 @@ async function verifyChallenge(
   try {
     container = await docker.createContainer({
       Image: image,
-      Cmd: ['/bin/bash', '-lc', `set -e\n${challenge.setupScript}\ntouch /tmp/clirace-integrity-ready\nexec sleep 120`],
+      Cmd: ['/bin/bash', '-lc', `set -e\n${challenge.setupScript}\ntouch /tmp/clirace-integrity-ready\nexec tail -f /dev/null`],
+      Tty: true,
+      OpenStdin: true,
       Labels: {
         'com.clirace.sandbox-test': 'integrity',
         'com.clirace.challenge': challenge.id,
@@ -140,23 +143,25 @@ async function execArgv(
     Cmd: ['/usr/bin/timeout', '--signal=KILL', `${Math.max(100, options.timeoutMs) / 1_000}s`, ...argv],
     AttachStdout: true,
     AttachStderr: true,
-    Tty: true,
+    Tty: false,
   });
   const stream = await execution.start({ hijack: true, stdin: false });
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
   const chunks: Buffer[] = [];
   let captured = 0;
   let truncated = false;
+  const capture = (include: boolean) => (chunk: Buffer) => {
+    const buffer = Buffer.from(chunk);
+    const remaining = Math.max(0, options.maxOutputBytes - captured);
+    if (buffer.length > remaining) truncated = true;
+    if (include && remaining > 0) chunks.push(buffer.subarray(0, remaining));
+    captured += Math.min(buffer.length, remaining);
+  };
+  stdout.on('data', capture(true));
+  stderr.on('data', capture(false));
+  container.modem.demuxStream(stream, stdout, stderr);
   await new Promise<void>((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => {
-      const buffer = Buffer.from(chunk);
-      const remaining = Math.max(0, options.maxOutputBytes - captured);
-      if (buffer.length > remaining) truncated = true;
-      if (remaining > 0) {
-        const part = buffer.subarray(0, remaining);
-        chunks.push(part);
-        captured += part.length;
-      }
-    });
     stream.once('end', resolve);
     stream.once('error', reject);
   });

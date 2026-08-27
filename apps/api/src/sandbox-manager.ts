@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, createHash, timingSafeEqual } from 'node:crypto';
+import { PassThrough } from 'node:stream';
 import Docker, { type Container } from 'dockerode';
 import type { RawData, WebSocket } from 'ws';
 import type { AppConfig } from './config.js';
@@ -1237,16 +1238,43 @@ async function runContainerArgv(
     Cmd: ['/usr/bin/timeout', '--signal=KILL', timeout, ...argv],
     AttachStdout: true,
     AttachStderr: true,
-    Tty: true,
+    Tty: false,
   });
   const stream = await execution.start({ hijack: true, stdin: false });
-  const capture = await captureBoundedStream(stream, options.maxOutputBytes);
+  const capture = await captureBoundedDockerStream(container, stream, options.maxOutputBytes);
   const inspection = await waitForExecution(execution);
   return {
     exitCode: inspection.ExitCode ?? 125,
     output: capture.output,
     truncated: capture.truncated,
   };
+}
+
+async function captureBoundedDockerStream(
+  container: Container,
+  stream: NodeJS.ReadableStream,
+  maxBytes: number,
+): Promise<{ output: string; truncated: boolean }> {
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
+  const chunks: Buffer[] = [];
+  let capturedBytes = 0;
+  let truncated = false;
+  const capture = (include: boolean) => (chunk: Buffer) => {
+    const buffer = Buffer.from(chunk);
+    const remaining = Math.max(0, maxBytes - capturedBytes);
+    if (buffer.length > remaining) truncated = true;
+    if (include && remaining > 0) chunks.push(buffer.subarray(0, remaining));
+    capturedBytes += Math.min(buffer.length, remaining);
+  };
+  stdout.on('data', capture(true));
+  stderr.on('data', capture(false));
+  container.modem.demuxStream(stream, stdout, stderr);
+  await new Promise<void>((resolve, reject) => {
+    stream.once('end', resolve);
+    stream.once('error', reject);
+  });
+  return { output: Buffer.concat(chunks).toString('utf8'), truncated };
 }
 
 async function captureBoundedStream(

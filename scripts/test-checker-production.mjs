@@ -6,7 +6,7 @@ assert.ok(base.startsWith('https://'), 'Set CLIRACE_URL=https://your-domain.exam
 const origin = new URL(base).origin;
 const wsBase = origin.replace(/^https:/, 'wss:');
 const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-const username = `checker_e2e_${suffix}`;
+const username = `chk_${suffix}`;
 const password = 'Checker-E2E-2026!';
 let cookie = '';
 
