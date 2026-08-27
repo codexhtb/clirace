@@ -52,8 +52,8 @@ const checkerCases: CheckerCase[] = [
   { name: 'user_exists', checker: { id: 'check', type: 'user_exists', user: 'runner' }, passing: async () => ok('runner:x:1000:1000::/home/runner:/bin/bash'), failing: async () => no() },
   { name: 'group_exists', checker: { id: 'check', type: 'group_exists', group: 'devops' }, passing: async () => ok('devops:x:1001:'), failing: async () => no() },
   { name: 'user_in_group', checker: { id: 'check', type: 'user_in_group', user: 'runner', group: 'devops' }, passing: async () => ok('runner devops\n'), failing: async () => ok('runner\n') },
-  { name: 'process_running', checker: { id: 'check', type: 'process_running', process: 'worker' }, passing: async () => ok('42\n'), failing: async () => no() },
-  { name: 'process_not_running', checker: { id: 'check', type: 'process_not_running', process: 'worker' }, passing: async () => no(), failing: async () => ok('42\n') },
+  { name: 'process_running', checker: { id: 'check', type: 'process_running', process: 'worker' }, passing: async () => ok('S\n'), failing: async () => no() },
+  { name: 'process_not_running', checker: { id: 'check', type: 'process_not_running', process: 'worker' }, passing: async () => ok('Z\n'), failing: async () => ok('S\n') },
   { name: 'port_listening', checker: { id: 'check', type: 'port_listening', protocol: 'tcp', port: 8081, bindAddress: '127.0.0.1' }, passing: async () => ok('LISTEN 0 128 127.0.0.1:8081 0.0.0.0:*\n'), failing: async () => ok('LISTEN 0 128 127.0.0.1:3000 0.0.0.0:*\n') },
   { name: 'package_installed', checker: { id: 'check', type: 'package_installed', package: 'curl' }, passing: async () => ok('install ok installed'), failing: async () => no() },
 ];

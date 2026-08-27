@@ -74,7 +74,7 @@ checkerContract(linuxCoreRuntime, [
 
 ## Безопасность и лимиты
 
-- команды — фиксированные массивы argv (`test`, `stat`, `head`, `readlink`, `getent`, `id`, `pgrep`, `ss`, `dpkg-query`);
+- команды — фиксированные массивы argv (`test`, `stat`, `head`, `readlink`, `getent`, `id`, `ps`, `ss`, `dpkg-query`);
 - `shell=false` по конструкции Docker Exec: `/bin/sh` и `/bin/bash` не участвуют в V1 checker execution;
 - абсолютные пути ограничены 512 символами и не допускают управляющие символы;
 - имена пользователей, групп, процессов, пакетов, адреса и порты проходят allowlist-валидацию;

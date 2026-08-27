@@ -100,9 +100,11 @@ export class CheckerService {
       }
       case 'process_running':
       case 'process_not_running': {
-        const result = await exec(['/usr/bin/pgrep', '-x', checker.process]);
+        const result = await exec(['/usr/bin/ps', '-C', checker.process, '-o', 'stat=']);
         if (result.exitCode > 1 || result.truncated) return errorResult(checker, 'process_inspection_error');
-        const running = result.exitCode === 0;
+        const running = result.exitCode === 0 && result.output
+          .split(/\s+/)
+          .some((state) => state.length > 0 && !state.startsWith('Z'));
         const passed = checker.type === 'process_running' ? running : !running;
         return passed ? passedResult(checker) : failedResult(checker, running ? 'process_still_running' : 'process_not_running');
       }
