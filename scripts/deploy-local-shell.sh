@@ -105,6 +105,20 @@ for attempt in $(seq 1 30); do
       echo 'Challenge Runtime Contract V1 production validation passed.'
     fi
 
+    checker_e2e_cleanup_marker=/var/lib/clirace/checker-runtime-contract-v1-e2e-cleaned
+    if [[ ! -f "$checker_e2e_cleanup_marker" ]]; then
+      echo 'Removing orphaned Challenge Runtime Contract V1 test accounts...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T postgres \
+        sh -c 'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set ON_ERROR_STOP=1' <<'SQL'
+DELETE FROM users
+WHERE username LIKE 'chk\_%' ESCAPE '\'
+  AND email LIKE '%@e2e.invalid';
+SQL
+      install -d -m 0755 /var/lib/clirace
+      touch "$checker_e2e_cleanup_marker"
+      echo 'Challenge Runtime Contract V1 test-account cleanup passed.'
+    fi
+
     validation_marker=/var/lib/clirace/sandbox-platform-v2-validated
     if [[ ! -f "$validation_marker" ]]; then
       echo 'Running one-time Sandbox Platform V2 production validation...'

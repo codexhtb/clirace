@@ -51,56 +51,71 @@ try {
     const socket = new WebSocket(`${wsBase}${ticket.websocketPath}`, { headers: { Origin: origin, Cookie: cookie } });
     const state = { failed: undefined, passed: undefined, repeated: undefined };
     let output = '';
+    let settled = false;
     let commandSent = false;
     let solutionCheckSent = false;
     let secondCheckSent = false;
-    const timer = setTimeout(() => reject(new Error(`Checker E2E timed out. Output: ${output.slice(-500)}`)), 45_000);
+    let timer;
     const finish = () => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
       socket.close(1000, 'checker_e2e_complete');
       resolve(state);
     };
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.close();
+      reject(error);
+    };
+    timer = setTimeout(() => fail(new Error(`Checker E2E timed out. Output: ${output.slice(-500)}`)), 45_000);
     socket.on('open', () => socket.send(JSON.stringify({ type: 'auth', token: ticket.token, cols: 100, rows: 28 })));
     socket.on('message', (data, binary) => {
-      if (binary) {
-        output += data.toString();
-        if (commandSent && output.includes('CHECKER_SOLUTION_READY') && !solutionCheckSent) {
-          solutionCheckSent = true;
-          socket.send(JSON.stringify({ type: 'check' }));
+      try {
+        if (binary) {
+          output += data.toString();
+          if (commandSent && output.includes('CHECKER_SOLUTION_READY') && !solutionCheckSent) {
+            solutionCheckSent = true;
+            socket.send(JSON.stringify({ type: 'check' }));
+          }
+          return;
         }
-        return;
-      }
-      const message = JSON.parse(data.toString());
-      if (message.type === 'ready') socket.send(JSON.stringify({ type: 'check' }));
-      if (message.type !== 'check_result') return;
-      if (!state.failed) {
-        state.failed = message;
-        assert.equal(message.passed, false);
-        assert.equal(message.error, false);
-        assert.ok(Array.isArray(message.checks) && message.checks.some((check) => check.passed === false));
-        commandSent = true;
-        socket.send(JSON.stringify({ type: 'input', data: "chmod u=rw,go= /workspace/secret.env && printf 'CHECKER_SOLUTION_READY\\n'\r" }));
-        return;
-      }
-      if (!state.passed) {
-        state.passed = message;
-        assert.equal(message.passed, true);
-        assert.ok(message.scoreAwarded > 0);
-        secondCheckSent = true;
-        socket.send(JSON.stringify({ type: 'check' }));
-        return;
-      }
-      if (secondCheckSent) {
-        state.repeated = message;
-        assert.equal(message.passed, true);
-        assert.equal(message.scoreAwarded, state.passed.scoreAwarded);
-        assert.equal(message.alreadyCompleted, true);
-        finish();
+        const message = JSON.parse(data.toString());
+        if (message.type === 'ready') socket.send(JSON.stringify({ type: 'check' }));
+        if (message.type !== 'check_result') return;
+        if (!state.failed) {
+          state.failed = message;
+          assert.equal(message.passed, false);
+          assert.equal(message.error, false);
+          assert.ok(Array.isArray(message.checks) && message.checks.some((check) => check.passed === false));
+          commandSent = true;
+          socket.send(JSON.stringify({ type: 'input', data: "chmod u=rw,go= /workspace/secret.env && printf 'CHECKER_SOLUTION_READY\\n'\r" }));
+          return;
+        }
+        if (!state.passed) {
+          state.passed = message;
+          assert.equal(message.passed, true);
+          assert.ok(message.scoreAwarded > 0);
+          secondCheckSent = true;
+          socket.send(JSON.stringify({ type: 'check' }));
+          return;
+        }
+        if (secondCheckSent) {
+          state.repeated = message;
+          assert.equal(message.passed, true);
+          assert.equal(message.scoreAwarded, state.passed.scoreAwarded);
+          assert.equal(message.alreadyCompleted, true);
+          finish();
+        }
+      } catch (error) {
+        fail(error);
       }
     });
-    socket.on('error', reject);
+    socket.on('error', fail);
     socket.on('close', (code, reason) => {
-      if (!state.repeated) reject(new Error(`Checker socket closed early: ${code} ${reason.toString()}`));
+      if (!settled && !state.repeated) fail(new Error(`Checker socket closed early: ${code} ${reason.toString()}`));
     });
   });
 
