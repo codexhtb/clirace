@@ -1,5 +1,5 @@
 import { ArrowRight, LoaderCircle, Radar, ShieldCheck, Swords, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 type MatchmakingStatus =
@@ -16,12 +16,17 @@ type MatchmakingStatus =
 
 interface ApiError { code?: string; message?: string; battleId?: string; roomCode?: string }
 
-export function QuickMatchPanel() {
+export function QuickMatchPanel({ autoEnqueue = false, onIntentConsumed }: {
+  autoEnqueue?: boolean;
+  onIntentConsumed?: () => void;
+}) {
   const navigate = useNavigate();
   const [status, setStatus] = useState<MatchmakingStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const enqueueInFlightRef = useRef(false);
+  const autoIntentHandledRef = useRef(false);
 
   const loadStatus = useCallback(async () => {
     const response = await fetch('/api/matchmaking/status', { cache: 'no-store' });
@@ -71,12 +76,15 @@ export function QuickMatchPanel() {
     return () => window.clearTimeout(transition);
   }, [navigate, status]);
 
-  const enqueue = async () => {
+  const enqueue = useCallback(async () => {
+    if (enqueueInFlightRef.current) return false;
+    enqueueInFlightRef.current = true;
     setBusy(true);
     setError(null);
     try {
       setStatus(await requestMatchmaking('/api/matchmaking/queue', { method: 'POST' }));
       setNow(Date.now());
+      return true;
     } catch (reason) {
       if (reason instanceof MatchmakingRequestError && reason.code === 'active_battle' && reason.roomCode) {
         setStatus({
@@ -84,13 +92,31 @@ export function QuickMatchPanel() {
           battleId: reason.battleId ?? '', roomCode: reason.roomCode,
           opponent: null, matchedAt: null, source: 'active_battle',
         });
+        return true;
       } else {
         setError(readableError(reason));
+        return false;
       }
     } finally {
+      enqueueInFlightRef.current = false;
       setBusy(false);
     }
-  };
+  }, []);
+
+  const startSearch = useCallback(async () => {
+    const started = await enqueue();
+    if (started && autoEnqueue) onIntentConsumed?.();
+  }, [autoEnqueue, enqueue, onIntentConsumed]);
+
+  useEffect(() => {
+    if (!autoEnqueue || !status || autoIntentHandledRef.current) return;
+    autoIntentHandledRef.current = true;
+    if (status.status !== 'idle') {
+      onIntentConsumed?.();
+      return;
+    }
+    void startSearch();
+  }, [autoEnqueue, onIntentConsumed, startSearch, status]);
 
   const cancel = async () => {
     setBusy(true);
@@ -155,7 +181,7 @@ export function QuickMatchPanel() {
         <p>Быстрый PvP без изменения MMR: три случайных shell-задачи и отдельный терминал для каждого игрока.</p>
         <div className="matchmaking-trust"><span><ShieldCheck size={13} /> один матч на игрока</span><span>без MMR</span><span>результат определяет сервер</span></div>
       </div>
-      <button className="primary-button" type="button" disabled={busy} onClick={() => void enqueue()}>
+      <button className="primary-button" type="button" disabled={busy} onClick={() => void startSearch()}>
         {busy ? <LoaderCircle className="animate-spin" size={16} /> : <Radar size={16} />}
         {busy ? 'Входим в очередь…' : 'Найти соперника'}
       </button>

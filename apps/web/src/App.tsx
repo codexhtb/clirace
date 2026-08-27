@@ -161,8 +161,9 @@ function HomePage() {
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <Link className="primary-button" to="/play">Начать практику <ArrowRight size={16} /></Link>
-                <Link className="secondary-button" to="/play?compete=quick#competition"><Swords size={15} /> Найти соперника</Link>
+                <Link className="secondary-button" to="/play?match=quick#competition"><Swords size={15} /> Найти соперника</Link>
               </div>
+              <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-acid">ONLINE PvP · реальный соперник · Quick без MMR</p>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">
                 <SystemStatus /><span>Задачи по 30–180 секунд</span><span>Без настройки окружения</span>
               </div>
@@ -177,7 +178,7 @@ function HomePage() {
           <div className="product-paths mt-6">
             <Link to="/play#practice"><Terminal size={19} /><div><strong>Практика</strong><span>Короткие задачи в настоящем Linux shell.</span></div><ArrowRight size={15} /></Link>
             <Link to="/learn"><BookOpen size={19} /><div><strong>Обучение</strong><span>Вопросы с разбором каждого ответа.</span></div><ArrowRight size={15} /></Link>
-            <Link to="/play?compete=quick#competition"><Trophy size={19} /><div><strong>Соревнования</strong><span>Quick без MMR или Ranked с MMR.</span></div><ArrowRight size={15} /></Link>
+            <Link to="/play?compete=quick#competition"><Trophy size={19} /><div><strong>ONLINE PvP</strong><span>Quick без MMR, Ranked с MMR или матч с другом.</span></div><ArrowRight size={15} /></Link>
           </div>
         </section>
 

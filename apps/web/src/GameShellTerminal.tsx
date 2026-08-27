@@ -4,6 +4,7 @@ import '@xterm/xterm/css/xterm.css';
 import { CheckCircle2, Lightbulb, LoaderCircle, Play, ShieldCheck, SkipForward, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { humanizeError } from './errors';
+import { CONTINUE_SHELL_RETRY_DELAYS_MS, sandboxStartErrorMessage } from './flow-intents';
 
 type TerminalStatus = 'idle' | 'connecting' | 'ready' | 'closed' | 'error';
 type CheckStatus = 'idle' | 'checking' | 'passed' | 'failed';
@@ -14,9 +15,13 @@ interface SessionTicket {
   websocketPath: string;
 }
 
-export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: {
+type SandboxSessionPayload = SessionTicket & { message?: string; code?: string; error?: string };
+
+export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAutoStartConsumed, onCompleted, onSkip }: {
   gameSessionId: string;
   hint?: string;
+  autoStart?: boolean;
+  onAutoStartConsumed?: () => void;
   onCompleted: (scoreAwarded: number) => void;
   onSkip: () => void;
 }) {
@@ -26,6 +31,8 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
   const socketRef = useRef<WebSocket | null>(null);
   const passedRef = useRef(false);
   const scoreRef = useRef(0);
+  const startInFlightRef = useRef(false);
+  const autoStartAttemptedRef = useRef(false);
   const [status, setStatus] = useState<TerminalStatus>('idle');
   const [checkStatus, setCheckStatus] = useState<CheckStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -91,8 +98,9 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
     };
   }, [sendResize]);
 
-  const start = useCallback(async () => {
-    if (status === 'connecting' || status === 'ready') return;
+  const start = useCallback(async (source: 'manual' | 'continue-auto' = 'manual') => {
+    if (startInFlightRef.current || socketRef.current?.readyState === WebSocket.OPEN) return;
+    startInFlightRef.current = true;
     setStatus('connecting');
     setCheckStatus('idle');
     setError(null);
@@ -100,18 +108,31 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
     passedRef.current = false;
     scoreRef.current = 0;
     terminalRef.current?.clear();
-    terminalRef.current?.writeln('\x1b[38;2;82;211;247mСоздаём изолированный контейнер…\x1b[0m');
+    terminalRef.current?.writeln('\x1b[38;2;82;211;247mГотовим терминал…\x1b[0m');
     try {
-      const response = await fetch('/api/sandbox/sessions', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ gameSessionId }),
-      });
-      const payload = await response.json().catch(() => null) as (SessionTicket & { message?: string }) | null;
-      if (!response.ok || !payload?.token) throw new Error(payload?.message ?? 'Не удалось создать shell-сессию.');
+      let payload: SandboxSessionPayload | null = null;
+      for (let attempt = 0; ; attempt += 1) {
+        const response = await fetch('/api/sandbox/sessions', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ gameSessionId }),
+        });
+        payload = await response.json().catch(() => null) as SandboxSessionPayload | null;
+        const code = payload?.code ?? payload?.error;
+        if (response.ok && payload?.token) break;
+        const retryDelay = source === 'continue-auto' && code === 'user_capacity_full'
+          ? CONTINUE_SHELL_RETRY_DELAYS_MS[attempt]
+          : undefined;
+        if (retryDelay !== undefined) {
+          await new Promise((resolve) => window.setTimeout(resolve, retryDelay));
+          continue;
+        }
+        throw new SandboxStartError(code);
+      }
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const socket = new WebSocket(`${protocol}//${window.location.host}${payload.websocketPath}`);
       socket.binaryType = 'arraybuffer';
       socketRef.current = socket;
       socket.onopen = () => {
+        startInFlightRef.current = false;
         const terminal = terminalRef.current;
         socket.send(JSON.stringify({ type: 'auth', token: payload.token, cols: terminal?.cols ?? 100, rows: terminal?.rows ?? 28 }));
       };
@@ -140,21 +161,33 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
         }
       };
       socket.onerror = () => {
+        startInFlightRef.current = false;
         setStatus('error');
         setError('Shell временно недоступен. Попробуйте снова через несколько секунд.');
       };
       socket.onclose = () => {
+        startInFlightRef.current = false;
         socketRef.current = null;
         setStatus((current) => current === 'error' ? current : 'closed');
         if (passedRef.current) onCompleted(scoreRef.current);
       };
     } catch (startError) {
+      startInFlightRef.current = false;
       setStatus('error');
-      const message = humanizeError(startError, 'Shell временно недоступен. Попробуйте снова через несколько секунд.');
+      const message = startError instanceof SandboxStartError
+        ? sandboxStartErrorMessage(startError.code)
+        : humanizeError(startError, 'Не удалось подготовить терминал. Попробуйте ещё раз.');
       setError(message);
       terminalRef.current?.writeln(`\r\n\x1b[31m${message}\x1b[0m`);
     }
-  }, [gameSessionId, onCompleted, sendResize, status]);
+  }, [gameSessionId, onCompleted, sendResize]);
+
+  useEffect(() => {
+    if (!autoStart || autoStartAttemptedRef.current) return;
+    autoStartAttemptedRef.current = true;
+    onAutoStartConsumed?.();
+    void start('continue-auto');
+  }, [autoStart, onAutoStartConsumed, start]);
 
   const check = () => {
     if (socketRef.current?.readyState !== WebSocket.OPEN || checkStatus === 'checking') return;
@@ -168,7 +201,7 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
     <div className="game-shell mt-8">
       {hint && <details className="challenge-hint px-4 pt-4 sm:px-5"><summary><Lightbulb size={13} /> Подсказка</summary><p>{hint}</p></details>}
       <div className="game-shell-status" role="status" aria-live="polite">
-        <span>{status === 'idle' ? 'Окружение ещё не запущено' : status === 'connecting' ? 'Создаём окружение…' : status === 'ready' ? 'Окружение готово' : status === 'error' ? 'Shell временно недоступен' : 'Сессия завершена'}</span>
+        <span>{status === 'idle' ? 'Терминал ещё не запущен' : status === 'connecting' ? 'Готовим терминал…' : status === 'ready' ? 'Терминал готов' : status === 'error' ? 'Терминал не запущен' : 'Сессия завершена'}</span>
         {remainingSeconds !== null && status === 'ready' && <strong className={remainingSeconds < 120 ? 'text-amber-300' : ''}>Сессия {formatRemaining(remainingSeconds)}</strong>}
       </div>
       <div className="game-shell-host" ref={hostRef} />
@@ -183,11 +216,17 @@ export function GameShellTerminal({ gameSessionId, hint, onCompleted, onSkip }: 
             {checkStatus === 'checking' ? 'Проверяем…' : checkStatus === 'passed' ? 'Выполнено' : 'Проверить'}
           </button>}
           {active ? <button type="button" className="terminal-action terminal-action-stop" onClick={stop}><Square size={13} /> Завершить</button>
-            : <button type="button" className="terminal-action" onClick={() => void start()}><Play size={13} /> {status === 'idle' ? 'Запустить shell' : 'Запустить снова'}</button>}
+            : <button type="button" className="terminal-action" onClick={() => void start('manual')}><Play size={13} /> {status === 'idle' ? 'Запустить shell' : 'Повторить'}</button>}
         </div>
       </div>
     </div>
   );
+}
+
+class SandboxStartError extends Error {
+  constructor(readonly code?: string) {
+    super('Sandbox start failed.');
+  }
 }
 
 function formatRemaining(seconds: number) {

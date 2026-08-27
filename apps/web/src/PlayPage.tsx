@@ -8,7 +8,8 @@ import { QuickMatchPanel } from './QuickMatchPanel';
 import { RankedMatchPanel } from './RankedMatchPanel';
 import { PageLoader } from './Ui';
 import { difficultyLabel } from './product-language';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { consumeQuickMatchIntent, hasQuickMatchIntent, shouldAutoStartNextShell } from './flow-intents';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
@@ -158,7 +159,10 @@ export function PlayPage() {
 function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmit }: {
   categories: Category[]; shellEnabled: boolean; busy: boolean; error: string | null; newPlayer: boolean; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const requestedCompetition = new URLSearchParams(window.location.search).get('compete');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const requestedCompetition = new URLSearchParams(location.search).get('compete');
+  const quickMatchIntent = hasQuickMatchIntent(location.search);
   const [matchmakingMode, setMatchmakingMode] = useState<'quick' | 'ranked'>(requestedCompetition === 'ranked' ? 'ranked' : 'quick');
   useEffect(() => {
     if (requestedCompetition === 'quick' || requestedCompetition === 'ranked') return;
@@ -246,12 +250,17 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
       </form>
 
       <section id="competition" className="mt-12 scroll-mt-28" aria-labelledby="competition-title">
-        <div className="mb-5"><p className="eyebrow">Соревнования</p><h2 id="competition-title" className="mt-2 text-2xl font-semibold text-white">Сыграйте против другого игрока.</h2><p className="mt-2 text-sm text-slate-500">Quick — без MMR. Ranked — с изменением MMR.</p></div>
+        <div className="mb-5"><p className="eyebrow">ONLINE PvP</p><h2 id="competition-title" className="mt-2 text-2xl font-semibold text-white">Сыграйте против реального игрока.</h2><p className="mt-2 text-sm text-slate-500">Выберите быстрый поиск, рейтинговую игру или приватный матч с другом.</p></div>
+        <div className="mb-5 grid gap-2 text-xs text-slate-400 sm:grid-cols-3">
+          <div className="rounded-md border border-line bg-panel px-4 py-3"><strong className="block text-white">Quick Match</strong><span>реальный соперник · без MMR</span></div>
+          <div className="rounded-md border border-line bg-panel px-4 py-3"><strong className="block text-white">Ranked</strong><span>реальный соперник · влияет на MMR</span></div>
+          <Link className="rounded-md border border-line bg-panel px-4 py-3 transition-colors hover:border-acid/40" to="/battle"><strong className="block text-white">Private</strong><span>пригласите друга по коду</span></Link>
+        </div>
         <div className="matchmaking-mode-tabs" role="tablist" aria-label="Режим соревнования">
           <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'quick'} onClick={() => setMatchmakingMode('quick')}>Quick Match <small>без MMR</small></button>
           <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'ranked'} onClick={() => setMatchmakingMode('ranked')}>Ranked <small>влияет на MMR</small></button>
         </div>
-        {matchmakingMode === 'quick' ? <QuickMatchPanel /> : <RankedMatchPanel />}
+        {matchmakingMode === 'quick' ? <QuickMatchPanel autoEnqueue={quickMatchIntent} onIntentConsumed={() => navigate({ pathname: location.pathname, search: consumeQuickMatchIntent(location.search), hash: location.hash }, { replace: true })} /> : <RankedMatchPanel />}
         <Link className="mt-4 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" to="/battle"><Swords size={15} /> Создать приватный матч с другом <ChevronRight size={14} /></Link>
       </section>
 
@@ -289,6 +298,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
   const [answer, setAnswer] = useState('');
   const [elapsed, setElapsed] = useState(() => Date.now() - new Date(task.presentedAt).getTime());
   const [pendingGame, setPendingGame] = useState<GameState | null>(null);
+  const [autoStartShellTaskSlug, setAutoStartShellTaskSlug] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -379,7 +389,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
           {task.type === 'real_shell' ? (
             <div className={pendingGame ? 'pointer-events-none' : ''} aria-disabled={pendingGame !== null}>
               <Suspense fallback={<div className="game-shell mt-8 flex h-[480px] items-center justify-center"><LoaderCircle size={20} className="animate-spin text-acid" /></div>}>
-                <GameShellTerminal gameSessionId={game.session.id} {...(task.hint ? { hint: task.hint } : {})} onCompleted={(score) => void refreshAfterShell(score)} onSkip={() => void request('skip')} />
+                <GameShellTerminal key={task.slug} gameSessionId={game.session.id} autoStart={autoStartShellTaskSlug === task.slug} onAutoStartConsumed={() => setAutoStartShellTaskSlug(null)} {...(task.hint ? { hint: task.hint } : {})} onCompleted={(score) => void refreshAfterShell(score)} onSkip={() => void request('skip')} />
               </Suspense>
             </div>
           ) : (
@@ -397,7 +407,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
               {feedback.kind === 'correct' ? <CheckCircle2 size={16} /> : feedback.kind === 'skip' ? <SkipForward size={16} /> : <Terminal size={16} />}
               <span>{feedback.text}</span>
               {feedback.score ? <strong>+{feedback.score}</strong> : null}
-              {pendingGame && <button type="button" className="terminal-action ml-auto" onClick={() => { setGame(pendingGame); setPendingGame(null); setFeedback(null); }}>Продолжить <ChevronRight size={13} /></button>}
+              {pendingGame && <button type="button" className="terminal-action ml-auto" onClick={() => { setAutoStartShellTaskSlug(shouldAutoStartNextShell(true, pendingGame.task?.type) ? pendingGame.task?.slug ?? null : null); setGame(pendingGame); setPendingGame(null); setFeedback(null); }}>Продолжить <ChevronRight size={13} /></button>}
             </div>
           )}
 
@@ -434,7 +444,7 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link className="secondary-button" to={returnTo ?? '/'}><ArrowLeft size={14} /> {returnTo ? 'Вернуться в курс' : 'На главную'}</Link>
-        <Link className="secondary-button" to="/play?compete=quick#competition"><Swords size={15} /> Quick Match</Link>
+        <Link className="secondary-button" to="/play?match=quick#competition"><Swords size={15} /> Quick Match</Link>
         {returnTo ? <Link className="primary-button" to={returnTo}>Засчитать шаг <CheckCircle2 size={15} /></Link> : <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>}
       </div>
     </section>
@@ -442,7 +452,8 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
 }
 
 function GuestState() {
-  const returnTo = encodeURIComponent('/play');
+  const location = useLocation();
+  const returnTo = encodeURIComponent(`${location.pathname}${location.search}${location.hash}`);
   return (
     <section className="mx-auto max-w-2xl py-14 text-center">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel text-acid"><Terminal size={24} /></div>
