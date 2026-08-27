@@ -95,6 +95,16 @@ for attempt in $(seq 1 30); do
       -f docker-compose.yml \
       -f docker-compose.sandbox.yml \
       ps
+    checker_contract_marker=/var/lib/clirace/checker-runtime-contract-v1-validated
+    if [[ ! -f "$checker_contract_marker" ]]; then
+      echo 'Running one-time Challenge Runtime Contract V1 production validation...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/sandbox-integrity.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$checker_contract_marker"
+      echo 'Challenge Runtime Contract V1 production validation passed.'
+    fi
+
     validation_marker=/var/lib/clirace/sandbox-platform-v2-validated
     if [[ ! -f "$validation_marker" ]]; then
       echo 'Running one-time Sandbox Platform V2 production validation...'
