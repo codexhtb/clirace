@@ -11,11 +11,15 @@ interface ShellTaskRow {
   validation_config: Record<string, unknown>;
   presented_at: Date;
   attempt_count: number;
+  task_status: string;
+  session_status: string;
+  score_awarded: number;
 }
 
 export interface ShellCompletion {
   scoreAwarded: number;
   gameCompleted: boolean;
+  alreadyCompleted?: boolean;
 }
 
 export class ShellGameStateError extends Error {}
@@ -49,16 +53,28 @@ export async function completeShellTask(
     const result = await client.query<ShellTaskRow>(`
       SELECT st.id AS task_id, gs.id AS session_id, gs.user_id, c.id AS challenge_id,
              c.difficulty, c.scoring_config, c.validation_config,
-             st.presented_at, st.attempt_count
+             st.presented_at, st.attempt_count, st.status AS task_status,
+             gs.status AS session_status, st.score_awarded
       FROM game_sessions gs
       JOIN session_tasks st ON st.game_session_id = gs.id
       JOIN challenges c ON c.id = st.challenge_id
       WHERE gs.id = $1 AND gs.user_id = $2 AND st.id = $3
-        AND gs.status = 'active' AND st.status = 'active' AND c.type = 'real_shell'
+        AND c.type = 'real_shell'
       FOR UPDATE OF gs, st
     `, [gameSessionId, userId, sessionTaskId]);
     const task = result.rows[0];
     if (!task || task.validation_config.sandboxChallengeId !== sandboxChallengeId) {
+      throw new ShellGameStateError('Shell task is no longer active.');
+    }
+    if (task.task_status === 'correct') {
+      await client.query('COMMIT');
+      return {
+        scoreAwarded: task.score_awarded,
+        gameCompleted: task.session_status === 'completed',
+        alreadyCompleted: true,
+      };
+    }
+    if (task.task_status !== 'active' || task.session_status !== 'active') {
       throw new ShellGameStateError('Shell task is no longer active.');
     }
 

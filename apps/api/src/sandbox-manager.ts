@@ -13,6 +13,12 @@ import {
 import type { Dependencies } from './services.js';
 import { completeShellTask, recordFailedShellCheck } from './shell-game-service.js';
 import {
+  CheckerService,
+  type CheckerEvaluation,
+  type CheckerExecOptions,
+  type CheckerExecResult,
+} from './checker-service.js';
+import {
   LIVE_SANDBOX_STATES,
   SANDBOX_LIFECYCLE_STATES,
   SandboxMetrics,
@@ -133,6 +139,7 @@ export interface SandboxReconciliationResult {
 
 export class SandboxManager {
   private readonly docker: Docker;
+  private readonly checkerService = new CheckerService();
   private readonly sessions = new Map<string, ActiveSession>();
   private readonly closingSessions = new Map<string, Promise<void>>();
   private readonly metrics = new SandboxMetrics();
@@ -974,8 +981,14 @@ export class SandboxManager {
     if (message.type === 'check' && !session.checking) {
       session.checking = true;
       try {
-        const result = await runContainerCommand(session.container, session.challenge.checkScript);
-        const passed = result.exitCode === 0;
+        const evaluation = session.challenge.runtime && session.challenge.checks
+          ? await this.checkerService.evaluate(
+              { runtime: session.challenge.runtime, checks: session.challenge.checks },
+              (argv, options) => runContainerArgv(session.container, argv, options),
+            )
+          : await evaluateLegacyCheck(session.container, session.challenge.checkScript);
+        const passed = evaluation.outcome === 'passed';
+        const systemError = evaluation.outcome === 'error';
         let completion: BattleRoundCompletion | { scoreAwarded: number; gameCompleted: boolean } | undefined;
         if (session.battle && passed) {
           completion = await this.battleHooks?.onBattleRoundCompleted(session.battle, session.userId);
@@ -988,7 +1001,7 @@ export class SandboxManager {
               session.userId,
               session.challenge.id,
             );
-          } else {
+          } else if (!systemError) {
             await recordFailedShellCheck(
               this.dependencies,
               session.gameSessionId,
@@ -997,13 +1010,31 @@ export class SandboxManager {
             );
           }
         }
+        console.info('sandbox_checker_evaluated', {
+          sessionId: session.id,
+          challengeId: session.challenge.id,
+          contractVersion: session.challenge.runtime?.version ?? 'legacy',
+          outcome: evaluation.outcome,
+          passedChecks: evaluation.results.filter((item) => item.status === 'passed').length,
+          totalChecks: evaluation.results.length,
+          durationMs: evaluation.durationMs,
+        });
         if (session.socket?.readyState === session.socket?.OPEN) {
           session.socket.send(JSON.stringify({
             type: 'check_result',
             passed,
-            message: passed
+            error: systemError,
+            message: systemError
+              ? 'Не удалось проверить среду. Попробуйте ещё раз.'
+              : passed
               ? session.challenge.successMessage
               : 'Условие пока не выполнено. Проверьте результат и попробуйте ещё раз.',
+            checks: evaluation.results.map((item) => ({
+              id: item.id,
+              passed: item.status === 'passed',
+              status: item.status,
+              ...(item.failureHint ? { hint: item.failureHint } : {}),
+            })),
             ...(completion ?? {}),
           }));
         }
@@ -1164,19 +1195,82 @@ async function runContainerCommand(
     Tty: true,
   });
   const stream = await execution.start({ hijack: true, stdin: false });
-  const chunks: Buffer[] = [];
-
-  await new Promise<void>((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-    stream.once('end', resolve);
-    stream.once('error', reject);
-  });
+  const capture = await captureBoundedStream(stream, 2_000);
 
   const inspection = await waitForExecution(execution);
   return {
     exitCode: inspection.ExitCode ?? 1,
-    output: Buffer.concat(chunks).toString('utf8').trim().slice(0, 2_000),
+    output: capture.output.trim(),
   };
+}
+
+async function evaluateLegacyCheck(container: Container, script: string): Promise<CheckerEvaluation> {
+  const startedAt = performance.now();
+  try {
+    const result = await runContainerCommand(container, script);
+    return {
+      outcome: result.exitCode === 0 ? 'passed' : 'failed',
+      results: [{
+        id: 'legacy-check',
+        type: 'file_exists',
+        status: result.exitCode === 0 ? 'passed' : 'failed',
+        code: result.exitCode === 0 ? 'ok' : 'legacy_condition_failed',
+      }],
+      durationMs: Math.round(performance.now() - startedAt),
+    };
+  } catch {
+    return {
+      outcome: 'error',
+      results: [{ id: 'legacy-check', type: 'file_exists', status: 'error', code: 'legacy_execution_error' }],
+      durationMs: Math.round(performance.now() - startedAt),
+    };
+  }
+}
+
+async function runContainerArgv(
+  container: Container,
+  argv: readonly string[],
+  options: CheckerExecOptions,
+): Promise<CheckerExecResult> {
+  const timeout = `${Math.max(100, options.timeoutMs) / 1_000}s`;
+  const execution = await container.exec({
+    Cmd: ['/usr/bin/timeout', '--signal=KILL', timeout, ...argv],
+    AttachStdout: true,
+    AttachStderr: true,
+    Tty: true,
+  });
+  const stream = await execution.start({ hijack: true, stdin: false });
+  const capture = await captureBoundedStream(stream, options.maxOutputBytes);
+  const inspection = await waitForExecution(execution);
+  return {
+    exitCode: inspection.ExitCode ?? 125,
+    output: capture.output,
+    truncated: capture.truncated,
+  };
+}
+
+async function captureBoundedStream(
+  stream: NodeJS.ReadableStream,
+  maxBytes: number,
+): Promise<{ output: string; truncated: boolean }> {
+  const chunks: Buffer[] = [];
+  let capturedBytes = 0;
+  let truncated = false;
+  await new Promise<void>((resolve, reject) => {
+    stream.on('data', (chunk: Buffer) => {
+      const buffer = Buffer.from(chunk);
+      const remaining = Math.max(0, maxBytes - capturedBytes);
+      if (buffer.length > remaining) truncated = true;
+      if (remaining > 0) {
+        const captured = buffer.subarray(0, remaining);
+        chunks.push(captured);
+        capturedBytes += captured.length;
+      }
+    });
+    stream.once('end', resolve);
+    stream.once('error', reject);
+  });
+  return { output: Buffer.concat(chunks).toString('utf8'), truncated };
 }
 
 function terminalStatusForReason(reason: string): 'expired' | 'failed' {

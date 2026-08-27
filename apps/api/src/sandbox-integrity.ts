@@ -1,6 +1,8 @@
 import Docker, { type Container } from 'dockerode';
 import { Pool } from 'pg';
 import { listSandboxChallenges, type SandboxChallenge } from './sandbox-challenges.js';
+import { CheckerService, type CheckerExecOptions, type CheckerExecResult } from './checker-service.js';
+import { checkerContract, linuxCoreRuntime, type ChallengeCheckerContract } from './checker-contract.js';
 
 interface IntegrityResult {
   total: number;
@@ -79,8 +81,39 @@ async function verifyChallenge(
     if (ready.exitCode !== 0) return { id: challenge.id, stage: 'setup', output: ready.output };
     const inspection = await container.inspect();
     assertSecurityInvariants(inspection.HostConfig);
+    if (challenge.runtime && challenge.checks) {
+      const initial = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
+      if (initial.outcome !== 'failed') {
+        return { id: challenge.id, stage: 'initial_checker', output: `expected failed, received ${initial.outcome}` };
+      }
+    }
     const solution = await exec(container, challenge.referenceSolution);
     if (solution.exitCode !== 0) return { id: challenge.id, stage: 'reference_solution', output: solution.output };
+    if (challenge.runtime && challenge.checks) {
+      const contractCheck = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
+      if (contractCheck.outcome !== 'passed') {
+        return { id: challenge.id, stage: 'contract_checker', output: JSON.stringify(contractCheck.results) };
+      }
+      if (challenge.id === 'secure-secret') {
+        const reset = await exec(container, 'chmod 0644 /workspace/secret.env');
+        if (reset.exitCode !== 0) return { id: challenge.id, stage: 'alternative_reset', output: reset.output };
+        const alternative = await exec(container, 'chmod u=rw,go= /workspace/secret.env');
+        if (alternative.exitCode !== 0) return { id: challenge.id, stage: 'alternative_solution', output: alternative.output };
+        const alternativeCheck = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
+        if (alternativeCheck.outcome !== 'passed') {
+          return { id: challenge.id, stage: 'alternative_checker', output: JSON.stringify(alternativeCheck.results) };
+        }
+        const identityProbe = await evaluateContract(container, checkerContract(linuxCoreRuntime, [
+          { id: 'root-user', type: 'user_exists', user: 'root' },
+          { id: 'root-group', type: 'group_exists', group: 'root' },
+          { id: 'root-membership', type: 'user_in_group', user: 'root', group: 'root' },
+          { id: 'curl-package', type: 'package_installed', package: 'curl' },
+        ]));
+        if (identityProbe.outcome !== 'passed') {
+          return { id: challenge.id, stage: 'identity_runtime_probe', output: JSON.stringify(identityProbe.results) };
+        }
+      }
+    }
     const check = await exec(container, challenge.checkScript);
     if (check.exitCode !== 0) return { id: challenge.id, stage: 'checker', output: check.output };
     return undefined;
@@ -89,6 +122,46 @@ async function verifyChallenge(
   } finally {
     await container?.remove({ force: true, v: true }).catch(() => undefined);
   }
+}
+
+async function evaluateContract(container: Container, contract: ChallengeCheckerContract) {
+  return new CheckerService().evaluate(
+    contract,
+    (argv, options) => execArgv(container, argv, options),
+  );
+}
+
+async function execArgv(
+  container: Container,
+  argv: readonly string[],
+  options: CheckerExecOptions,
+): Promise<CheckerExecResult> {
+  const execution = await container.exec({
+    Cmd: ['/usr/bin/timeout', '--signal=KILL', `${Math.max(100, options.timeoutMs) / 1_000}s`, ...argv],
+    AttachStdout: true,
+    AttachStderr: true,
+    Tty: true,
+  });
+  const stream = await execution.start({ hijack: true, stdin: false });
+  const chunks: Buffer[] = [];
+  let captured = 0;
+  let truncated = false;
+  await new Promise<void>((resolve, reject) => {
+    stream.on('data', (chunk: Buffer) => {
+      const buffer = Buffer.from(chunk);
+      const remaining = Math.max(0, options.maxOutputBytes - captured);
+      if (buffer.length > remaining) truncated = true;
+      if (remaining > 0) {
+        const part = buffer.subarray(0, remaining);
+        chunks.push(part);
+        captured += part.length;
+      }
+    });
+    stream.once('end', resolve);
+    stream.once('error', reject);
+  });
+  const state = await waitForExecution(execution);
+  return { exitCode: state.ExitCode ?? 125, output: Buffer.concat(chunks).toString('utf8'), truncated };
 }
 
 async function exec(container: Container, script: string): Promise<{ exitCode: number; output: string }> {

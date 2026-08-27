@@ -1,3 +1,9 @@
+import {
+  checkerContract,
+  linuxCoreRuntime,
+  type ChallengeCheckerContract,
+} from './checker-contract.js';
+
 export type SandboxDifficulty = 'Easy' | 'Medium' | 'Hard';
 
 export interface SandboxChallenge {
@@ -10,6 +16,9 @@ export interface SandboxChallenge {
   successMessage: string;
   setupScript: string;
   checkScript: string;
+  /** Trusted declarative Runtime Contract V1. Legacy challenges fall back to checkScript. */
+  runtime?: ChallengeCheckerContract['runtime'];
+  checks?: ChallengeCheckerContract['checks'];
   /** Executed only by integrity tests; never sent to the browser. */
   referenceSolution: string;
 }
@@ -595,8 +604,66 @@ const baseReferenceSolutions: Readonly<Record<string, string>> = {
   'rename-backups': "for file in /workspace/backups/*.conf.bak; do mv \"$file\" \"${file%.bak}\"; done",
 };
 
+const checkerContractsById: Readonly<Record<string, ChallengeCheckerContract>> = {
+  'build-castle': checkerContract(linuxCoreRuntime, [
+    { id: 'tower-directory', type: 'file_exists', path: '/workspace/castle/tower', kind: 'directory', failureHint: 'Создайте каталог /workspace/castle/tower.' },
+  ]),
+  'name-robot': checkerContract(linuxCoreRuntime, [
+    { id: 'robot-file', type: 'file_exists', path: '/workspace/robot.txt', kind: 'file', failureHint: 'Создайте файл robot.txt.' },
+    { id: 'robot-name', type: 'file_contains', path: '/workspace/robot.txt', expected: 'BEEP-42', failureHint: 'В файле должна быть строка BEEP-42.' },
+  ]),
+  'launch-rocket': checkerContract(linuxCoreRuntime, [
+    { id: 'rocket-left-hangar', type: 'file_not_exists', path: '/workspace/hangar/rocket.txt', failureHint: 'Уберите rocket.txt из ангара.' },
+    { id: 'rocket-on-launchpad', type: 'file_contains', path: '/workspace/launchpad/rocket.txt', expected: 'ready', failureHint: 'Переместите готовую ракету на launchpad.' },
+  ]),
+  'remove-crumbs': checkerContract(linuxCoreRuntime, [
+    { id: 'crumbs-removed', type: 'file_not_exists', path: '/workspace/crumbs.txt', failureHint: 'Удалите crumbs.txt.' },
+    { id: 'cake-preserved', type: 'file_contains', path: '/workspace/cake.txt', expected: 'cake', failureHint: 'Файл cake.txt должен остаться на месте.' },
+  ]),
+  'executable-spell': checkerContract(linuxCoreRuntime, [
+    { id: 'spell-present', type: 'file_exists', path: '/workspace/spell.sh', kind: 'file' },
+    { id: 'spell-mode', type: 'permission_equals', path: '/workspace/spell.sh', mode: '0755', failureHint: 'Установите права 755.' },
+  ]),
+  'readonly-scroll': checkerContract(linuxCoreRuntime, [
+    { id: 'scroll-present', type: 'file_exists', path: '/workspace/scroll.txt', kind: 'file' },
+    { id: 'scroll-mode', type: 'permission_equals', path: '/workspace/scroll.txt', mode: '0444', failureHint: 'Установите права 444.' },
+  ]),
+  'portal-shortcut': checkerContract(linuxCoreRuntime, [
+    { id: 'portal-target', type: 'symlink_points_to', path: '/workspace/portal', target: '/workspace/worlds/mars', failureHint: 'Создайте символическую ссылку portal на каталог mars.' },
+  ]),
+  'hello-terminal': checkerContract(linuxCoreRuntime, [
+    { id: 'hello-file', type: 'file_exists', path: '/workspace/hello.txt', kind: 'file' },
+    { id: 'hello-text', type: 'file_contains', path: '/workspace/hello.txt', expected: 'Привет, терминал!', failureHint: 'Запишите приветствие в hello.txt.' },
+  ]),
+  'delete-junk': checkerContract(linuxCoreRuntime, [
+    { id: 'junk-removed', type: 'file_not_exists', path: '/workspace/junk.txt', failureHint: 'Удалите только junk.txt.' },
+    { id: 'important-preserved', type: 'file_contains', path: '/workspace/important.txt', expected: 'keep me', failureHint: 'Файл important.txt должен сохраниться.' },
+  ]),
+  'directory-mode': checkerContract(linuxCoreRuntime, [
+    { id: 'app-directory', type: 'file_exists', path: '/workspace/app', kind: 'directory', failureHint: 'Создайте каталог /workspace/app.' },
+    { id: 'app-directory-mode', type: 'permission_equals', path: '/workspace/app', mode: '0750', failureHint: 'Установите каталогу права 750.' },
+  ]),
+  'secure-secret': checkerContract(linuxCoreRuntime, [
+    { id: 'secret-present', type: 'file_exists', path: '/workspace/secret.env', kind: 'file' },
+    { id: 'secret-mode', type: 'permission_equals', path: '/workspace/secret.env', mode: '0600', failureHint: 'Оставьте доступ только владельцу: режим 600.' },
+    { id: 'secret-owner', type: 'owner_equals', path: '/workspace/secret.env', user: 'root' },
+  ]),
+  'release-symlink': checkerContract(linuxCoreRuntime, [
+    { id: 'release-target', type: 'symlink_points_to', path: '/workspace/current.conf', target: '/workspace/versions/app-v2.conf', failureHint: 'current.conf должна быть символической ссылкой на app-v2.conf.' },
+  ]),
+  'stop-worker': checkerContract(linuxCoreRuntime, [
+    { id: 'worker-pid-preserved', type: 'file_exists', path: '/workspace/worker.pid', kind: 'file', failureHint: 'Не удаляйте worker.pid.' },
+    { id: 'worker-stopped', type: 'process_not_running', process: 'sleep', failureHint: 'Процесс sleep всё ещё работает.' },
+  ]),
+  'local-http': checkerContract(linuxCoreRuntime, [
+    { id: 'local-service-listening', type: 'port_listening', protocol: 'tcp', port: 8081, bindAddress: '127.0.0.1', failureHint: 'Локальный сервис должен оставаться запущенным.' },
+    { id: 'response-file', type: 'file_contains', path: '/workspace/response.txt', expected: 'CLIRace service: ready', failureHint: 'Сохраните тело ответа в response.txt.' },
+  ]),
+};
+
 const baseChallenges: readonly SandboxChallenge[] = baseChallengeDefinitions.map((challenge) => ({
   ...challenge,
+  ...(checkerContractsById[challenge.id] ?? {}),
   referenceSolution: baseReferenceSolutions[challenge.id] ?? challenge.hint,
 }));
 

@@ -7,7 +7,8 @@ import { humanizeError } from './errors';
 import { CONTINUE_SHELL_RETRY_DELAYS_MS, sandboxStartErrorMessage } from './flow-intents';
 
 type TerminalStatus = 'idle' | 'connecting' | 'ready' | 'closed' | 'error';
-type CheckStatus = 'idle' | 'checking' | 'passed' | 'failed';
+type CheckStatus = 'idle' | 'checking' | 'passed' | 'failed' | 'error';
+interface PublicCheckResult { id: string; passed: boolean; status: 'passed' | 'failed' | 'error'; hint?: string }
 
 interface SessionTicket {
   sessionId: string;
@@ -36,6 +37,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
   const [status, setStatus] = useState<TerminalStatus>('idle');
   const [checkStatus, setCheckStatus] = useState<CheckStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [checkResults, setCheckResults] = useState<PublicCheckResult[]>([]);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
 
   useEffect(() => {
@@ -103,6 +105,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
     startInFlightRef.current = true;
     setStatus('connecting');
     setCheckStatus('idle');
+    setCheckResults([]);
     setError(null);
     setRemainingSeconds(null);
     passedRef.current = false;
@@ -141,7 +144,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
           terminalRef.current?.write(new Uint8Array(event.data as ArrayBuffer));
           return;
         }
-        const message = JSON.parse(event.data) as { type: string; passed?: boolean; message?: string; scoreAwarded?: number; reason?: string; expiresInSeconds?: number };
+        const message = JSON.parse(event.data) as { type: string; passed?: boolean; error?: boolean; checks?: PublicCheckResult[]; message?: string; scoreAwarded?: number; reason?: string; expiresInSeconds?: number };
         if (message.type === 'ready') {
           setStatus('ready');
           setRemainingSeconds(message.expiresInSeconds ?? null);
@@ -152,8 +155,13 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
           const passed = message.passed === true;
           passedRef.current = passed;
           scoreRef.current = message.scoreAwarded ?? 0;
-          setCheckStatus(passed ? 'passed' : 'failed');
-          const feedback = passed ? (message.message ?? 'Задача решена.') : 'Пока не выполнено. Состояние песочницы ещё не соответствует условию.';
+          setCheckStatus(message.error ? 'error' : passed ? 'passed' : 'failed');
+          setCheckResults(message.checks ?? []);
+          const feedback = message.error
+            ? (message.message ?? 'Не удалось проверить среду. Попробуйте ещё раз.')
+            : passed
+              ? (message.message ?? 'Задача решена.')
+              : 'Пока не выполнено. Состояние песочницы ещё не соответствует условию.';
           terminalRef.current?.writeln(`\r\n\x1b[${passed ? '38;2;182;240;74' : '33'}m${passed ? '✓' : '○'} ${feedback}${message.scoreAwarded ? `  +${message.scoreAwarded}` : ''}\x1b[0m`);
         }
         if (message.type === 'closed' && !passedRef.current && message.reason !== 'challenge_completed') {
@@ -192,6 +200,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
   const check = () => {
     if (socketRef.current?.readyState !== WebSocket.OPEN || checkStatus === 'checking') return;
     setCheckStatus('checking');
+    setCheckResults([]);
     socketRef.current.send(JSON.stringify({ type: 'check' }));
   };
   const stop = () => socketRef.current?.close(1000, 'user_stopped');
@@ -205,6 +214,11 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
         {remainingSeconds !== null && status === 'ready' && <strong className={remainingSeconds < 120 ? 'text-amber-300' : ''}>Сессия {formatRemaining(remainingSeconds)}</strong>}
       </div>
       <div className="game-shell-host" ref={hostRef} />
+      {checkResults.length > 0 && <ul className="border-t border-line px-4 py-3 text-xs sm:px-5" aria-live="polite">
+        {checkResults.map((result) => <li key={result.id} className={result.status === 'passed' ? 'text-acid' : result.status === 'error' ? 'text-rose-300' : 'text-amber-300'}>
+          {result.status === 'passed' ? '✓ Проверка выполнена' : result.status === 'error' ? '× Проверка временно недоступна' : `○ ${result.hint ?? 'Проверьте состояние задачи.'}`}
+        </li>)}
+      </ul>}
       {error && <p className="play-error mx-4 mb-3 sm:mx-5" role="alert">{error}</p>}
       <p className="border-t border-line px-4 py-2 text-[11px] leading-5 text-slate-600 sm:hidden">Для работы с терминалом удобнее использовать компьютер, но основные команды доступны и здесь.</p>
       <div className="game-shell-actions">
@@ -213,7 +227,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
           <button type="button" className="secondary-button min-h-9 px-3 text-xs" onClick={onSkip} disabled={active}><SkipForward size={13} /> Пропустить</button>
           {status === 'ready' && <button type="button" className="terminal-action" onClick={check} disabled={checkStatus === 'checking' || checkStatus === 'passed'}>
             {checkStatus === 'checking' ? <LoaderCircle size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-            {checkStatus === 'checking' ? 'Проверяем…' : checkStatus === 'passed' ? 'Выполнено' : 'Проверить'}
+            {checkStatus === 'checking' ? 'Проверяем среду…' : checkStatus === 'passed' ? 'Выполнено' : checkStatus === 'error' ? 'Проверить снова' : 'Проверить'}
           </button>}
           {active ? <button type="button" className="terminal-action terminal-action-stop" onClick={stop}><Square size={13} /> Завершить</button>
             : <button type="button" className="terminal-action" onClick={() => void start('manual')}><Play size={13} /> {status === 'idle' ? 'Запустить shell' : 'Повторить'}</button>}
