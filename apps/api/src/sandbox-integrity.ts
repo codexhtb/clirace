@@ -121,6 +121,11 @@ async function verifyChallenge(
     if (!trustedSolution) return { id: challenge.id, stage: stage('reference_solution'), output: 'trusted test solution missing' };
     const solution = await exec(container, trustedSolution);
     if (solution.exitCode !== 0) return { id: challenge.id, stage: stage('reference_solution'), output: solution.output };
+    // Detached process/listener solutions may return just before the child has
+    // completed exec()/bind(). Keep the production checker strict, but give the
+    // sandbox scheduler one bounded readiness window before evaluating it.
+    const readiness = await exec(container, 'sleep 0.2');
+    if (readiness.exitCode !== 0) return { id: challenge.id, stage: stage('solution_readiness'), output: readiness.output };
     if (challenge.runtime && challenge.checks) {
       const contractCheck = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
       if (contractCheck.outcome !== 'passed') {
