@@ -70,6 +70,9 @@ function solutionForChecker(checker: ChallengeChecker): string[] {
     case 'permission_equals':
       return [ensureParent(checker.path), `touch -- ${quote(checker.path)}`, `chmod ${checker.mode} -- ${quote(checker.path)}`];
     case 'owner_equals':
+      if (checker.user === 'root' && (!checker.group || checker.group === 'root')) {
+        return [ensureParent(checker.path), `touch -- ${quote(checker.path)}`];
+      }
       return [ensureParent(checker.path), `touch -- ${quote(checker.path)}`, `chown -- ${quote(`${checker.user}${checker.group ? `:${checker.group}` : ''}`)} ${quote(checker.path)}`];
     case 'symlink_points_to':
       return [ensureParent(checker.path), `ln -sfn -- ${quote(checker.target)} ${quote(checker.path)}`];
