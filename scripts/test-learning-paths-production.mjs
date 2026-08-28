@@ -115,7 +115,7 @@ try {
   await completeAssessment('linux-foundations-basics-knowledge');
   await completeShellChallenge('shell-hello-terminal', "printf 'Привет, терминал!\\n' > /workspace/hello.txt");
   await json(await request('/api/learn/paths/linux-foundations/sync', { method: 'POST' }), 200, 'sync practice evidence');
-  await completeShellChallenge('shell-build-castle', 'mkdir -p /workspace/castle/tower');
+  await completeShellChallenge('filesystem-create-cache-layout', 'mkdir -p /workspace/cache/http /workspace/cache/jobs /workspace/cache/sessions');
   await json(await request('/api/learn/paths/linux-foundations/sync', { method: 'POST' }), 200, 'sync lab evidence');
   await completeAssessment('linux-foundations-basics-checkpoint');
   state = await json(await request('/api/learn/paths/linux-foundations/sync', { method: 'POST' }), 200, 'finish first module');

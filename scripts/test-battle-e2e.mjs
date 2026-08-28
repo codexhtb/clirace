@@ -1,4 +1,6 @@
 import WebSocket from 'ws';
+import { listChallengeLibraryV2 } from '../apps/api/src/challenge-library-v2/catalog.ts';
+import { trustedSolutionForChallenge } from '../apps/api/src/challenge-library-v2/test-solutions.ts';
 
 const base = process.env.CLIRACE_URL ?? 'http://localhost:8080';
 const origin = new URL(base).origin;
@@ -181,6 +183,10 @@ const commands = {
   'shell-production-config': "sed -i 's/debug=true/debug=false/' /workspace/app.conf",
   'shell-filter-json': "jq -r '.[] | select(.enabled) | .name' /workspace/services.json > /workspace/enabled.txt",
   'shell-rename-backups': "for f in /workspace/backups/*.conf.bak; do mv \"$f\" \"${f%.bak}\"; done",
+  ...Object.fromEntries(listChallengeLibraryV2().map((challenge) => [
+    challenge.id,
+    trustedSolutionForChallenge(challenge),
+  ])),
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -221,7 +227,7 @@ try {
     if (stateA.body.battle.mode !== matchmakingMode) throw new Error(`Battle mode is ${stateA.body.battle.mode}, expected ${matchmakingMode}.`);
     console.log(`[matchmaking-e2e] exactly one Battle ${matchmakingBattleId} / ${roomCode}`);
   } else {
-    const created = await a.request('/api/battles', { method: 'POST', body: JSON.stringify({ rounds: 3, category: 'bash' }) });
+    const created = await a.request('/api/battles', { method: 'POST', body: JSON.stringify({ rounds: 3, category: 'all' }) });
     if (!created.response.ok) throw new Error(`create battle: ${created.response.status} ${created.body.message ?? ''}`);
     roomCode = created.body.battle.roomCode;
     console.log(`[battle-e2e] room ${roomCode} created`);
