@@ -248,6 +248,18 @@ SQL
       echo 'Ranked / MMR V1 validation passed.'
     fi
 
+    challenge_library_validation_marker=/var/lib/clirace/challenge-library-v2-content-v2-validated
+    if [[ ! -f "$challenge_library_validation_marker" ]]; then
+      echo 'Running one-time Unified Challenge Library V2 production validation...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        env SANDBOX_INTEGRITY_CONCURRENCY=4 node apps/api/dist/sandbox-integrity.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/matchmaking-e2e.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$challenge_library_validation_marker"
+      echo 'Unified Challenge Library V2 production validation passed.'
+    fi
+
     # The legacy archive runner may have populated a real Git checkout. Verify
     # every deployed tracked file byte-for-byte before advancing HEAD/index;
     # this also handles files that are new relative to the old local index.
