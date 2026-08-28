@@ -130,10 +130,10 @@ async function completeRegularReplay() {
   return { replayId: passed.replayId, replay, game };
 }
 
-async function completeTruncatedReplay() {
-  const { ticket } = await startSecureSecret();
-  const terminal = await openTerminal(ticket);
-  terminal.input("for i in $(seq 1 70); do yes X | head -c 8192; sleep 0.04; done; printf '\\nTRUNC_DONE\\n'\r");
+async function completeTruncatedReplay(cookie) {
+  const { ticket } = await startSecureSecret(cookie);
+  const terminal = await openTerminal(ticket, cookie);
+  terminal.input("for i in $(seq 1 70); do printf '%*s' 8192 '' | tr ' ' X; sleep 0.05; done; printf '\\nTRUNC_DONE\\n'\r");
   await terminal.waitOutput('TRUNC_DONE', 2, 45_000);
   terminal.check();
   const failed = await terminal.waitCheck(0);
@@ -143,11 +143,11 @@ async function completeTruncatedReplay() {
   terminal.check();
   const passed = await terminal.waitCheck(1);
   assert.equal(passed.passed, true);
-  const replay = (await body(await request(`/api/practice/replays/${passed.replayId}`), 200, 'truncated replay GET')).replay;
+  const replay = (await body(await request(`/api/practice/replays/${passed.replayId}`, {}, cookie), 200, 'truncated replay GET')).replay;
   assert.equal(replay.truncated, true);
   assert.ok(replay.payload.events.some((event) => event.type === 'checker' && event.status === 'passed'));
   assert.ok(replay.payload.events.some((event) => event.type === 'completed'));
-  await body(await request(`/api/practice/replays/${passed.replayId}`, { method: 'DELETE' }), 204, 'delete truncated replay');
+  await body(await request(`/api/practice/replays/${passed.replayId}`, { method: 'DELETE' }, cookie), 204, 'delete truncated replay');
   return replay;
 }
 
@@ -161,7 +161,7 @@ try {
   assert.equal((await request(`/practice/replay/${regular.replayId}`)).status, 200, 'SPA replay route must resolve');
   await body(await request(`/api/practice/replays/${regular.replayId}`, { method: 'DELETE' }), 204, 'owner replay delete');
   assert.equal((await request(`/api/practice/replays/${regular.replayId}`)).status, 404);
-  const truncated = await completeTruncatedReplay();
+  const truncated = await completeTruncatedReplay(cookieB);
   console.log(JSON.stringify({
     ok: true,
     reconnectSameSession: true,
@@ -179,4 +179,3 @@ try {
   if (cookieB) await request('/api/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) }, cookieB).catch(() => undefined);
   if (cookieA) await request('/api/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) }, cookieA).catch(() => undefined);
 }
-
