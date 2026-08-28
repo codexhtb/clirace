@@ -8,7 +8,7 @@ import { difficultyLabel } from './product-language';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type Enrollment = { status: 'active' | 'completed'; progress: number; finalScore: number | null; startedAt: string; completedAt: string | null };
-type PathItem = { stableId: string; slug: string; title: string; type: ItemType; status: ItemStatus; score: number | null };
+type PathItem = { stableId: string; slug: string; title: string; type: ItemType; status: ItemStatus; score: number | null; optional?: boolean };
 type PathModule = {
   slug: string; title: string; description: string; order: number; estimatedMinutes: number; prerequisites: string[];
   status?: 'completed' | 'current' | 'available' | 'locked'; completedItems?: number; totalItems?: number;
@@ -25,7 +25,7 @@ type TheoryBlock = { type: 'heading' | 'paragraph' | 'bullets' | 'code' | 'note'
 type ItemDetail = {
   course: CourseState['course']; module: PathModule;
   item: { stableId: string; slug: string; title: string; type: ItemType; category: string; concept: string; version: number;
-    status: ItemStatus; score: number | null; recommendations?: string[]; theory?: TheoryBlock[]; questionCount?: number; passThreshold?: number;
+    status: ItemStatus; score: number | null; optional?: boolean; recommendations?: string[]; theory?: TheoryBlock[]; questionCount?: number; passThreshold?: number;
     challenges?: { slug: string; title: string; description: string; difficulty: string; type: string; completed: boolean }[] };
   resume: CourseState['resume'];
 };
@@ -57,7 +57,7 @@ function PathsCatalog() {
   useEffect(() => { const controller = new AbortController(); fetch('/api/learn/paths', { signal: controller.signal }).then(readJson<{ courses: CatalogCourse[] }>).then((payload) => setCourses(payload.courses)).catch((reason) => { if (reason.name !== 'AbortError') setError(humanizeError(reason, 'Не удалось загрузить учебные пути.')); }); return () => controller.abort(); }, []);
   return <Page><section className="path-hero"><p className="eyebrow">Learning Paths</p><h1>Linux — последовательно.<br /><span>От идеи до настоящего shell.</span></h1><p>Короткая теория сразу переходит в вопросы, команды, лабораторные и checkpoint. Прогресс хранится на сервере.</p></section>
     {error && <p className="play-error mt-6" role="alert">{error}</p>}
-    {!courses ? <Loading label="Загружаем учебные пути" /> : <div className="path-catalog-grid">{courses.map((course) => <Link className="path-course-card" to={`/learn/paths/${course.slug}`} key={course.slug}><span className="mode-card-icon"><MapIcon size={19} /></span><small>{course.enrollment?.status === 'completed' ? 'Курс завершён' : course.enrollment ? `${course.enrollment.progress}% пройдено` : 'Для начинающих'}</small><h2>{course.title}</h2><p>{course.description}</p><div><span><Clock3 size={13} /> ≈ {formatMinutes(course.estimatedMinutes)}</span><strong>{course.enrollment ? 'Продолжить' : 'Открыть путь'} <ArrowRight size={15} /></strong></div></Link>)}</div>}
+    {!courses ? <Loading label="Загружаем учебные пути" /> : <div className="path-catalog-grid">{courses.map((course) => <Link className={`path-course-card ${course.slug === 'linux-zero-to-operator' ? 'featured' : ''}`} to={`/learn/paths/${course.slug}`} key={course.slug}><span className="mode-card-icon"><MapIcon size={19} /></span><small>{course.enrollment?.status === 'completed' ? 'Курс завершён' : course.enrollment ? `${course.enrollment.progress}% пройдено` : course.slug === 'linux-zero-to-operator' ? 'Основной курс · с нуля' : 'Классический путь'}</small><h2>{course.title}</h2><p>{course.description}</p><div><span><Clock3 size={13} /> ≈ {formatMinutes(course.estimatedMinutes)}</span><strong>{course.enrollment ? 'Продолжить' : course.slug === 'linux-zero-to-operator' ? 'Начать обучение' : 'Открыть путь'} <ArrowRight size={15} /></strong></div></Link>)}</div>}
   </Page>;
 }
 
@@ -69,7 +69,7 @@ function CoursePage({ courseSlug, moduleSlug }: { courseSlug: string; moduleSlug
   const load = () => Promise.all([currentUser(), fetch(`/api/learn/paths/${encodeURIComponent(courseSlug)}`).then(readJson<CourseState>)]).then(([user, payload]) => { setAuth(user.user ? 'ready' : 'guest'); setState(payload); });
   useEffect(() => { load().catch((reason) => setError(humanizeError(reason, 'Не удалось загрузить курс.'))).finally(() => setAuth((value) => value === 'loading' ? 'guest' : value)); }, [courseSlug]);
   const enroll = async () => { setBusy(true); setError(null); try { const response = await fetch(`/api/learn/paths/${courseSlug}/enroll`, { method: 'POST' }); setState(await readJson<CourseState>(response)); setAuth('ready'); } catch (reason) { setError(humanizeError(reason, 'Не удалось начать курс.')); } finally { setBusy(false); } };
-  if (!state) return <Page>{error ? <p className="play-error" role="alert">{error}</p> : <Loading label="Загружаем Linux Foundations" />}</Page>;
+  if (!state) return <Page>{error ? <p className="play-error" role="alert">{error}</p> : <Loading label="Загружаем курс" />}</Page>;
   const selectedModule = moduleSlug ? state.modules.find((module) => module.slug === moduleSlug) : null;
   if (moduleSlug && !selectedModule) return <Page><p className="play-error">Модуль не найден.</p></Page>;
   return <Page>
@@ -99,10 +99,10 @@ function ModuleView({ course, module, auth }: { course: CourseState; module: Pat
   if (!course.enrollment || auth !== 'ready') return <section className="state-panel"><LockKeyhole size={24} className="text-acid" /><div><h1>Сначала начните курс</h1><p>Enrollment нужен, чтобы сервер проверял prerequisites и сохранял каждый шаг.</p></div><Link className="primary-button" to={`/learn/paths/${course.course.slug}`}>К карте курса <ArrowRight size={14} /></Link></section>;
   if (module.status === 'locked') return <section className="state-panel"><LockKeyhole size={24} /><div><h1>Модуль пока закрыт</h1><p>Завершите предыдущий модуль — проверка выполняется сервером.</p></div><Link className="secondary-button" to={`/learn/paths/${course.course.slug}`}>К карте курса</Link></section>;
   return <>
-    <Link className="eyebrow hover:text-white" to={`/learn/paths/${course.course.slug}`}>Linux Foundations / Модуль {module.order}</Link>
+    <Link className="eyebrow hover:text-white" to={`/learn/paths/${course.course.slug}`}>{course.course.title} / Модуль {module.order}</Link>
     <section className="path-module-head"><div><h1>{module.title}</h1><p>{module.description}</p></div><div><strong>{module.completedItems} / {module.totalItems}</strong><span>шагов завершено</span></div></section>
     {module.result && <ModuleResultCard result={module.result} />}
-    <div className="path-items">{module.items?.map((item, index) => { const disabled = item.status === 'locked' || item.status === 'available'; return disabled ? <article className={`path-item-row ${item.status}`} key={item.stableId}>{itemStatusIcon(item.status)}<div><small>{itemLabels[item.type]}</small><strong>{item.title}</strong></div><span>{itemStatusLabel(item.status)}</span></article> : <Link className={`path-item-row ${item.status}`} key={item.stableId} to={itemHref(course.course.slug, module.slug, item.slug)}>{itemStatusIcon(item.status)}<div><small>{itemLabels[item.type]}</small><strong>{item.title}</strong></div><span>{item.status === 'completed' && item.score !== null ? `${item.score}%` : itemStatusLabel(item.status)}</span><ChevronRight size={16} /></Link>; })}</div>
+    <div className="path-items">{module.items?.map((item) => { const disabled = item.status === 'locked' || (item.status === 'available' && !item.optional); const label = `${itemLabels[item.type]}${item.optional ? ' · необязательно' : ''}`; return disabled ? <article className={`path-item-row ${item.status}`} key={item.stableId}>{itemStatusIcon(item.status)}<div><small>{label}</small><strong>{item.title}</strong></div><span>{itemStatusLabel(item.status)}</span></article> : <Link className={`path-item-row ${item.status} ${item.optional ? 'optional' : ''}`} key={item.stableId} to={itemHref(course.course.slug, module.slug, item.slug)}>{itemStatusIcon(item.status)}<div><small>{label}</small><strong>{item.title}</strong></div><span>{item.status === 'completed' && item.score !== null ? `${item.score}%` : item.optional ? 'По желанию' : itemStatusLabel(item.status)}</span><ChevronRight size={16} /></Link>; })}</div>
   </>;
 }
 
@@ -116,9 +116,10 @@ function PathItemPage({ courseSlug, moduleSlug, itemSlug }: { courseSlug: string
   const endpoint = `/api/learn/paths/${courseSlug}/modules/${moduleSlug}/items/${itemSlug}`;
   const load = () => fetch(endpoint).then(readJson<ItemDetail>).then(setDetail);
   useEffect(() => { currentUser().then(({ user }) => { if (!user) { navigate(`/?auth=1&returnTo=${encodeURIComponent(pathname)}`, { replace: true }); return; } return load(); }).catch((reason) => setError(humanizeError(reason, 'Не удалось открыть учебный шаг.'))); }, [endpoint, navigate, pathname]);
-  const completeTheory = () => action(`/api/learn/paths/${courseSlug}/items/${detail!.item.stableId}/complete-theory`, async () => { await load(); navigate(`/learn/paths/${detail!.course.slug}/${detail!.module.slug}`); });
+  const goToResume = (payload: unknown) => { const state = payload as CourseState; if (state.resume) navigate(itemHref(state.course.slug, state.resume.module, state.resume.item)); else navigate(`/learn/paths/${state.course.slug}`); };
+  const completeTheory = () => action(`/api/learn/paths/${courseSlug}/items/${detail!.item.stableId}/complete-theory`, async (payload) => goToResume(payload));
   const startAssessment = () => action(`/api/learn/paths/${courseSlug}/items/${detail!.item.stableId}/start-assessment`, async (payload) => setSession(payload as LearnSession));
-  const sync = () => action(`/api/learn/paths/${courseSlug}/sync`, async () => { await load(); });
+  const sync = () => action(`/api/learn/paths/${courseSlug}/sync`, async (payload) => goToResume(payload));
   const action = async (url: string, done: (payload: unknown) => Promise<void>) => { setBusy(true); setError(null); try { const response = await fetch(url, { method: 'POST' }); const payload = await readJson<unknown>(response); await done(payload); } catch (reason) { setError(humanizeError(reason, 'Не удалось сохранить прогресс.')); } finally { setBusy(false); } };
   const assessmentRequest = async (url: string, body?: unknown) => { setBusy(true); setError(null); try { const response = await fetch(url, { method: 'POST', ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) }); const payload = await readJson<LearnSession>(response); setSession(payload); if (payload.status === 'completed') { await fetch(`/api/learn/paths/${courseSlug}/sync`, { method: 'POST' }); await load(); } } catch (reason) { setError(humanizeError(reason, 'Не удалось продолжить проверку.')); } finally { setBusy(false); } };
   if (!detail) return <Page>{error ? <p className="play-error" role="alert">{error}</p> : <Loading label="Загружаем учебный шаг" />}</Page>;
@@ -137,6 +138,7 @@ function ItemContent({ detail, busy, onTheory, onAssessment, onSync }: { detail:
     {item.type === 'theory' && <TheoryContent blocks={item.theory ?? []} />}
     {(item.type === 'knowledge_check' || item.type === 'checkpoint') && <div className="path-assessment-intro"><FileQuestion size={24} /><div><h2>{item.questionCount} вопросов</h2><p>Проходной результат — {item.passThreshold}%. Ответы и объяснения обрабатывает существующий Linux Core engine.</p></div></div>}
     {item.status === 'failed' && item.recommendations && <aside className="path-review"><CircleAlert size={18} /><div><strong>Что повторить перед новой попыткой</strong>{item.recommendations.map((recommendation) => <p key={recommendation}>{recommendation}</p>)}</div></aside>}
+    {item.optional && <aside className="path-review"><BookOpen size={18} /><div><strong>Дополнительная практика</strong><p>Этот шаг не блокирует следующий урок и не влияет на процент прохождения курса.</p></div></aside>}
     {(item.type === 'practice' || item.type === 'shell_lab') && <div className="path-challenges">{item.challenges?.map((challenge) => <article key={challenge.slug}><span>{challenge.completed ? <CheckCircle2 size={18} /> : <Terminal size={18} />}</span><div><small>{challenge.completed ? 'Уже выполнено' : difficultyLabel(challenge.difficulty)}</small><h2>{challenge.title}</h2><p>{challenge.description}</p></div>{!challenge.completed && <Link className="primary-button" to={`/play?mode=real_shell&challenge=${challenge.slug}&returnTo=${encodeURIComponent(window.location.pathname)}`}>Открыть терминал <ArrowRight size={14} /></Link>}</article>)}</div>}
     <footer className="path-item-actions">
       <Link className="secondary-button" to={`/learn/paths/${detail.course.slug}/${detail.module.slug}`}><ArrowLeft size={14} /> К модулю</Link>

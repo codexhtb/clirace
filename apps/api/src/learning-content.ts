@@ -108,6 +108,9 @@ function validateQuestionQuality(question: LearningQuestionContent, label: strin
   }
   const forbidden = /(?:вс[её]\s+вышеперечислен|ни\s+один\s+из\s+вариант)/iu;
   if (forbidden.test(question.question) || question.answers.some((answer) => forbidden.test(answer.text))) throw new Error(`${label}: forbidden giveaway answer wording`);
+  const unsafeHtml = /<\/?[a-z][^>]*>/iu;
+  const authoredText = [question.question, question.explanation, ...question.answers.map((answer) => answer.text), ...Object.values(question.answerExplanations)];
+  if (authoredText.some((value) => unsafeHtml.test(value))) throw new Error(`${label}: raw HTML is not allowed in learning content`);
 
   const lengths = question.answers.map((answer) => answer.text.length).sort((a, b) => a - b);
   const median = lengths[Math.floor(lengths.length / 2)] ?? 1;

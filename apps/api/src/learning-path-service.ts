@@ -17,7 +17,7 @@ type ItemRow = {
   theory_content: TheoryBlock[] | null; completion_config: CompletionConfig; version: number;
 };
 type ReferenceConfig = { questionSlugs?: string[]; challengeSlugs?: string[] };
-type CompletionConfig = { passThreshold?: number; requireAll?: boolean; explicitContinue?: boolean };
+type CompletionConfig = { passThreshold?: number; requireAll?: boolean; explicitContinue?: boolean; optional?: boolean };
 type TheoryBlock =
   | { type: 'heading'; text: string }
   | { type: 'paragraph'; text: string }
@@ -116,6 +116,7 @@ export class LearningPathService {
         stableId: item.stable_id, slug: item.slug, title: item.title, type: item.item_type,
         category: item.category_slug, concept: item.concept_slug, version: item.version,
         status: itemState.status, score: itemState.score,
+        optional: item.completion_config.optional === true,
         recommendations: itemState.status === 'failed' ? [
           `Повторите теорию модуля «${module.title}».`,
           `Вернитесь к практике по теме «${item.category_slug}».`,
@@ -242,7 +243,7 @@ export class LearningPathService {
     `, [enrollment.id, moduleIds]);
     const moduleResults = new Map(moduleResultQuery.rows.map((row) => [row.module_id, row]));
     for (const module of structure.modules) {
-      if (moduleResults.has(module.id) || !module.items.every((item) => progress.get(item.id)?.status === 'completed')) continue;
+      if (moduleResults.has(module.id) || !requiredItems(module).every((item) => progress.get(item.id)?.status === 'completed')) continue;
       const scores = moduleScores(module, progress);
       const mastery = calculateMastery(scores);
       const checkpointItem = module.items.find((item) => item.item_type === 'checkpoint');
@@ -257,7 +258,7 @@ export class LearningPathService {
         RETURNING *
       `, [enrollment.id, module.id, scores.knowledge, scores.practice, scores.lab, scores.checkpoint, mastery, JSON.stringify(recommendations)]);
       moduleResults.set(module.id, saved.rows[0]!);
-      const evidenceCount = module.items.reduce((sum, item) => sum + (item.reference_config.questionSlugs?.length ?? item.reference_config.challengeSlugs?.length ?? 0), 0);
+      const evidenceCount = requiredItems(module).reduce((sum, item) => sum + (item.reference_config.questionSlugs?.length ?? item.reference_config.challengeSlugs?.length ?? 0), 0);
       const category = checkpointItem?.category_slug ?? module.items[0]!.category_slug;
       const concept = checkpointItem?.concept_slug ?? module.items[0]!.concept_slug;
       await client.query(`
@@ -269,12 +270,13 @@ export class LearningPathService {
       `, [userId, category, concept, evidenceCount, mastery, evidenceCount >= MASTERY_MINIMUM_EVIDENCE]);
     }
 
-    const completedItems = items.filter((item) => progress.get(item.id)?.status === 'completed').length;
-    const progressPercent = Math.round((completedItems / items.length) * 100);
+    const requiredCourseItems = items.filter((item) => !isOptional(item));
+    const completedItems = requiredCourseItems.filter((item) => progress.get(item.id)?.status === 'completed').length;
+    const progressPercent = Math.round((completedItems / requiredCourseItems.length) * 100);
     const moduleStates = buildModuleStates(structure.modules, moduleResults);
     const itemStates = buildItemStates(structure.modules, moduleStates, progress);
     const currentModule = structure.modules.find((module) => moduleStates.get(module.id)?.status === 'current' || moduleStates.get(module.id)?.status === 'available') ?? null;
-    const currentItem = currentModule?.items.find((item) => itemStates.get(item.id)?.status === 'current') ?? null;
+    const currentItem = currentModule?.items.find((item) => !isOptional(item) && itemStates.get(item.id)?.status === 'current') ?? null;
     const allModulesComplete = moduleResults.size === structure.modules.length;
     const courseCompleted = enrollment.status === 'completed' || allModulesComplete;
     let finalScore = enrollment.final_score;
@@ -312,7 +314,8 @@ export class LearningPathService {
         ...moduleSummary(module, state.moduleStates.get(module.id)!),
         items: module.items.map((item) => {
           const itemState = state.itemStates.get(item.id)!;
-          return { stableId: item.stable_id, slug: item.slug, title: item.title, type: item.item_type, status: itemState.status, score: itemState.score };
+          return { stableId: item.stable_id, slug: item.slug, title: item.title, type: item.item_type, status: itemState.status, score: itemState.score,
+            optional: isOptional(item) };
         }),
         result: state.moduleResults.get(module.id) ? publicModuleResult(state.moduleResults.get(module.id)!) : null,
       })),
@@ -393,7 +396,7 @@ function buildModuleStates(modules: CourseModule[], results: Map<string, ModuleR
     const unlocked = module.prerequisite_slugs.every((slug) => completedSlugs.has(slug));
     const status: ModuleState['status'] = completed ? 'completed' : !unlocked ? 'locked' : !currentAssigned ? 'current' : 'available';
     if (status === 'current') currentAssigned = true;
-    states.set(module.id, { status, completedItems: 0, totalItems: module.items.length });
+    states.set(module.id, { status, completedItems: 0, totalItems: requiredItems(module).length });
   }
   return states;
 }
@@ -408,13 +411,15 @@ function buildItemStates(modules: CourseModule[], moduleStates: Map<string, Modu
     for (const item of module.items) {
       const saved = progress.get(item.id);
       const completed = saved?.status === 'completed';
-      if (completed) completedItems += 1;
+      const optional = isOptional(item);
+      if (completed && !optional) completedItems += 1;
       const status: ItemState['status'] = completed ? 'completed'
         : moduleState.status === 'locked' || !previousComplete ? 'locked'
+          : optional ? 'available'
           : !currentAssigned ? (saved?.status === 'failed' ? 'failed' : 'current') : 'available';
       if (status === 'current' || status === 'failed') currentAssigned = true;
       states.set(item.id, { status, score: saved?.score_percent ?? null });
-      previousComplete = completed;
+      if (!optional) previousComplete = completed;
     }
     moduleState.completedItems = completedItems;
   }
@@ -435,11 +440,12 @@ function ensureCurrentItem(state: SyncedState, stableId: string, expected: ItemT
 }
 
 function moduleScores(module: CourseModule, progress: Map<string, ProgressRow>) {
+  const scoredItems = requiredItems(module);
   return {
-    knowledge: average(module.items.filter((item) => item.item_type === 'knowledge_check').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
-    practice: average(module.items.filter((item) => item.item_type === 'practice').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
-    lab: average(module.items.filter((item) => item.item_type === 'shell_lab').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
-    checkpoint: average(module.items.filter((item) => item.item_type === 'checkpoint').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
+    knowledge: average(scoredItems.filter((item) => item.item_type === 'knowledge_check').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
+    practice: average(scoredItems.filter((item) => item.item_type === 'practice').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
+    lab: average(scoredItems.filter((item) => item.item_type === 'shell_lab').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
+    checkpoint: average(scoredItems.filter((item) => item.item_type === 'checkpoint').map((item) => progress.get(item.id)?.score_percent ?? 0), 100),
   };
 }
 
@@ -488,3 +494,5 @@ function publicModuleResult(row: ModuleResultRow) {
     completedAt: row.completed_at.toISOString() };
 }
 function average(values: number[], fallback: number): number { return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : fallback; }
+function isOptional(item: ItemRow): boolean { return item.completion_config.optional === true; }
+function requiredItems(module: CourseModule): ItemRow[] { return module.items.filter((item) => !isOptional(item)); }

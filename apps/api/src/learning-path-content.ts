@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { loadAndValidateLinuxCoreContent } from './learning-content.js';
 import { listSandboxChallenges, sandboxChallengeCatalogSlug } from './sandbox-challenges.js';
+import { listChallengeLibraryV2 } from './challenge-library-v2/catalog.js';
 
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120);
 const theoryBlockSchema = z.discriminatedUnion('type', [
@@ -37,7 +38,7 @@ const assessmentItem = itemBase.extend({
 const challengeItem = itemBase.extend({
   type: z.enum(['practice', 'shell_lab']),
   challengeSlugs: z.array(slug).min(1).max(5),
-  completion: z.object({ requireAll: z.literal(true) }).strict(),
+  completion: z.object({ requireAll: z.literal(true), optional: z.boolean().optional() }).strict(),
 }).strict();
 
 export const learningPathItemSchema = z.union([theoryItem, assessmentItem, challengeItem]);
@@ -61,6 +62,7 @@ const courseFileSchema = z.object({
   order: z.number().int().nonnegative(),
   estimatedMinutes: z.number().int().min(30),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
+  canonicalChallengeLibrary: z.literal(2).optional(),
   prerequisites: z.array(slug).max(8),
   modules: z.array(z.string().regex(/^\d{2}-[a-z0-9-]+\.json$/)).min(1).max(20),
 }).strict();
@@ -76,11 +78,23 @@ export interface LearningPathDatasetReport {
   byType: Record<string, number>;
   invalidReferences: number;
   warnings: string[];
+  lessons: number;
+  questionReferences: number;
+  uniqueQuestionReferences: number;
+  challengeReferences: number;
+  uniqueChallengeReferences: number;
+  zeroToOperator: null | {
+    modules: number; lessons: number; questions: number; reusedQuestions: number;
+    newQuestions: number; requiredPractice: number; optionalPractice: number;
+  };
 }
 
 export async function loadAndValidateLearningPathsContent(): Promise<{ courses: LearningPathCourseContent[]; report: LearningPathDatasetReport }> {
   const root = new URL('../../../content/learning-paths/', import.meta.url);
-  const courseDirectories = ['linux-foundations'];
+  const courseDirectories = (await readdir(root, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
   const linuxCore = await loadAndValidateLinuxCoreContent();
   const questionSlugs = new Set(linuxCore.questions.filter((question) => question.enabled).map((question) => question.slug));
   const challengeSlugs = new Set(listSandboxChallenges().map(sandboxChallengeCatalogSlug));
@@ -88,6 +102,7 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
   const allCourseSlugs = new Set<string>();
   const allItemIds = new Set<string>();
   const warnings: string[] = [];
+  let zeroToOperator: LearningPathDatasetReport['zeroToOperator'] = null;
 
   for (const directory of courseDirectories) {
     const base = new URL(`${directory}/`, root);
@@ -106,12 +121,22 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
       if (allItemIds.has(item.id)) throw new Error(`Duplicate learning item ID: ${item.id}`);
       allItemIds.add(item.id);
     }
-    validateLearningPathReferences(modules.flatMap((module) => module.items), questionSlugs, challengeSlugs);
+    const courseItems = modules.flatMap((module) => module.items);
+    validateLearningPathReferences(courseItems, questionSlugs, challengeSlugs);
+    validateStructuredText(parsedCourse.data.slug, modules);
+    if (parsedCourse.data.canonicalChallengeLibrary === 2) {
+      validateCanonicalPracticeReferences(parsedCourse.data.slug, courseItems);
+    }
+    if (parsedCourse.data.slug === 'linux-zero-to-operator') {
+      zeroToOperator = validateZeroToOperatorCourse(modules, linuxCore.questions.map((question) => question.slug));
+    }
     const { modules: _filenames, ...course } = parsedCourse.data;
     courses.push({ ...course, modules });
   }
 
   const items = courses.flatMap((course) => course.modules.flatMap((module) => module.items));
+  const questionReferences = items.flatMap((item) => 'questionSlugs' in item ? item.questionSlugs : []);
+  const challengeReferences = items.flatMap((item) => 'challengeSlugs' in item ? item.challengeSlugs : []);
   return {
     courses,
     report: {
@@ -121,7 +146,62 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
       byType: countBy(items, (item) => item.type),
       invalidReferences: 0,
       warnings,
+      lessons: items.filter((item) => item.type === 'theory').length,
+      questionReferences: questionReferences.length,
+      uniqueQuestionReferences: new Set(questionReferences).size,
+      challengeReferences: challengeReferences.length,
+      uniqueChallengeReferences: new Set(challengeReferences).size,
+      zeroToOperator,
     },
+  };
+}
+
+export function validateZeroToOperatorCourse(modules: LearningPathModuleContent[], allQuestionSlugs: string[]): NonNullable<LearningPathDatasetReport['zeroToOperator']> {
+  if (modules.length !== 17) throw new Error(`linux-zero-to-operator: expected 17 modules, received ${modules.length}`);
+  const lessonTitles = new Set<string>();
+  const questionReferences: string[] = [];
+  const requiredPractice: string[] = [];
+  const optionalPractice: string[] = [];
+  for (const [index, module] of modules.entries()) {
+    const theory = module.items.filter((item) => item.type === 'theory');
+    const knowledge = module.items.filter((item) => item.type === 'knowledge_check');
+    const checkpoints = module.items.filter((item) => item.type === 'checkpoint');
+    const required = module.items.filter((item) => (item.type === 'practice' || item.type === 'shell_lab') && item.completion.optional !== true);
+    const optional = module.items.filter((item) => (item.type === 'practice' || item.type === 'shell_lab') && item.completion.optional === true);
+    if (theory.length !== 4 || knowledge.length !== 4 || checkpoints.length !== 1 || required.length !== 1 || optional.length !== 1) {
+      throw new Error(`${module.slug}: expected four lesson/quiz pairs, one required lab, one optional practice and one checkpoint`);
+    }
+    if (index === 0 ? module.prerequisites.length !== 0 : module.prerequisites.length !== 1 || module.prerequisites[0] !== modules[index - 1]?.slug) {
+      throw new Error(`${module.slug}: course prerequisite chain is not linear`);
+    }
+    for (const item of theory) {
+      const normalizedTitle = item.title.toLocaleLowerCase('ru-RU').replace(/\s+/gu, ' ').trim();
+      if (lessonTitles.has(normalizedTitle)) throw new Error(`${item.id}: duplicate lesson title`);
+      lessonTitles.add(normalizedTitle);
+      if (item.content.length < 5) throw new Error(`${item.id}: lesson needs theory, example and summary blocks`);
+    }
+    questionReferences.push(...knowledge.flatMap((item) => 'questionSlugs' in item ? item.questionSlugs : []),
+      ...checkpoints.flatMap((item) => 'questionSlugs' in item ? item.questionSlugs : []));
+    requiredPractice.push(...required.flatMap((item) => 'challengeSlugs' in item ? item.challengeSlugs : []));
+    optionalPractice.push(...optional.flatMap((item) => 'challengeSlugs' in item ? item.challengeSlugs : []));
+  }
+  if (lessonTitles.size !== 68) throw new Error(`linux-zero-to-operator: expected 68 lessons, received ${lessonTitles.size}`);
+  if (questionReferences.length !== 187 || new Set(questionReferences).size !== questionReferences.length) {
+    throw new Error('linux-zero-to-operator: expected 187 unique question references');
+  }
+  if (requiredPractice.length !== 17 || optionalPractice.length !== 34 || new Set([...requiredPractice, ...optionalPractice]).size !== 51) {
+    throw new Error('linux-zero-to-operator: practice references must contain 17 required and 34 unique optional challenges');
+  }
+  const newQuestions = questionReferences.filter((slugValue) => slugValue.startsWith('zto-'));
+  const questionSet = new Set(allQuestionSlugs);
+  const orphaned = allQuestionSlugs.filter((slugValue) => slugValue.startsWith('zto-') && !questionReferences.includes(slugValue));
+  if (newQuestions.length !== 162 || orphaned.length || questionReferences.some((slugValue) => !questionSet.has(slugValue))) {
+    throw new Error(`linux-zero-to-operator: invalid question ownership or orphaned content (${orphaned.join(', ')})`);
+  }
+  return {
+    modules: modules.length, lessons: lessonTitles.size, questions: questionReferences.length,
+    reusedQuestions: questionReferences.length - newQuestions.length, newQuestions: newQuestions.length,
+    requiredPractice: requiredPractice.length, optionalPractice: optionalPractice.length,
   };
 }
 
@@ -209,6 +289,10 @@ export function validateModuleGraph(course: string, modules: LearningPathModuleC
     }
   }
   for (const module of modules) for (const prerequisite of module.prerequisites) if (!slugs.has(prerequisite)) throw new Error(`${module.slug}: unknown prerequisite ${prerequisite}`);
+  for (const module of modules) for (const prerequisite of module.prerequisites) {
+    const dependency = modules.find((candidate) => candidate.slug === prerequisite)!;
+    if (dependency.order >= module.order) throw new Error(`${module.slug}: prerequisite ${prerequisite} must come earlier in the course`);
+  }
   const bySlug = new Map(modules.map((module) => [module.slug, module]));
   const visiting = new Set<string>(); const visited = new Set<string>();
   const visit = (moduleSlug: string): void => {
@@ -219,6 +303,24 @@ export function validateModuleGraph(course: string, modules: LearningPathModuleC
     visiting.delete(moduleSlug); visited.add(moduleSlug);
   };
   for (const module of modules) visit(module.slug);
+}
+
+export function validateCanonicalPracticeReferences(course: string, items: LearningPathItemContent[]): void {
+  const practiceEligible = new Set(listChallengeLibraryV2().filter((challenge) => challenge.availability.practice).map((challenge) => challenge.id));
+  for (const item of items) if ('challengeSlugs' in item) for (const reference of item.challengeSlugs) {
+    if (!practiceEligible.has(reference)) throw new Error(`${course}/${item.id}: challenge ${reference} is not Practice-eligible Library V2 content`);
+  }
+}
+
+export function validateStructuredText(course: string, modules: LearningPathModuleContent[]): void {
+  const unsafeHtml = /<\/?[a-z][^>]*>/iu;
+  for (const module of modules) for (const item of module.items) {
+    if (!('content' in item)) continue;
+    for (const block of item.content) {
+      const values = 'items' in block ? block.items : ['code' in block ? block.code : block.text];
+      if (values.some((value) => unsafeHtml.test(value))) throw new Error(`${course}/${item.id}: raw HTML is not allowed in lesson content`);
+    }
+  }
 }
 
 export function validateLearningPathReferences(items: LearningPathItemContent[], questionSlugs: Set<string>, challengeSlugs: Set<string>): void {
