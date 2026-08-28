@@ -186,7 +186,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
               <b className={match.result === 'win' ? 'text-acid' : match.result === 'loss' ? 'text-rose-300' : 'text-slate-400'}>{match.result === 'win' ? 'ПОБЕДА' : match.result === 'loss' ? 'ПОРАЖЕНИЕ' : 'БЕЗ РЕЗУЛЬТАТА'}</b>
               <div><strong>{match.mmrBefore} → {match.mmrAfter}</strong><span>{match.delta >= 0 ? '+' : ''}{match.delta} MMR</span></div>
             </Link>
-          )) : <EmptyPanel text="Здесь появятся завершённые рейтинговые матчи." action={{ href: '/play?compete=ranked#competition', label: 'Играть Ranked' }} />}
+          )) : <EmptyPanel text="Здесь появятся завершённые рейтинговые матчи." action={{ href: '/online?mode=ranked', label: 'Играть Ranked' }} />}
         </div>
       </section>
     </>

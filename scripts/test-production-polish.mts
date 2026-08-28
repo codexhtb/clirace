@@ -15,7 +15,7 @@ check(primaryNavigation.length === 4, 'primary navigation stays focused');
 check(primaryNavigation.every((item) => item.href.startsWith('/')), 'primary navigation uses crawlable internal links');
 check(new Set(primaryNavigation.map((item) => item.label)).size === 4, 'primary navigation labels are distinct');
 
-const publicRoutes = ['/', '/play', '/learn', '/learn/linux-core', '/interview', '/daily', '/rating'];
+const publicRoutes = ['/', '/play', '/online', '/learn', '/learn/linux-core', '/interview', '/daily', '/rating'];
 const metadata = publicRoutes.map(routeMetadata);
 check(metadata.every((item) => item.indexable), 'public routes remain indexable');
 check(new Set(metadata.map((item) => item.title)).size === publicRoutes.length, 'public route titles are unique');
@@ -47,9 +47,11 @@ check(main.includes('<BrowserRouter>') && app.includes('useLocation()'), 'Browse
 check(app.includes('<AppPage><PageLoader label="Загружаем раздел" /></AppPage>'), 'lazy route fallback stays inside the application shell');
 
 const play = await readFile(join(webRoot, 'PlayPage.tsx'), 'utf8');
+const online = await readFile(join(webRoot, 'OnlinePage.tsx'), 'utf8');
 const learn = await readFile(join(webRoot, 'LearnPage.tsx'), 'utf8');
 const battle = await readFile(join(webRoot, 'BattlePages.tsx'), 'utf8');
-check(play.includes('Начните здесь') && play.includes('без MMR') && play.includes('влияет на MMR'), 'new-user and mode guidance are present');
+check(play.includes('Начните здесь') && !play.includes('QuickMatchPanel') && !play.includes('RankedMatchPanel'), 'Practice is focused on solo onboarding');
+check(online.includes('QuickMatchPanel') && online.includes('RankedMatchPanel') && online.includes('Игра с другом'), 'Online owns all PvP entry points');
 check(learn.includes('practiceHrefForWeakArea') && learn.includes('Разберём ответ'), 'Learn explanation and next practice action are present');
 check(battle.includes('Матч не повлиял на MMR') && battle.includes('Снова Ranked'), 'Ranked no-contest and replay actions are present');
 

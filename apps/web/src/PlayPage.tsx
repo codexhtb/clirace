@@ -4,12 +4,10 @@ import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
 import { humanizeError } from './errors';
 import { isNewPlayer } from './product-ux';
-import { QuickMatchPanel } from './QuickMatchPanel';
-import { RankedMatchPanel } from './RankedMatchPanel';
 import { PageLoader } from './Ui';
 import { difficultyLabel } from './product-language';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { consumeQuickMatchIntent, hasQuickMatchIntent, shouldAutoStartNextShell } from './flow-intents';
+import { Link, useLocation } from 'react-router-dom';
+import { shouldAutoStartNextShell } from './flow-intents';
 
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
@@ -159,22 +157,6 @@ export function PlayPage() {
 function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmit }: {
   categories: Category[]; shellEnabled: boolean; busy: boolean; error: string | null; newPlayer: boolean; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const requestedCompetition = new URLSearchParams(location.search).get('compete');
-  const quickMatchIntent = hasQuickMatchIntent(location.search);
-  const [matchmakingMode, setMatchmakingMode] = useState<'quick' | 'ranked'>(requestedCompetition === 'ranked' ? 'ranked' : 'quick');
-  useEffect(() => {
-    if (requestedCompetition === 'quick' || requestedCompetition === 'ranked') return;
-    const controller = new AbortController();
-    fetch('/api/matchmaking/status?mode=quick', { cache: 'no-store', signal: controller.signal })
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload: { pool?: 'quick' | 'ranked' } | null) => {
-        if (payload?.pool === 'ranked') setMatchmakingMode('ranked');
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [requestedCompetition]);
   const requestedDefaults = getPlayDefaults();
   const defaults = requestedDefaults.mode === 'real_shell' && !shellEnabled
     ? { ...requestedDefaults, mode: 'mixed' as const }
@@ -182,9 +164,9 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
   return (
     <section className="mx-auto max-w-4xl">
       <div className="mb-10">
-        <p className="eyebrow">Практика и соревнования</p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Выберите следующий шаг.</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Тренируйтесь самостоятельно или сыграйте три одинаковых shell-раунда против другого игрока.</p>
+        <p className="eyebrow">Solo Practice</p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Тренируйтесь в своём темпе.</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">Выберите тему и формат индивидуальной практики — от коротких команд до задач в настоящем Linux shell.</p>
       </div>
 
       {newPlayer && <section className="onboarding-card" aria-labelledby="first-step-title">
@@ -249,20 +231,7 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
         </div>
       </form>
 
-      <section id="competition" className="mt-12 scroll-mt-28" aria-labelledby="competition-title">
-        <div className="mb-5"><p className="eyebrow">ONLINE PvP</p><h2 id="competition-title" className="mt-2 text-2xl font-semibold text-white">Сыграйте против реального игрока.</h2><p className="mt-2 text-sm text-slate-500">Выберите быстрый поиск, рейтинговую игру или приватный матч с другом.</p></div>
-        <div className="mb-5 grid gap-2 text-xs text-slate-400 sm:grid-cols-3">
-          <div className="rounded-md border border-line bg-panel px-4 py-3"><strong className="block text-white">Quick Match</strong><span>реальный соперник · без MMR</span></div>
-          <div className="rounded-md border border-line bg-panel px-4 py-3"><strong className="block text-white">Ranked</strong><span>реальный соперник · влияет на MMR</span></div>
-          <Link className="rounded-md border border-line bg-panel px-4 py-3 transition-colors hover:border-acid/40" to="/battle"><strong className="block text-white">Private</strong><span>пригласите друга по коду</span></Link>
-        </div>
-        <div className="matchmaking-mode-tabs" role="tablist" aria-label="Режим соревнования">
-          <button className={matchmakingMode === 'quick' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'quick'} onClick={() => setMatchmakingMode('quick')}>Quick Match <small>без MMR</small></button>
-          <button className={matchmakingMode === 'ranked' ? 'active' : ''} type="button" role="tab" aria-selected={matchmakingMode === 'ranked'} onClick={() => setMatchmakingMode('ranked')}>Ranked <small>влияет на MMR</small></button>
-        </div>
-        {matchmakingMode === 'quick' ? <QuickMatchPanel autoEnqueue={quickMatchIntent} onIntentConsumed={() => navigate({ pathname: location.pathname, search: consumeQuickMatchIntent(location.search), hash: location.hash }, { replace: true })} /> : <RankedMatchPanel />}
-        <Link className="mt-4 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" to="/battle"><Swords size={15} /> Создать приватный матч с другом <ChevronRight size={14} /></Link>
-      </section>
+      <Link className="mt-6 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" to="/online"><Swords size={15} /> Хотите играть против других? Перейти в Онлайн <ChevronRight size={14} /></Link>
 
       <nav className="context-links mt-10" aria-label="Другие способы практики"><Link to="/daily"><CalendarDays size={14} /> Задача дня</Link><Link to="/interview"><BookOpenCheck size={14} /> Interview 100</Link><Link to="/learn/linux-core"><BookOpen size={14} /> Linux Core с объяснениями</Link></nav>
     </section>
@@ -445,7 +414,7 @@ function FinalScreen({ game, onReset }: { game: GameState; onReset: () => void }
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link className="secondary-button" to={returnTo ?? '/'}><ArrowLeft size={14} /> {returnTo ? 'Вернуться в курс' : 'На главную'}</Link>
-        <Link className="secondary-button" to="/play?match=quick#competition"><Swords size={15} /> Quick Match</Link>
+        <Link className="secondary-button" to="/online?match=quick"><Swords size={15} /> Найти соперника</Link>
         {returnTo ? <Link className="primary-button" to={returnTo}>Засчитать шаг <CheckCircle2 size={15} /></Link> : <button className="primary-button" type="button" onClick={onReset}><RotateCcw size={15} /> Следующая практика</button>}
       </div>
     </section>

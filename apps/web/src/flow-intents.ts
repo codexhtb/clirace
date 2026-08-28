@@ -11,6 +11,26 @@ export function consumeQuickMatchIntent(search: string): string {
   return next ? `?${next}` : '';
 }
 
+export type OnlineMode = 'quick' | 'ranked';
+
+export function onlineModeFromSearch(search: string): OnlineMode {
+  return new URLSearchParams(search).get('mode') === 'ranked' ? 'ranked' : 'quick';
+}
+
+export function legacyPvpOnlineHref(search: string, hash: string): string | null {
+  const query = new URLSearchParams(search);
+  const competition = query.get('compete');
+  const quickIntent = hasQuickMatchIntent(search);
+  if (!quickIntent && !competition && hash !== '#competition') return null;
+
+  query.delete('compete');
+  if (quickIntent) query.delete('mode');
+  else if (competition === 'ranked') query.set('mode', 'ranked');
+  else query.delete('mode');
+  const next = query.toString();
+  return `/online${next ? `?${next}` : ''}`;
+}
+
 export function shouldAutoStartNextShell(explicitContinue: boolean, nextTaskType?: string): boolean {
   return explicitContinue && nextTaskType === 'real_shell';
 }

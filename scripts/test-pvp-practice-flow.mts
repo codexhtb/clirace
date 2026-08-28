@@ -15,21 +15,21 @@ const check = (condition: unknown, message: string) => { checks += 1; assert.ok(
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const webRoot = join(repoRoot, 'apps', 'web', 'src');
 const source = async (name: string) => readFile(join(webRoot, name), 'utf8');
-const [app, play, quick, shell, battle] = await Promise.all([
-  source('App.tsx'), source('PlayPage.tsx'), source('QuickMatchPanel.tsx'),
+const [app, play, online, quick, shell, battle] = await Promise.all([
+  source('App.tsx'), source('PlayPage.tsx'), source('OnlinePage.tsx'), source('QuickMatchPanel.tsx'),
   source('GameShellTerminal.tsx'), source('BattlePages.tsx'),
 ]);
 
-check(app.includes('to="/play?match=quick#competition"'), 'homepage opponent CTA carries a direct Quick Match intent');
+check(app.includes('to="/online?match=quick"'), 'homepage opponent CTA carries the Online Quick Match intent');
 check(hasQuickMatchIntent('?match=quick') && !hasQuickMatchIntent('?compete=quick'), 'only the explicit action marker auto-enqueues');
 check(quick.includes('autoEnqueue') && quick.includes("requestMatchmaking('/api/matchmaking/queue'"), 'auto flow reuses the existing Quick Match enqueue');
 check(quick.includes('enqueueInFlightRef') && quick.includes('autoIntentHandledRef'), 'auto enqueue is guarded against repeat clicks and effects');
-check(consumeQuickMatchIntent('?match=quick&compete=quick') === '?compete=quick', 'consuming the intent preserves unrelated query state');
-check(play.includes('{ replace: true }') && play.includes('consumeQuickMatchIntent'), 'successful enqueue consumes history state with replace');
-check(play.includes('location.pathname}${location.search}${location.hash}'), 'authentication return preserves the Quick Match intent');
+check(consumeQuickMatchIntent('?match=quick&mode=ranked') === '?mode=ranked', 'consuming the intent preserves unrelated query state');
+check(online.includes('{ replace: true }') && online.includes('consumeQuickMatchIntent'), 'successful enqueue consumes Online history state with replace');
+check(online.includes("encodeURIComponent('/online?match=quick')"), 'authentication return preserves the Quick Match intent');
 check(quick.includes("method: 'DELETE'") && quick.includes('Отменить поиск'), 'existing cancel flow remains available');
 check(quick.includes('waitingCapacity') && quick.includes('Место в очереди сохранено'), 'capacity waiting remains readable');
-check(battle.includes('/play?match=quick#competition'), 'Quick Match result action starts a fresh search');
+check(battle.includes('/online?match=quick'), 'Quick Match result action starts a fresh Online search');
 check(shouldAutoStartNextShell(true, 'real_shell'), 'explicit Continue auto-starts a following real-shell task');
 check(!shouldAutoStartNextShell(false, 'real_shell') && !shouldAutoStartNextShell(true, 'quick'), 'direct opens and non-shell tasks never auto-start');
 check(play.includes('autoStartShellTaskSlug') && shell.includes("start('continue-auto')"), 'Continue passes a local one-shot auto-start signal');

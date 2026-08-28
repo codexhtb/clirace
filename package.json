@@ -40,6 +40,7 @@
     "test:ranked-e2e": "node scripts/test-ranked-e2e.mjs",
     "test:production-polish": "pnpm --filter @clirace/api exec tsx ../../scripts/test-production-polish.mts",
     "test:pvp-practice-flow": "pnpm --filter @clirace/api exec tsx ../../scripts/test-pvp-practice-flow.mts",
+    "test:online-tab-ux": "pnpm --filter @clirace/api exec tsx ../../scripts/test-online-tab-ux.mts",
     "start": "pnpm --filter @clirace/api start"
   },
   "engines": {

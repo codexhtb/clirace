@@ -1,7 +1,7 @@
 export const primaryNavigation = [
-  { href: '/play#practice', label: 'Практика', matches: (path: string, search: string) => path === '/play' && !new URLSearchParams(search).has('compete') },
   { href: '/learn', label: 'Обучение', matches: (path: string, _search: string) => path.startsWith('/learn') || path === '/interview' },
-  { href: '/play?compete=quick#competition', label: 'Соревнования', matches: (path: string, search: string) => path.startsWith('/battle') || (path === '/play' && new URLSearchParams(search).has('compete')) },
+  { href: '/play#practice', label: 'Практика', matches: (path: string, _search: string) => path === '/play' || path.startsWith('/practice/replay/') },
+  { href: '/online', label: 'Онлайн', matches: (path: string, _search: string) => path === '/online' || path.startsWith('/online/') || path.startsWith('/battle') },
   { href: '/rating', label: 'Рейтинг', matches: (path: string, _search: string) => path === '/rating' || path === '/leaderboard' },
 ] as const;
 
@@ -17,7 +17,8 @@ export function routeMetadata(path: string): RouteMeta {
   if (path === '/learn/paths') return meta('Учебные пути Linux — CLIRace', 'Последовательные курсы Linux: короткая теория, проверка знаний, CLI-практика и лабораторные в настоящем shell.', '/learn/paths');
   if (path === '/learn/paths/linux-foundations') return meta('Linux Foundations — структурированный курс Linux | CLIRace', 'Пройдите основы Linux от команд и файлов до сетей, systemd и диагностики с практикой в настоящем терминале.', '/learn/paths/linux-foundations');
   if (path.startsWith('/learn/paths/')) return meta('Учебный модуль — CLIRace', 'Персональный прогресс учебного пути CLIRace.', path, false);
-  if (path === '/play') return meta('Практика и соревнования — CLIRace', 'Решайте Linux-задачи в настоящем терминале или найдите соперника в Quick Match и Ranked.', '/play');
+  if (path === '/play') return meta('Практика Linux и DevOps — CLIRace', 'Решайте индивидуальные Linux-задачи и тренируйтесь в настоящем безопасном терминале.', '/play');
+  if (path === '/online') return meta('Онлайн-матчи Linux — CLIRace', 'Играйте против живых соперников в Quick Match, Ranked или приватном матче с другом.', '/online');
   if (path.startsWith('/practice/replay/')) return meta('Повтор терминала — CLIRace', 'Личный повтор завершённой Practice shell-сессии.', path, false);
   if (path === '/learn') return meta('Обучение Linux с разбором ошибок — CLIRace', 'Изучайте Linux Core с объяснениями ответов и переходите от слабых тем к практике в терминале.', '/learn');
   if (path === '/learn/linux-core') return meta('Linux Core — обучение Linux с объяснениями | CLIRace', 'Проверьте знания Linux, разберите каждый ответ и закрепите слабые темы в настоящем терминале.', '/learn/linux-core');

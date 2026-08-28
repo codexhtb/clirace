@@ -326,7 +326,7 @@ function BattleResults({ battle }: { battle: BattleState }) {
           {rows.map((round) => <div className="battle-result-row" key={round}><span>{String(round).padStart(2, '0')}</span>{battle.results?.map((result) => { const item = result.rounds.find((entry) => entry.round === round); return <strong className={item?.success ? 'text-white' : 'text-slate-600'} key={result.userId}>{item?.success && item.durationMs !== null ? formatCompactDuration(item.durationMs) : 'DNF'}</strong>; })}</div>)}
         </div>
         {battle.mode === 'ranked' && battle.rankedResult && <RankedResultBlock battle={battle} result={battle.rankedResult} victory={victory} />}
-        <div className="mt-8 flex flex-wrap justify-center gap-3"><Link className="secondary-button" to="/"><ArrowLeft size={14} /> На главную</Link>{battle.mode === 'ranked' && <Link className="secondary-button" to="/rating?category=ranked"><Trophy size={14} /> Рейтинг</Link>}<Link className="primary-button" to={battle.mode === 'ranked' ? '/play?compete=ranked#competition' : battle.mode === 'quick' ? '/play?match=quick#competition' : '/battle'}><RefreshCw size={14} /> {battle.mode === 'ranked' ? 'Снова Ranked' : battle.mode === 'quick' ? 'Снова Quick Match' : 'Новая игра с другом'}</Link></div>
+        <div className="mt-8 flex flex-wrap justify-center gap-3"><Link className="secondary-button" to="/"><ArrowLeft size={14} /> На главную</Link>{battle.mode === 'ranked' && <Link className="secondary-button" to="/rating?category=ranked"><Trophy size={14} /> Рейтинг</Link>}<Link className="primary-button" to={battle.mode === 'ranked' ? '/online?mode=ranked' : battle.mode === 'quick' ? '/online?match=quick' : '/battle'}><RefreshCw size={14} /> {battle.mode === 'ranked' ? 'Снова Ranked' : battle.mode === 'quick' ? 'Снова Quick Match' : 'Новая игра с другом'}</Link></div>
       </section>
     </main>
   );
@@ -348,7 +348,7 @@ function RankedResultBlock({ battle, result, victory }: { battle: BattleState; r
 }
 
 function RankedNoContest({ reason }: { reason: string | null }) {
-  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на MMR.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><Link className="primary-button mt-8" to="/play?compete=ranked#competition">Вернуться к Ranked</Link></main>;
+  return <main className="page-width relative z-10 py-24 text-center"><div className="battle-icon mx-auto"><ShieldCheck size={25} /></div><p className="eyebrow mt-7">Рейтинговый матч отменён</p><h1 className="mt-4 text-4xl font-semibold text-white">Матч не повлиял на MMR.</h1><p className="mx-auto mt-4 max-w-lg text-slate-400">{noContestMessage(reason)} Ни один игрок не получил поражение.</p><Link className="primary-button mt-8" to="/online?mode=ranked">Вернуться к Ranked</Link></main>;
 }
 
 function noContestMessage(reason: string | null): string {

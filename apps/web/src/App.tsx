@@ -3,8 +3,9 @@ import { Activity, ArrowRight, BookOpen, Check, Command, Swords, Terminal, Troph
 import { QuickStartSection } from './QuickStartSection';
 import { CommunityHeader } from './CommunityHeader';
 import { routeMetadata, secondaryNavigation } from './product-ux';
+import { legacyPvpOnlineHref } from './flow-intents';
 import { currentUser } from './auth-client';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { AppPage, PageLoader } from './Ui';
 
 const BattleCreatePage = lazy(() => import('./BattlePages').then((module) => ({
@@ -17,6 +18,7 @@ const LearningPathsPage = lazy(() => import('./LearningPathsPage').then((module)
 const LeaderboardPage = lazy(() => import('./LeaderboardPage').then((module) => ({ default: module.LeaderboardPage })));
 const DailyPage = lazy(() => import('./DailyPage').then((module) => ({ default: module.DailyPage })));
 const PlayPage = lazy(() => import('./PlayPage').then((module) => ({ default: module.PlayPage })));
+const OnlinePage = lazy(() => import('./OnlinePage').then((module) => ({ default: module.OnlinePage })));
 const ProfilePage = lazy(() => import('./ProfilePage').then((module) => ({ default: module.ProfilePage })));
 const InterviewPage = lazy(() => import('./InterviewPage').then((module) => ({ default: module.InterviewPage })));
 const AdminConsole = lazy(() => import('./AdminConsole').then((module) => ({ default: module.AdminConsole })));
@@ -162,7 +164,7 @@ function HomePage() {
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <Link className="primary-button" to="/play">Начать практику <ArrowRight size={16} /></Link>
-                <Link className="secondary-button" to="/play?match=quick#competition"><Swords size={15} /> Найти соперника</Link>
+                <Link className="secondary-button" to="/online?match=quick"><Swords size={15} /> Найти соперника</Link>
               </div>
               <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-acid">ONLINE PvP · реальный соперник · Quick без MMR</p>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-600">
@@ -179,7 +181,7 @@ function HomePage() {
           <div className="product-paths mt-6">
             <Link to="/play#practice"><Terminal size={19} /><div><strong>Практика</strong><span>Короткие задачи в настоящем Linux shell.</span></div><ArrowRight size={15} /></Link>
             <Link to="/learn"><BookOpen size={19} /><div><strong>Обучение</strong><span>Вопросы с разбором каждого ответа.</span></div><ArrowRight size={15} /></Link>
-            <Link to="/play?compete=quick#competition"><Trophy size={19} /><div><strong>ONLINE PvP</strong><span>Quick без MMR, Ranked с MMR или матч с другом.</span></div><ArrowRight size={15} /></Link>
+            <Link to="/online"><Trophy size={19} /><div><strong>Онлайн</strong><span>Quick без MMR, Ranked с MMR или матч с другом.</span></div><ArrowRight size={15} /></Link>
           </div>
         </section>
 
@@ -249,7 +251,7 @@ function HomePage() {
 }
 
 export function App() {
-  const { pathname: path } = useLocation();
+  const { pathname: path, search, hash } = useLocation();
   useEffect(() => {
     const metadata = routeMetadata(path);
     document.title = metadata.title;
@@ -266,7 +268,12 @@ export function App() {
   }, [path]);
   if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
   if (path === '/admin' || path.startsWith('/admin/')) return <Suspense fallback={<RouteFallback />}><AdminConsole /></Suspense>;
-  if (path === '/play') return <Suspense fallback={<RouteFallback />}><PlayPage /></Suspense>;
+  if (path === '/play') {
+    const onlineHref = legacyPvpOnlineHref(search, hash);
+    if (onlineHref) return <Navigate to={onlineHref} replace />;
+    return <Suspense fallback={<RouteFallback />}><PlayPage /></Suspense>;
+  }
+  if (path === '/online') return <Suspense fallback={<RouteFallback />}><OnlinePage /></Suspense>;
   if (/^\/practice\/replay\/[0-9a-f-]{36}$/i.test(path)) return <Suspense fallback={<RouteFallback />}><TerminalReplayPage /></Suspense>;
   if (path === '/learn') return <Suspense fallback={<RouteFallback />}><LearnPage catalogOnly /></Suspense>;
   if (path === '/learn/paths' || path.startsWith('/learn/paths/')) return <Suspense fallback={<BattlePageFallback />}><LearningPathsPage /></Suspense>;

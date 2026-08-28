@@ -11,7 +11,8 @@
 
 ## P1 — основной путь пользователя
 
-- `/play`: сначала практика, затем единый блок соревнований Quick/Ranked, затем вторичная ссылка на Private Battle.
+- `/play`: только индивидуальная практика и real-shell; небольшой secondary link ведёт в Online.
+- `/online`: отдельный PvP-раздел с primary Quick Match и secondary Ranked/Private Battle.
 - Настоящий shell — главный рабочий элемент real-shell задачи. Таймер практики показывает прошедшее время, а не создаёт ложное ощущение дедлайна.
 - Профиль начинается с личности и компактного Ranked-статуса. Для пользователя без активности показывается понятный zero state, а не панель из нулей.
 - Единый словарь: «Практика», «Оценка практики», `MMR`, «Задача дня», русские названия сложности и режимов.
@@ -37,7 +38,8 @@
 | --- | --- | --- |
 | `/rating` | canonical | Ranked MMR по умолчанию, отдельно оценка практики |
 | `/leaderboard` | legacy redirect | `308` на `/rating` с сохранением query string |
-| `/play` | canonical | практика и соревнования |
+| `/play` | canonical | индивидуальная практика и real-shell |
+| `/online` | canonical | Quick Match, Ranked и Private Battle |
 | `/battle` | canonical secondary | создание приватного матча |
 | `/daily` | canonical | задача дня с серверным временем сброса |
 

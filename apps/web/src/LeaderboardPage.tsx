@@ -79,11 +79,11 @@ export function LeaderboardPage() {
       <main className="page-width relative z-10 py-10 sm:py-16">
         <section className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
           <div>
-            <p className="eyebrow">Соревнования CLIRace</p>
+            <p className="eyebrow">Рейтинг CLIRace</p>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Рейтинг игроков.</h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">MMR меняется только в Ranked. Результаты обычной практики собраны отдельно и не влияют на подбор соперника.</p>
           </div>
-          <Link className="primary-button self-start lg:self-auto" to="/play?compete=ranked#competition"><Trophy size={15} /> Играть Ranked</Link>
+          <Link className="primary-button self-start lg:self-auto" to="/online?mode=ranked"><Trophy size={15} /> Играть Ranked</Link>
         </section>
 
         <div className="mt-10 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Категория рейтинга">
