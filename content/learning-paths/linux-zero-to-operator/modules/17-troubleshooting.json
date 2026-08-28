@@ -1,0 +1,296 @@
+{
+  "slug": "troubleshooting",
+  "title": "Системная диагностика",
+  "description": "Собирайте факты от симптома к причине, проверяйте ресурсы, процессы, логи и конфигурацию без случайных исправлений.",
+  "order": 17,
+  "prerequisites": [
+    "packages"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-troubleshooting-symptom-lesson",
+      "slug": "symptom",
+      "title": "Начните с воспроизводимого симптома",
+      "type": "theory",
+      "order": 1,
+      "category": "troubleshooting",
+      "concept": "diagnostic_symptom",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Начните с воспроизводимого симптома"
+        },
+        {
+          "type": "paragraph",
+          "text": "Зафиксируйте точную команду, время, код и текст ошибки. Сначала подтвердите симптом, затем меняйте только одну гипотезу за шаг."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl -v http://127.0.0.1:8081/status.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Выполните локальный запрос и сохраните подробную ошибку curl.",
+            "Результат: Флаг `-v` показывает этап соединения и отделяет transport-проблему от HTTP-ответа."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Флаг `-v` показывает этап соединения и отделяет transport-проблему от HTTP-ответа."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-troubleshooting-symptom-quiz",
+      "slug": "symptom-quiz",
+      "title": "Проверьте себя: Начните с воспроизводимого симптома",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "troubleshooting",
+      "concept": "diagnostic_symptom",
+      "version": 1,
+      "questionSlugs": [
+        "zto-troubleshooting-symptom-command",
+        "troubleshooting-service-first-checks"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-troubleshooting-resources-lesson",
+      "slug": "resources",
+      "title": "Диск, inode и память",
+      "type": "theory",
+      "order": 3,
+      "category": "troubleshooting",
+      "concept": "resource_checks",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Диск, inode и память"
+        },
+        {
+          "type": "paragraph",
+          "text": "Ресурсные ошибки проверяют измерениями: `df -h` для блоков, `df -i` для inode, `free -h` для памяти. Свободные байты не гарантируют свободные inode."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "df -i"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите использование inode смонтированных файловых систем.",
+            "Результат: `df -i` проверяет отдельный конечный ресурс — количество файловых записей."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `df -i` проверяет отдельный конечный ресурс — количество файловых записей."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-troubleshooting-resources-quiz",
+      "slug": "resources-quiz",
+      "title": "Проверьте себя: Диск, inode и память",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "troubleshooting",
+      "concept": "resource_checks",
+      "version": 1,
+      "questionSlugs": [
+        "zto-troubleshooting-resources-command",
+        "storage-inodes-full"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-troubleshooting-service-state-lesson",
+      "slug": "service-state",
+      "title": "Состояние сервиса и журнал",
+      "type": "theory",
+      "order": 5,
+      "category": "troubleshooting",
+      "concept": "service_state",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Состояние сервиса и журнал"
+        },
+        {
+          "type": "paragraph",
+          "text": "На системе с systemd сначала смотрят `systemctl status`, затем узкий журнал unit. В sandbox systemd может отсутствовать, поэтому labs используют обычные процессы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "systemctl --no-pager status nginx.service"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите состояние `nginx.service` без pager.",
+            "Результат: `status` объединяет состояние unit и последние диагностические строки."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `status` объединяет состояние unit и последние диагностические строки."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-troubleshooting-service-state-quiz",
+      "slug": "service-state-quiz",
+      "title": "Проверьте себя: Состояние сервиса и журнал",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "troubleshooting",
+      "concept": "service_state",
+      "version": 1,
+      "questionSlugs": [
+        "zto-troubleshooting-service-state-command",
+        "systemd-enable-versus-start"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-troubleshooting-evidence-fix-lesson",
+      "slug": "evidence-fix",
+      "title": "Проверьте гипотезу и исправление",
+      "type": "theory",
+      "order": 7,
+      "category": "troubleshooting",
+      "concept": "verify_fix",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверьте гипотезу и исправление"
+        },
+        {
+          "type": "paragraph",
+          "text": "Перед исправлением сохраните evidence, затем внесите минимальное изменение и повторите исходную проверку. Успех — исчезновение симптома, а не отсутствие сообщения в терминале."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "journalctl -u api.service -n 30 --no-pager"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите последние 30 записей systemd unit `api.service`.",
+            "Результат: Узкий журнал сохраняет контекст и уменьшает шум при проверке гипотезы."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Узкий журнал сохраняет контекст и уменьшает шум при проверке гипотезы."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-troubleshooting-evidence-fix-quiz",
+      "slug": "evidence-fix-quiz",
+      "title": "Проверьте себя: Проверьте гипотезу и исправление",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "troubleshooting",
+      "concept": "verify_fix",
+      "version": 1,
+      "questionSlugs": [
+        "zto-troubleshooting-evidence-fix-command",
+        "systemd-view-status"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-troubleshooting-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "troubleshooting",
+      "concept": "troubleshooting_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "troubleshooting-stop-worker-clear-lock",
+        "troubleshooting-repair-current-release"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-troubleshooting-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "troubleshooting",
+      "concept": "troubleshooting_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "troubleshooting-identify-failed-services"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-troubleshooting-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Системная диагностика",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "troubleshooting",
+      "concept": "troubleshooting_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-troubleshooting-checkpoint-1",
+        "zto-troubleshooting-checkpoint-2",
+        "zto-troubleshooting-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

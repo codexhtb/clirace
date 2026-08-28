@@ -1,0 +1,296 @@
+{
+  "slug": "streams",
+  "title": "stdin, stdout и stderr",
+  "description": "Разделяйте вход, обычный вывод и ошибки, чтобы команды можно было безопасно соединять и автоматизировать.",
+  "order": 9,
+  "prerequisites": [
+    "processes"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-streams-three-streams-lesson",
+      "slug": "three-streams",
+      "title": "Три стандартных потока",
+      "type": "theory",
+      "order": 1,
+      "category": "pipes_redirection",
+      "concept": "standard_streams",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Три стандартных потока"
+        },
+        {
+          "type": "paragraph",
+          "text": "Процесс обычно получает stdin с дескриптором 0, пишет обычный результат в stdout 1, а диагностику — в stderr 2."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "echo ok > result.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Запишите обычный вывод `echo ok` в `result.txt`.",
+            "Результат: Оператор `>` без номера перенаправляет stdout, то есть дескриптор 1."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Оператор `>` без номера перенаправляет stdout, то есть дескриптор 1."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-streams-three-streams-quiz",
+      "slug": "three-streams-quiz",
+      "title": "Проверьте себя: Три стандартных потока",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "pipes_redirection",
+      "concept": "standard_streams",
+      "version": 1,
+      "questionSlugs": [
+        "zto-streams-three-streams-command",
+        "zto-streams-three-streams-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-streams-input-lesson",
+      "slug": "input",
+      "title": "Стандартный ввод",
+      "type": "theory",
+      "order": 3,
+      "category": "pipes_redirection",
+      "concept": "standard_input",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Стандартный ввод"
+        },
+        {
+          "type": "paragraph",
+          "text": "Оператор `<` подключает файл к stdin команды. Программа читает данные так, будто они пришли с клавиатуры или предыдущего этапа."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "sort < names.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Передайте `names.txt` на stdin команды `sort`.",
+            "Результат: Перенаправление ввода не означает перезапись источника."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Перенаправление ввода не означает перезапись источника."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-streams-input-quiz",
+      "slug": "input-quiz",
+      "title": "Проверьте себя: Стандартный ввод",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "pipes_redirection",
+      "concept": "standard_input",
+      "version": 1,
+      "questionSlugs": [
+        "zto-streams-input-command",
+        "zto-streams-input-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-streams-stderr-lesson",
+      "slug": "stderr",
+      "title": "Ошибки отдельно от результата",
+      "type": "theory",
+      "order": 5,
+      "category": "pipes_redirection",
+      "concept": "standard_error",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Ошибки отдельно от результата"
+        },
+        {
+          "type": "paragraph",
+          "text": "Раздельные потоки позволяют сохранить данные и диагностику в разные файлы. Запись `2>` относится только к stderr."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ls /missing 2> errors.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Сохраните ошибки команды `ls /missing` в `errors.log`.",
+            "Результат: Дескриптор 2 можно направить отдельно, не загрязняя полезный вывод."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Дескриптор 2 можно направить отдельно, не загрязняя полезный вывод."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-streams-stderr-quiz",
+      "slug": "stderr-quiz",
+      "title": "Проверьте себя: Ошибки отдельно от результата",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "pipes_redirection",
+      "concept": "standard_error",
+      "version": 1,
+      "questionSlugs": [
+        "zto-streams-stderr-command",
+        "zto-streams-stderr-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-streams-append-lesson",
+      "slug": "append",
+      "title": "Перезапись и добавление",
+      "type": "theory",
+      "order": 7,
+      "category": "pipes_redirection",
+      "concept": "append_output",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Перезапись и добавление"
+        },
+        {
+          "type": "paragraph",
+          "text": "`>` создаёт или обнуляет файл перед записью, а `>>` добавляет данные в конец. Выбор оператора определяет сохранность старого содержимого."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "echo done >> audit.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Добавьте строку `done` в конец `audit.log`.",
+            "Результат: `>>` сохраняет прежнее содержимое и продолжает запись в конце."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `>>` сохраняет прежнее содержимое и продолжает запись в конце."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-streams-append-quiz",
+      "slug": "append-quiz",
+      "title": "Проверьте себя: Перезапись и добавление",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "pipes_redirection",
+      "concept": "append_output",
+      "version": 1,
+      "questionSlugs": [
+        "zto-streams-append-command",
+        "redirection-append-output"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-streams-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "pipes_redirection",
+      "concept": "streams_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-append-deployment-audit",
+        "shell-merge-config-fragments"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-streams-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "pipes_redirection",
+      "concept": "streams_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-capture-command-streams"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-streams-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: stdin, stdout и stderr",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "pipes_redirection",
+      "concept": "streams_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-streams-checkpoint-1",
+        "zto-streams-checkpoint-2",
+        "zto-streams-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

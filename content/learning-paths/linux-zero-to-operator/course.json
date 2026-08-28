@@ -1,0 +1,31 @@
+{
+  "slug": "linux-zero-to-operator",
+  "title": "Linux с нуля: Zero to Operator",
+  "description": "Главный курс CLIRace для новичка: 68 коротких уроков, понятные проверки и настоящая практика в безопасном Linux shell — от первой команды до диагностики сервиса.",
+  "version": 1,
+  "enabled": true,
+  "order": 0,
+  "estimatedMinutes": 595,
+  "level": "beginner",
+  "canonicalChallengeLibrary": 2,
+  "prerequisites": [],
+  "modules": [
+    "01-terminal-basics.json",
+    "02-filesystem-navigation.json",
+    "03-files-directories.json",
+    "04-viewing-files.json",
+    "05-search.json",
+    "06-permissions.json",
+    "07-users-groups.json",
+    "08-processes.json",
+    "09-streams.json",
+    "10-pipes-redirection.json",
+    "11-text-processing.json",
+    "12-shell-fundamentals.json",
+    "13-environment-path.json",
+    "14-links.json",
+    "15-networking.json",
+    "16-packages.json",
+    "17-troubleshooting.json"
+  ]
+}

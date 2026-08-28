@@ -1,0 +1,296 @@
+{
+  "slug": "users-groups",
+  "title": "Пользователи и группы",
+  "description": "Поймите UID, GID, группы процесса и связь идентичности с доступом к данным.",
+  "order": 7,
+  "prerequisites": [
+    "permissions"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-users-groups-identity-lesson",
+      "slug": "identity",
+      "title": "UID, GID и текущая идентичность",
+      "type": "theory",
+      "order": 1,
+      "category": "users_groups",
+      "concept": "identity",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "UID, GID и текущая идентичность"
+        },
+        {
+          "type": "paragraph",
+          "text": "Ядро проверяет числовые UID и GID. Имена удобны человеку и сопоставляются с идентификаторами через системные базы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "id"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите пользователя, UID, основной GID и группы текущей сессии.",
+            "Результат: `id` собирает основные сведения, которые участвуют в проверке доступа."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `id` собирает основные сведения, которые участвуют в проверке доступа."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-users-groups-identity-quiz",
+      "slug": "identity-quiz",
+      "title": "Проверьте себя: UID, GID и текущая идентичность",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "users_groups",
+      "concept": "identity",
+      "version": 1,
+      "questionSlugs": [
+        "zto-users-groups-identity-command",
+        "users-effective-groups"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-users-groups-whoami-lesson",
+      "slug": "whoami",
+      "title": "Имя пользователя и сессии",
+      "type": "theory",
+      "order": 3,
+      "category": "users_groups",
+      "concept": "current_user",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Имя пользователя и сессии"
+        },
+        {
+          "type": "paragraph",
+          "text": "`whoami` выводит эффективное имя пользователя процесса. `who` показывает вошедшие сессии и отвечает на другой вопрос."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "whoami"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите эффективное имя пользователя одной строкой.",
+            "Результат: Эффективная идентичность важна именно для проверки прав текущего процесса."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Эффективная идентичность важна именно для проверки прав текущего процесса."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-users-groups-whoami-quiz",
+      "slug": "whoami-quiz",
+      "title": "Проверьте себя: Имя пользователя и сессии",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "users_groups",
+      "concept": "current_user",
+      "version": 1,
+      "questionSlugs": [
+        "zto-users-groups-whoami-command",
+        "zto-users-groups-whoami-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-users-groups-ownership-lesson",
+      "slug": "ownership",
+      "title": "Владелец и группа файла",
+      "type": "theory",
+      "order": 5,
+      "category": "users_groups",
+      "concept": "ownership",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Владелец и группа файла"
+        },
+        {
+          "type": "paragraph",
+          "text": "У inode есть владелец и группа. Команда `chown` меняет эти поля, а `chmod` меняет набор прав — это разные операции."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "chown clirace:ops report.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Назначьте файлу `report.txt` владельца `clirace` и группу `ops`.",
+            "Результат: `chown user:group` меняет владельца и группу в одной операции."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `chown user:group` меняет владельца и группу в одной операции."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-users-groups-ownership-quiz",
+      "slug": "ownership-quiz",
+      "title": "Проверьте себя: Владелец и группа файла",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "users_groups",
+      "concept": "ownership",
+      "version": 1,
+      "questionSlugs": [
+        "zto-users-groups-ownership-command",
+        "zto-users-groups-ownership-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-users-groups-group-access-lesson",
+      "slug": "group-access",
+      "title": "Дополнительные группы",
+      "type": "theory",
+      "order": 7,
+      "category": "users_groups",
+      "concept": "supplementary_groups",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Дополнительные группы"
+        },
+        {
+          "type": "paragraph",
+          "text": "Процесс наследует набор дополнительных групп при входе. Добавление пользователя в группу обычно влияет на новые сессии, а не на уже запущенный shell."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "id clirace"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите группы пользователя `clirace`.",
+            "Результат: Группы — часть credentials процесса; старый shell не всегда получает изменения автоматически."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Группы — часть credentials процесса; старый shell не всегда получает изменения автоматически."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-users-groups-group-access-quiz",
+      "slug": "group-access-quiz",
+      "title": "Проверьте себя: Дополнительные группы",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "users_groups",
+      "concept": "supplementary_groups",
+      "version": 1,
+      "questionSlugs": [
+        "zto-users-groups-group-access-command",
+        "zto-users-groups-group-access-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-users-groups-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "users_groups",
+      "concept": "users_groups_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "users-create-deploy-account",
+        "users-add-deploy-to-releases"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-users-groups-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "users_groups",
+      "concept": "users_groups_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "users-create-operations-group"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-users-groups-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Пользователи и группы",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "users_groups",
+      "concept": "users_groups_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-users-groups-checkpoint-1",
+        "zto-users-groups-checkpoint-2",
+        "zto-users-groups-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

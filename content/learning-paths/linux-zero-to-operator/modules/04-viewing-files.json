@@ -1,0 +1,296 @@
+{
+  "slug": "viewing-files",
+  "title": "Просмотр содержимого файлов",
+  "description": "Выбирайте подходящий способ чтения маленьких файлов, начала, конца и растущих журналов.",
+  "order": 4,
+  "prerequisites": [
+    "files-directories"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-viewing-files-cat-small-lesson",
+      "slug": "cat-small",
+      "title": "`cat` для коротких файлов",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "cat_files",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`cat` для коротких файлов"
+        },
+        {
+          "type": "paragraph",
+          "text": "`cat` последовательно пишет содержимое файлов в stdout. Он удобен для небольших конфигов, но длинный лог лучше читать порциями."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "cat version.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Выведите короткий файл `version.txt`.",
+            "Результат: `cat` не изменяет файл, если его вывод не перенаправлен."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `cat` не изменяет файл, если его вывод не перенаправлен."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-viewing-files-cat-small-quiz",
+      "slug": "cat-small-quiz",
+      "title": "Проверьте себя: `cat` для коротких файлов",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "cat_files",
+      "version": 1,
+      "questionSlugs": [
+        "zto-viewing-files-cat-small-command",
+        "zto-viewing-files-cat-small-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-viewing-files-head-tail-lesson",
+      "slug": "head-tail",
+      "title": "Начало и конец файла",
+      "type": "theory",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "head_tail",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Начало и конец файла"
+        },
+        {
+          "type": "paragraph",
+          "text": "`head` показывает начало, `tail` — конец. Параметр `-n` задаёт точное число строк и помогает ограничить вывод."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "tail -n 20 app.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите последние 20 строк `app.log`.",
+            "Результат: `tail -n 20` читает конец файла и не ждёт новых строк без `-f`."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `tail -n 20` читает конец файла и не ждёт новых строк без `-f`."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-viewing-files-head-tail-quiz",
+      "slug": "head-tail-quiz",
+      "title": "Проверьте себя: Начало и конец файла",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "head_tail",
+      "version": 1,
+      "questionSlugs": [
+        "zto-viewing-files-head-tail-command",
+        "zto-viewing-files-head-tail-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-viewing-files-follow-log-lesson",
+      "slug": "follow-log",
+      "title": "Наблюдение за растущим логом",
+      "type": "theory",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "follow_files",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Наблюдение за растущим логом"
+        },
+        {
+          "type": "paragraph",
+          "text": "Режим `tail -f` продолжает ждать новые записи. Его останавливают `Ctrl+C`, не завершая сам сервис, который пишет журнал."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "tail -f worker.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Начните наблюдать новые строки `worker.log`.",
+            "Результат: `Ctrl+C` отправляет foreground-команде сигнал прерывания."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `Ctrl+C` отправляет foreground-команде сигнал прерывания."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-viewing-files-follow-log-quiz",
+      "slug": "follow-log-quiz",
+      "title": "Проверьте себя: Наблюдение за растущим логом",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "filesystem",
+      "concept": "follow_files",
+      "version": 1,
+      "questionSlugs": [
+        "zto-viewing-files-follow-log-command",
+        "logs-follow-unit"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-viewing-files-file-type-lesson",
+      "slug": "file-type",
+      "title": "Тип и метаданные файла",
+      "type": "theory",
+      "order": 7,
+      "category": "filesystem",
+      "concept": "file_metadata",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Тип и метаданные файла"
+        },
+        {
+          "type": "paragraph",
+          "text": "`file` определяет тип по содержимому, а `stat` показывает размер, владельца, права и временные метки."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "stat report.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите подробные метаданные `report.txt`.",
+            "Результат: `stat` отвечает о метаданных, а `file` — о предполагаемом формате данных."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `stat` отвечает о метаданных, а `file` — о предполагаемом формате данных."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-viewing-files-file-type-quiz",
+      "slug": "file-type-quiz",
+      "title": "Проверьте себя: Тип и метаданные файла",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "filesystem",
+      "concept": "file_metadata",
+      "version": 1,
+      "questionSlugs": [
+        "zto-viewing-files-file-type-command",
+        "zto-viewing-files-file-type-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-viewing-files-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "filesystem",
+      "concept": "viewing_files_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "text-extract-failing-client-ip",
+        "text-enabled-services-from-csv"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-viewing-files-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "filesystem",
+      "concept": "viewing_files_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "text-collect-error-lines"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-viewing-files-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Просмотр содержимого файлов",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "filesystem",
+      "concept": "viewing_files_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-viewing-files-checkpoint-1",
+        "zto-viewing-files-checkpoint-2",
+        "zto-viewing-files-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

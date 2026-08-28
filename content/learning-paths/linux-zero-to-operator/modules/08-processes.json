@@ -1,0 +1,296 @@
+{
+  "slug": "processes",
+  "title": "Процессы и сигналы",
+  "description": "Наблюдайте процессы, находите PID, различайте foreground/background и завершайте работу корректным сигналом.",
+  "order": 8,
+  "prerequisites": [
+    "users-groups"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-processes-ps-lesson",
+      "slug": "ps",
+      "title": "Снимок процессов через `ps`",
+      "type": "theory",
+      "order": 1,
+      "category": "processes",
+      "concept": "process_listing",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Снимок процессов через `ps`"
+        },
+        {
+          "type": "paragraph",
+          "text": "`ps` показывает снимок процессов. Формат `ps aux` удобен для обзора, а точный `-p PID` — для проверки одного процесса."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ps -p $$"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите процесс текущего shell по его PID.",
+            "Результат: `ps -p $$` ограничивает снимок процессом текущего shell."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `ps -p $$` ограничивает снимок процессом текущего shell."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-processes-ps-quiz",
+      "slug": "ps-quiz",
+      "title": "Проверьте себя: Снимок процессов через `ps`",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "processes",
+      "concept": "process_listing",
+      "version": 1,
+      "questionSlugs": [
+        "zto-processes-ps-command",
+        "processes-zombie-state"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-processes-pgrep-lesson",
+      "slug": "pgrep",
+      "title": "Поиск PID по имени",
+      "type": "theory",
+      "order": 3,
+      "category": "processes",
+      "concept": "process_pid",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Поиск PID по имени"
+        },
+        {
+          "type": "paragraph",
+          "text": "`pgrep` ищет процессы по имени и возвращает PID. Перед отправкой сигнала полезно дополнительно проверить найденную команду."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "pgrep -x nginx"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Найдите PID процессов с точным именем `nginx`.",
+            "Результат: Флаг `-x` исключает частичные совпадения с похожими именами."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Флаг `-x` исключает частичные совпадения с похожими именами."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-processes-pgrep-quiz",
+      "slug": "pgrep-quiz",
+      "title": "Проверьте себя: Поиск PID по имени",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "processes",
+      "concept": "process_pid",
+      "version": 1,
+      "questionSlugs": [
+        "zto-processes-pgrep-command",
+        "processes-find-pid"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-processes-signals-lesson",
+      "slug": "signals",
+      "title": "Сигналы и корректная остановка",
+      "type": "theory",
+      "order": 5,
+      "category": "processes",
+      "concept": "process_signals",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Сигналы и корректная остановка"
+        },
+        {
+          "type": "paragraph",
+          "text": "`kill PID` по умолчанию отправляет SIGTERM. Это просьба завершиться корректно; SIGKILL стоит оставлять для процесса, который не реагирует."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "kill 4242"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Попросите процесс 4242 корректно завершиться.",
+            "Результат: SIGTERM даёт приложению шанс закрыть файлы и сохранить состояние."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: SIGTERM даёт приложению шанс закрыть файлы и сохранить состояние."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-processes-signals-quiz",
+      "slug": "signals-quiz",
+      "title": "Проверьте себя: Сигналы и корректная остановка",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "processes",
+      "concept": "process_signals",
+      "version": 1,
+      "questionSlugs": [
+        "zto-processes-signals-command",
+        "signals-graceful-stop"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-processes-background-lesson",
+      "slug": "background",
+      "title": "Foreground и background",
+      "type": "theory",
+      "order": 7,
+      "category": "processes",
+      "concept": "background_jobs",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Foreground и background"
+        },
+        {
+          "type": "paragraph",
+          "text": "Символ `&` запускает pipeline в фоне текущего shell. `jobs` показывает такие задания, а `fg` возвращает выбранное на передний план."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "sleep 30 &"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Запустите `sleep 30` как фоновую задачу.",
+            "Результат: Job ID принадлежит shell и не заменяет системный PID."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Job ID принадлежит shell и не заменяет системный PID."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-processes-background-quiz",
+      "slug": "background-quiz",
+      "title": "Проверьте себя: Foreground и background",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "processes",
+      "concept": "background_jobs",
+      "version": 1,
+      "questionSlugs": [
+        "zto-processes-background-command",
+        "zto-processes-background-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-processes-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "processes",
+      "concept": "processes_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "process-start-idle-worker",
+        "process-stop-log-follower"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-processes-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "processes",
+      "concept": "processes_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "process-stop-stalled-worker"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-processes-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Процессы и сигналы",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "processes",
+      "concept": "processes_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-processes-checkpoint-1",
+        "zto-processes-checkpoint-2",
+        "zto-processes-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

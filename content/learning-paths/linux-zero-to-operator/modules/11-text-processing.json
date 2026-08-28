@@ -1,0 +1,296 @@
+{
+  "slug": "text-processing",
+  "title": "Обработка текста",
+  "description": "Применяйте `cut`, `sort`, `uniq`, `tr`, `sed` и `awk` к локальным данным без ручного копирования.",
+  "order": 11,
+  "prerequisites": [
+    "pipes-redirection"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-text-processing-cut-lesson",
+      "slug": "cut",
+      "title": "Выбор полей через `cut`",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "cut_fields",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Выбор полей через `cut`"
+        },
+        {
+          "type": "paragraph",
+          "text": "`cut` извлекает поля из строк с простым разделителем. Для CSV без кавычек достаточно `-d` и `-f`."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "cut -d',' -f2 users.csv"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите второе поле строк `users.csv`, разделённых запятой.",
+            "Результат: `cut` не является полноценным CSV-парсером и не понимает кавычки."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `cut` не является полноценным CSV-парсером и не понимает кавычки."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-text-processing-cut-quiz",
+      "slug": "cut-quiz",
+      "title": "Проверьте себя: Выбор полей через `cut`",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "bash",
+      "concept": "cut_fields",
+      "version": 1,
+      "questionSlugs": [
+        "zto-text-processing-cut-command",
+        "zto-text-processing-cut-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-text-processing-sort-uniq-lesson",
+      "slug": "sort-uniq",
+      "title": "Сортировка и уникальные значения",
+      "type": "theory",
+      "order": 3,
+      "category": "bash",
+      "concept": "sort_unique",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Сортировка и уникальные значения"
+        },
+        {
+          "type": "paragraph",
+          "text": "`sort` упорядочивает строки, `uniq -c` считает соседние повторы. Вместе они дают компактную частотную таблицу."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "sort status.txt | uniq -c"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Посчитайте частоту каждой строки в `status.txt`.",
+            "Результат: Числовой режим избегает лексикографического порядка вроде 10 перед 2."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Числовой режим избегает лексикографического порядка вроде 10 перед 2."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-text-processing-sort-uniq-quiz",
+      "slug": "sort-uniq-quiz",
+      "title": "Проверьте себя: Сортировка и уникальные значения",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "bash",
+      "concept": "sort_unique",
+      "version": 1,
+      "questionSlugs": [
+        "zto-text-processing-sort-uniq-command",
+        "zto-text-processing-sort-uniq-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-text-processing-tr-lesson",
+      "slug": "tr",
+      "title": "Замена отдельных символов",
+      "type": "theory",
+      "order": 5,
+      "category": "bash",
+      "concept": "translate_chars",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Замена отдельных символов"
+        },
+        {
+          "type": "paragraph",
+          "text": "`tr` читает stdin и заменяет или удаляет символы. Он подходит для регистра и простых наборов, но не редактирует файл на месте."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "printf 'hello\n' | tr '[:lower:]' '[:upper:]'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Преобразуйте ввод `hello` в верхний регистр.",
+            "Результат: `tr` удобно помещать между другими этапами pipeline."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `tr` удобно помещать между другими этапами pipeline."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-text-processing-tr-quiz",
+      "slug": "tr-quiz",
+      "title": "Проверьте себя: Замена отдельных символов",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "bash",
+      "concept": "translate_chars",
+      "version": 1,
+      "questionSlugs": [
+        "zto-text-processing-tr-command",
+        "zto-text-processing-tr-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-text-processing-awk-lesson",
+      "slug": "awk",
+      "title": "Поля и условия в `awk`",
+      "type": "theory",
+      "order": 7,
+      "category": "bash",
+      "concept": "awk_fields",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Поля и условия в `awk`"
+        },
+        {
+          "type": "paragraph",
+          "text": "`awk` разбивает строку на поля и применяет правило. Переменные `$1`, `$2` означают поля текущей строки, а не shell-параметры внутри одинарных кавычек."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "awk '{print $1}' services.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите первый столбец `services.txt`.",
+            "Результат: Одинарные кавычки защищают `$1` от подстановки shell."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Одинарные кавычки защищают `$1` от подстановки shell."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-text-processing-awk-quiz",
+      "slug": "awk-quiz",
+      "title": "Проверьте себя: Поля и условия в `awk`",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "bash",
+      "concept": "awk_fields",
+      "version": 1,
+      "questionSlugs": [
+        "zto-text-processing-awk-command",
+        "zto-text-processing-awk-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-text-processing-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "bash",
+      "concept": "text_processing_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "text-unique-login-users",
+        "text-replace-deprecated-endpoint"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-text-processing-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "bash",
+      "concept": "text_processing_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "text-normalize-alert-message"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-text-processing-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Обработка текста",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "bash",
+      "concept": "text_processing_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-text-processing-checkpoint-1",
+        "zto-text-processing-checkpoint-2",
+        "zto-text-processing-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

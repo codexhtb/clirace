@@ -1,0 +1,296 @@
+{
+  "slug": "packages",
+  "title": "Пакеты и инструменты",
+  "description": "Проверяйте наличие утилит и сведения о пакетах; реальные лаборатории остаются offline и не требуют установки из сети.",
+  "order": 16,
+  "prerequisites": [
+    "networking"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-packages-command-exists-lesson",
+      "slug": "command-exists",
+      "title": "Проверка наличия команды",
+      "type": "theory",
+      "order": 1,
+      "category": "packages",
+      "concept": "command_presence",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверка наличия команды"
+        },
+        {
+          "type": "paragraph",
+          "text": "`command -v` сообщает, сможет ли shell разрешить имя команды. Это надёжнее попытки угадать путь вроде `/usr/bin/tool`."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "command -v curl"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Проверьте, доступна ли команда `curl`.",
+            "Результат: `command -v` ничего не устанавливает и подходит для offline-проверки."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `command -v` ничего не устанавливает и подходит для offline-проверки."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-packages-command-exists-quiz",
+      "slug": "command-exists-quiz",
+      "title": "Проверьте себя: Проверка наличия команды",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "packages",
+      "concept": "command_presence",
+      "version": 1,
+      "questionSlugs": [
+        "zto-packages-command-exists-command",
+        "zto-packages-command-exists-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-packages-package-owner-lesson",
+      "slug": "package-owner",
+      "title": "Какой пакет поставил файл",
+      "type": "theory",
+      "order": 3,
+      "category": "packages",
+      "concept": "package_ownership",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Какой пакет поставил файл"
+        },
+        {
+          "type": "paragraph",
+          "text": "На Debian/Ubuntu `dpkg -S` ищет пакет-владельца установленного пути, а `dpkg -L` перечисляет файлы установленного пакета."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "dpkg -S /bin/ls"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Найдите пакет-владелец файла `/bin/ls`.",
+            "Результат: Запрос локальной базе пакетов не требует сетевого доступа."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Запрос локальной базе пакетов не требует сетевого доступа."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-packages-package-owner-quiz",
+      "slug": "package-owner-quiz",
+      "title": "Проверьте себя: Какой пакет поставил файл",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "packages",
+      "concept": "package_ownership",
+      "version": 1,
+      "questionSlugs": [
+        "zto-packages-package-owner-command",
+        "zto-packages-package-owner-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-packages-package-info-lesson",
+      "slug": "package-info",
+      "title": "Информация об установленном пакете",
+      "type": "theory",
+      "order": 5,
+      "category": "packages",
+      "concept": "package_info",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Информация об установленном пакете"
+        },
+        {
+          "type": "paragraph",
+          "text": "`dpkg-query -W` показывает статус и версию пакета из локальной базы. Это безопасная диагностическая проверка."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "dpkg-query -W bash"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите статус и версию пакета `bash`.",
+            "Результат: `dpkg-query` не обновляет индекс и не меняет систему."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `dpkg-query` не обновляет индекс и не меняет систему."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-packages-package-info-quiz",
+      "slug": "package-info-quiz",
+      "title": "Проверьте себя: Информация об установленном пакете",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "packages",
+      "concept": "package_info",
+      "version": 1,
+      "questionSlugs": [
+        "zto-packages-package-info-command",
+        "zto-packages-package-info-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-packages-apt-index-lesson",
+      "slug": "apt-index",
+      "title": "Индекс репозитория и установка",
+      "type": "theory",
+      "order": 7,
+      "category": "packages",
+      "concept": "apt_package_index",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Индекс репозитория и установка"
+        },
+        {
+          "type": "paragraph",
+          "text": "`apt update` обновляет локальный индекс доступных версий, а `apt install` меняет систему. В CLIRace labs установка из Интернета не требуется."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "apt-cache policy bash"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите сведения о пакете из локального apt-кэша.",
+            "Результат: `apt-cache policy` читает имеющийся индекс, не устанавливая пакет."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `apt-cache policy` читает имеющийся индекс, не устанавливая пакет."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-packages-apt-index-quiz",
+      "slug": "apt-index-quiz",
+      "title": "Проверьте себя: Индекс репозитория и установка",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "packages",
+      "concept": "apt_package_index",
+      "version": 1,
+      "questionSlugs": [
+        "zto-packages-apt-index-command",
+        "packages-refresh-index"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-packages-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "packages",
+      "concept": "packages_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-audit-grep-runtime",
+        "packages-audit-archive-toolchain"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-packages-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "packages",
+      "concept": "packages_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-audit-findutils"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-packages-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Пакеты и инструменты",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "packages",
+      "concept": "packages_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-packages-checkpoint-1",
+        "zto-packages-checkpoint-2",
+        "zto-packages-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

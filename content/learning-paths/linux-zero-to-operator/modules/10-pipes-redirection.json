@@ -1,0 +1,296 @@
+{
+  "slug": "pipes-redirection",
+  "title": "Pipelines и перенаправления",
+  "description": "Соединяйте небольшие команды, считайте результаты и контролируйте ошибки pipeline.",
+  "order": 10,
+  "prerequisites": [
+    "streams"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-pipes-redirection-pipe-lesson",
+      "slug": "pipe",
+      "title": "Как работает pipe",
+      "type": "theory",
+      "order": 1,
+      "category": "pipes_redirection",
+      "concept": "pipeline",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Как работает pipe"
+        },
+        {
+          "type": "paragraph",
+          "text": "Оператор `|` подключает stdout левой команды к stdin правой. stderr левой команды остаётся отдельным, если его явно не перенаправить."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "grep ERROR app.log | wc -l"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Посчитайте строки с `ERROR` в `app.log`.",
+            "Результат: Pipe передаёт поток байтов, а не имя временного файла."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Pipe передаёт поток байтов, а не имя временного файла."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-pipe-quiz",
+      "slug": "pipe-quiz",
+      "title": "Проверьте себя: Как работает pipe",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "pipes_redirection",
+      "concept": "pipeline",
+      "version": 1,
+      "questionSlugs": [
+        "zto-pipes-redirection-pipe-command",
+        "pipes-filter-errors"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-pipeline-order-lesson",
+      "slug": "pipeline-order",
+      "title": "Порядок этапов",
+      "type": "theory",
+      "order": 3,
+      "category": "pipes_redirection",
+      "concept": "pipeline_order",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Порядок этапов"
+        },
+        {
+          "type": "paragraph",
+          "text": "Каждый этап должен принимать формат предыдущего. Сначала выбирают данные, затем преобразуют, сортируют и считают."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "sort users.txt | uniq"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Получите отсортированный список уникальных пользователей из `users.txt`.",
+            "Результат: Правильный порядок делает одинаковые строки соседними до дедупликации."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Правильный порядок делает одинаковые строки соседними до дедупликации."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-pipeline-order-quiz",
+      "slug": "pipeline-order-quiz",
+      "title": "Проверьте себя: Порядок этапов",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "pipes_redirection",
+      "concept": "pipeline_order",
+      "version": 1,
+      "questionSlugs": [
+        "zto-pipes-redirection-pipeline-order-command",
+        "zto-pipes-redirection-pipeline-order-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-tee-lesson",
+      "slug": "tee",
+      "title": "Вывод на экран и в файл",
+      "type": "theory",
+      "order": 5,
+      "category": "pipes_redirection",
+      "concept": "tee_output",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Вывод на экран и в файл"
+        },
+        {
+          "type": "paragraph",
+          "text": "`tee` копирует stdin одновременно в stdout и файл. Это удобно, когда результат нужен следующей команде и в артефакте."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "cat report.txt | tee copy.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите `report.txt` и одновременно сохраните копию в `copy.txt`.",
+            "Результат: `tee` не прерывает pipeline: копия потока продолжает идти в stdout."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `tee` не прерывает pipeline: копия потока продолжает идти в stdout."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-tee-quiz",
+      "slug": "tee-quiz",
+      "title": "Проверьте себя: Вывод на экран и в файл",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "pipes_redirection",
+      "concept": "tee_output",
+      "version": 1,
+      "questionSlugs": [
+        "zto-pipes-redirection-tee-command",
+        "zto-pipes-redirection-tee-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-pipe-status-lesson",
+      "slug": "pipe-status",
+      "title": "Ошибки внутри pipeline",
+      "type": "theory",
+      "order": 7,
+      "category": "pipes_redirection",
+      "concept": "pipeline_status",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Ошибки внутри pipeline"
+        },
+        {
+          "type": "paragraph",
+          "text": "Без `pipefail` код pipeline обычно равен коду последней команды. В Bash `set -o pipefail` позволяет заметить ошибку любого этапа."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "set -o pipefail"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Включите обнаружение ошибок всех этапов pipeline.",
+            "Результат: `pipefail` делает автоматизацию честнее: ранняя ошибка не маскируется успешным `wc`."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `pipefail` делает автоматизацию честнее: ранняя ошибка не маскируется успешным `wc`."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-pipe-status-quiz",
+      "slug": "pipe-status-quiz",
+      "title": "Проверьте себя: Ошибки внутри pipeline",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "pipes_redirection",
+      "concept": "pipeline_status",
+      "version": 1,
+      "questionSlugs": [
+        "zto-pipes-redirection-pipe-status-command",
+        "zto-pipes-redirection-pipe-status-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "pipes_redirection",
+      "concept": "pipes_redirection_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-sum-worker-durations",
+        "shell-extract-service-column"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "pipes_redirection",
+      "concept": "pipes_redirection_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-build-unique-user-pipeline"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-pipes-redirection-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Pipelines и перенаправления",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "pipes_redirection",
+      "concept": "pipes_redirection_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-pipes-redirection-checkpoint-1",
+        "zto-pipes-redirection-checkpoint-2",
+        "zto-pipes-redirection-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

@@ -1,0 +1,296 @@
+{
+  "slug": "networking",
+  "title": "Основы сети",
+  "description": "Различайте адрес и порт, проверяйте listeners и тестируйте только локальные endpoints без внешнего Интернета.",
+  "order": 15,
+  "prerequisites": [
+    "links"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-networking-addresses-lesson",
+      "slug": "addresses",
+      "title": "IP-адрес и loopback",
+      "type": "theory",
+      "order": 1,
+      "category": "networking",
+      "concept": "ip_addresses",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "IP-адрес и loopback"
+        },
+        {
+          "type": "paragraph",
+          "text": "Адрес `127.0.0.1` относится к loopback и доступен только внутри текущего network namespace. `0.0.0.0` в bind означает все локальные интерфейсы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ip -4 addr show"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите IPv4-адреса интерфейсов.",
+            "Результат: Команда `ip` читает сетевое состояние и не требует внешнего доступа."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Команда `ip` читает сетевое состояние и не требует внешнего доступа."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-networking-addresses-quiz",
+      "slug": "addresses-quiz",
+      "title": "Проверьте себя: IP-адрес и loopback",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "networking",
+      "concept": "ip_addresses",
+      "version": 1,
+      "questionSlugs": [
+        "zto-networking-addresses-command",
+        "zto-networking-addresses-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-networking-ports-lesson",
+      "slug": "ports",
+      "title": "Порты и listeners",
+      "type": "theory",
+      "order": 3,
+      "category": "networking",
+      "concept": "tcp_listening",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Порты и listeners"
+        },
+        {
+          "type": "paragraph",
+          "text": "IP выбирает хост или интерфейс, порт — конкретный сервис. Listener должен быть запущен и привязан к ожидаемому адресу и протоколу."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ss -ltnp"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите слушающие TCP-сокеты и процессы.",
+            "Результат: `ss -ltnp` объединяет состояние TCP, адреса, порты и сведения о процессах."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `ss -ltnp` объединяет состояние TCP, адреса, порты и сведения о процессах."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-networking-ports-quiz",
+      "slug": "ports-quiz",
+      "title": "Проверьте себя: Порты и listeners",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "networking",
+      "concept": "tcp_listening",
+      "version": 1,
+      "questionSlugs": [
+        "zto-networking-ports-command",
+        "networking-listen-sockets"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-networking-local-http-lesson",
+      "slug": "local-http",
+      "title": "Проверка локального HTTP",
+      "type": "theory",
+      "order": 5,
+      "category": "networking",
+      "concept": "local_http",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверка локального HTTP"
+        },
+        {
+          "type": "paragraph",
+          "text": "Для лабораторной достаточно запросить локальный endpoint через `curl`. Код ответа и тело проверяют отдельно, не полагаясь на внешний Интернет."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl -i http://127.0.0.1:8081/status.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Получите заголовки и тело локального status endpoint.",
+            "Результат: `-i` показывает HTTP-заголовки вместе с телом и помогает видеть код ответа."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `-i` показывает HTTP-заголовки вместе с телом и помогает видеть код ответа."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-networking-local-http-quiz",
+      "slug": "local-http-quiz",
+      "title": "Проверьте себя: Проверка локального HTTP",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "networking",
+      "concept": "local_http",
+      "version": 1,
+      "questionSlugs": [
+        "zto-networking-local-http-command",
+        "networking-connection-refused"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-networking-diagnosis-lesson",
+      "slug": "diagnosis",
+      "title": "Порядок сетевой диагностики",
+      "type": "theory",
+      "order": 7,
+      "category": "networking",
+      "concept": "network_diagnosis",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Порядок сетевой диагностики"
+        },
+        {
+          "type": "paragraph",
+          "text": "Проверяйте последовательно: имя, адрес, маршрут, listener и протокол приложения. Так одна гипотеза не смешивается с другой."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "getent hosts localhost"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Проверьте разрешение имени `localhost` через системную базу.",
+            "Результат: `getent` использует настроенный системный порядок разрешения имён."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `getent` использует настроенный системный порядок разрешения имён."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-networking-diagnosis-quiz",
+      "slug": "diagnosis-quiz",
+      "title": "Проверьте себя: Порядок сетевой диагностики",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "networking",
+      "concept": "network_diagnosis",
+      "version": 1,
+      "questionSlugs": [
+        "zto-networking-diagnosis-command",
+        "troubleshooting-dns-order"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-networking-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "networking",
+      "concept": "networking_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-start-local-tcp-service",
+        "networking-fetch-local-status-endpoint"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-networking-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "networking",
+      "concept": "networking_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-verify-local-http-and-save-body"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-networking-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Основы сети",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "networking",
+      "concept": "networking_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-networking-checkpoint-1",
+        "zto-networking-checkpoint-2",
+        "zto-networking-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

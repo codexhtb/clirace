@@ -1,0 +1,294 @@
+{
+  "slug": "terminal-basics",
+  "title": "Linux и терминал",
+  "description": "Разберитесь, где выполняются команды, как читать приглашение shell и безопасно получать справку.",
+  "order": 1,
+  "prerequisites": [],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-terminal-basics-linux-shell-lesson",
+      "slug": "linux-shell",
+      "title": "Linux, терминал и shell",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "terminal_model",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Linux, терминал и shell"
+        },
+        {
+          "type": "paragraph",
+          "text": "Терминал показывает интерфейс, shell разбирает введённую строку, а Linux запускает найденную программу. Это разные слои одной рабочей сессии."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ps -p $$ -o comm="
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Выведите имя текущего shell-процесса.",
+            "Результат: Shell подставляет `$$` своим PID до запуска команды."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Shell подставляет `$$` своим PID до запуска команды."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-terminal-basics-linux-shell-quiz",
+      "slug": "linux-shell-quiz",
+      "title": "Проверьте себя: Linux, терминал и shell",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "bash",
+      "concept": "terminal_model",
+      "version": 1,
+      "questionSlugs": [
+        "zto-terminal-basics-linux-shell-command",
+        "zto-terminal-basics-linux-shell-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-terminal-basics-prompt-command-lesson",
+      "slug": "prompt-command",
+      "title": "Приглашение и запуск команды",
+      "type": "theory",
+      "order": 3,
+      "category": "bash",
+      "concept": "command_invocation",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Приглашение и запуск команды"
+        },
+        {
+          "type": "paragraph",
+          "text": "Строка приглашения сообщает, что shell готов. Вводить нужно только команду после символа приглашения, а не имя пользователя и путь из prompt."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "printf '%s\n' 'Привет, Linux'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Напечатайте короткое сообщение без копирования prompt.",
+            "Результат: Prompt не является частью команды; shell получает только текст после приглашения."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Prompt не является частью команды; shell получает только текст после приглашения."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-terminal-basics-prompt-command-quiz",
+      "slug": "prompt-command-quiz",
+      "title": "Проверьте себя: Приглашение и запуск команды",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "bash",
+      "concept": "command_invocation",
+      "version": 1,
+      "questionSlugs": [
+        "zto-terminal-basics-prompt-command-command",
+        "zto-terminal-basics-prompt-command-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-terminal-basics-help-manuals-lesson",
+      "slug": "help-manuals",
+      "title": "Справка без угадывания",
+      "type": "theory",
+      "order": 5,
+      "category": "bash",
+      "concept": "command_help",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Справка без угадывания"
+        },
+        {
+          "type": "paragraph",
+          "text": "У большинства утилит есть краткая справка `--help`; подробные руководства доступны через `man`, если страницы установлены в окружении."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ls --help"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Откройте краткую справку утилиты `ls`.",
+            "Результат: Справка показывает синтаксис именно установленной версии команды."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Справка показывает синтаксис именно установленной версии команды."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-terminal-basics-help-manuals-quiz",
+      "slug": "help-manuals-quiz",
+      "title": "Проверьте себя: Справка без угадывания",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "bash",
+      "concept": "command_help",
+      "version": 1,
+      "questionSlugs": [
+        "zto-terminal-basics-help-manuals-command",
+        "zto-terminal-basics-help-manuals-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-terminal-basics-exit-status-lesson",
+      "slug": "exit-status",
+      "title": "Код завершения команды",
+      "type": "theory",
+      "order": 7,
+      "category": "bash",
+      "concept": "exit_status",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Код завершения команды"
+        },
+        {
+          "type": "paragraph",
+          "text": "Каждая программа возвращает целый код: ноль обычно означает успех, ненулевое значение — ошибку или отдельное состояние."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "true; echo $?"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Выполните успешную команду и сразу покажите её код.",
+            "Результат: Переменная `$?` относится к последней завершившейся команде."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Переменная `$?` относится к последней завершившейся команде."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-terminal-basics-exit-status-quiz",
+      "slug": "exit-status-quiz",
+      "title": "Проверьте себя: Код завершения команды",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "bash",
+      "concept": "exit_status",
+      "version": 1,
+      "questionSlugs": [
+        "zto-terminal-basics-exit-status-command",
+        "bash-exit-status"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-terminal-basics-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "bash",
+      "concept": "terminal_basics_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-verify-coreutils-toolkit",
+        "packages-confirm-curl-client"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-terminal-basics-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "bash",
+      "concept": "terminal_basics_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-audit-bash-runtime"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-terminal-basics-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Linux и терминал",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "bash",
+      "concept": "terminal_basics_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-terminal-basics-checkpoint-1",
+        "zto-terminal-basics-checkpoint-2",
+        "zto-terminal-basics-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

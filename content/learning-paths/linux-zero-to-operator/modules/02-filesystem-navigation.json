@@ -1,0 +1,296 @@
+{
+  "slug": "filesystem-navigation",
+  "title": "Навигация по файловой системе",
+  "description": "Научитесь различать абсолютные и относительные пути, менять каталог и проверять своё местоположение.",
+  "order": 2,
+  "prerequisites": [
+    "terminal-basics"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-filesystem-navigation-tree-root-lesson",
+      "slug": "tree-root",
+      "title": "Единое дерево от корня",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "filesystem_tree",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Единое дерево от корня"
+        },
+        {
+          "type": "paragraph",
+          "text": "В Linux все пути входят в одно дерево с корнем `/`. Каталоги вроде `/etc`, `/var` и `/home` имеют разные назначения, но принадлежат одному пространству имён."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ls /"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите содержимое корневого каталога.",
+            "Результат: Начальный `/` делает путь абсолютным и независимым от текущего каталога."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Начальный `/` делает путь абсолютным и независимым от текущего каталога."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-tree-root-quiz",
+      "slug": "tree-root-quiz",
+      "title": "Проверьте себя: Единое дерево от корня",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "filesystem_tree",
+      "version": 1,
+      "questionSlugs": [
+        "zto-filesystem-navigation-tree-root-command",
+        "filesystem-absolute-path"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-where-am-i-lesson",
+      "slug": "where-am-i",
+      "title": "Текущий рабочий каталог",
+      "type": "theory",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "working_directory",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Текущий рабочий каталог"
+        },
+        {
+          "type": "paragraph",
+          "text": "Относительные пути вычисляются от текущего рабочего каталога процесса. Команда `pwd` позволяет не гадать, где вы находитесь."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "pwd"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите полный путь текущего каталога.",
+            "Результат: `cd` — встроенная команда shell, поэтому она меняет состояние текущей сессии."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `cd` — встроенная команда shell, поэтому она меняет состояние текущей сессии."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-where-am-i-quiz",
+      "slug": "where-am-i-quiz",
+      "title": "Проверьте себя: Текущий рабочий каталог",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "working_directory",
+      "version": 1,
+      "questionSlugs": [
+        "zto-filesystem-navigation-where-am-i-command",
+        "zto-filesystem-navigation-where-am-i-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-relative-paths-lesson",
+      "slug": "relative-paths",
+      "title": "Относительные пути",
+      "type": "theory",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "relative_paths",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Относительные пути"
+        },
+        {
+          "type": "paragraph",
+          "text": "Точка `.` означает текущий каталог, две точки `..` — родительский. Путь без начального `/` считается относительным."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "cd ../logs"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Перейдите в каталог `logs` внутри родителя текущего каталога.",
+            "Результат: `./` явно фиксирует начало относительного пути в текущем каталоге."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `./` явно фиксирует начало относительного пути в текущем каталоге."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-relative-paths-quiz",
+      "slug": "relative-paths-quiz",
+      "title": "Проверьте себя: Относительные пути",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "filesystem",
+      "concept": "relative_paths",
+      "version": 1,
+      "questionSlugs": [
+        "zto-filesystem-navigation-relative-paths-command",
+        "zto-filesystem-navigation-relative-paths-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-home-shortcuts-lesson",
+      "slug": "home-shortcuts",
+      "title": "Домашний каталог и `~`",
+      "type": "theory",
+      "order": 7,
+      "category": "filesystem",
+      "concept": "home_directory",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Домашний каталог и `~`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Shell раскрывает `~` в домашний каталог текущего пользователя. Переменная `$HOME` хранит тот же базовый путь для программ."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "cd ~"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Перейдите в домашний каталог независимо от текущего пути.",
+            "Результат: Раскрытие `~` выполняет shell до запуска команды."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Раскрытие `~` выполняет shell до запуска команды."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-home-shortcuts-quiz",
+      "slug": "home-shortcuts-quiz",
+      "title": "Проверьте себя: Домашний каталог и `~`",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "filesystem",
+      "concept": "home_directory",
+      "version": 1,
+      "questionSlugs": [
+        "zto-filesystem-navigation-home-shortcuts-command",
+        "zto-filesystem-navigation-home-shortcuts-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "filesystem",
+      "concept": "filesystem_navigation_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-build-release-tree",
+        "filesystem-stage-application-config"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "filesystem",
+      "concept": "filesystem_navigation_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-create-cache-layout"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-filesystem-navigation-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Навигация по файловой системе",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "filesystem",
+      "concept": "filesystem_navigation_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-filesystem-navigation-checkpoint-1",
+        "zto-filesystem-navigation-checkpoint-2",
+        "zto-filesystem-navigation-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

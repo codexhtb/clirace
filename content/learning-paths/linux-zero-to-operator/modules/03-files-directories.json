@@ -1,0 +1,296 @@
+{
+  "slug": "files-directories",
+  "title": "Файлы и каталоги",
+  "description": "Создавайте, копируйте, перемещайте и удаляйте данные с проверяемым результатом.",
+  "order": 3,
+  "prerequisites": [
+    "filesystem-navigation"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-files-directories-create-lesson",
+      "slug": "create",
+      "title": "Создание файлов и каталогов",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "create_paths",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Создание файлов и каталогов"
+        },
+        {
+          "type": "paragraph",
+          "text": "`mkdir -p` создаёт цепочку каталогов, а `touch` создаёт пустой файл или обновляет его время изменения."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "mkdir -p /workspace/demo/logs"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Создайте каталог `/workspace/demo/logs` вместе с родителями.",
+            "Результат: Флаг `-p` делает создание вложенной структуры идемпотентным."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Флаг `-p` делает создание вложенной структуры идемпотентным."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-files-directories-create-quiz",
+      "slug": "create-quiz",
+      "title": "Проверьте себя: Создание файлов и каталогов",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "create_paths",
+      "version": 1,
+      "questionSlugs": [
+        "zto-files-directories-create-command",
+        "zto-files-directories-create-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-files-directories-copy-lesson",
+      "slug": "copy",
+      "title": "Копирование данных",
+      "type": "theory",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "copy_paths",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Копирование данных"
+        },
+        {
+          "type": "paragraph",
+          "text": "`cp` создаёт отдельную копию файла. Для каталога обычно требуется рекурсивный режим `-r`, а перед перезаписью важно проверить путь назначения."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "cp app.conf app.conf.bak"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Скопируйте `app.conf` в `app.conf.bak`.",
+            "Результат: После `cp` изменения одного обычного файла не меняют второй."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: После `cp` изменения одного обычного файла не меняют второй."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-files-directories-copy-quiz",
+      "slug": "copy-quiz",
+      "title": "Проверьте себя: Копирование данных",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "copy_paths",
+      "version": 1,
+      "questionSlugs": [
+        "zto-files-directories-copy-command",
+        "zto-files-directories-copy-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-files-directories-move-rename-lesson",
+      "slug": "move-rename",
+      "title": "Перемещение и переименование",
+      "type": "theory",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "move_paths",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Перемещение и переименование"
+        },
+        {
+          "type": "paragraph",
+          "text": "Команда `mv` меняет имя или расположение объекта. В пределах одной файловой системы это обычно не копирование всех байтов, а смена записи каталога."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "mv draft.txt report.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Переименуйте `draft.txt` в `report.txt`.",
+            "Результат: `mv` может перезаписать существующее назначение, поэтому путь нужно читать внимательно."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `mv` может перезаписать существующее назначение, поэтому путь нужно читать внимательно."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-files-directories-move-rename-quiz",
+      "slug": "move-rename-quiz",
+      "title": "Проверьте себя: Перемещение и переименование",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "filesystem",
+      "concept": "move_paths",
+      "version": 1,
+      "questionSlugs": [
+        "zto-files-directories-move-rename-command",
+        "zto-files-directories-move-rename-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-files-directories-remove-lesson",
+      "slug": "remove",
+      "title": "Удаление без сюрпризов",
+      "type": "theory",
+      "order": 7,
+      "category": "filesystem",
+      "concept": "remove_paths",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Удаление без сюрпризов"
+        },
+        {
+          "type": "paragraph",
+          "text": "`rm` удаляет имена файлов без корзины. Рекурсивное удаление каталогов требует особенно точного пути и предварительной проверки."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "rmdir old-cache"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Удалите пустой каталог `old-cache`.",
+            "Результат: Для пустого каталога `rmdir` безопаснее: он откажется удалять непустую структуру."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Для пустого каталога `rmdir` безопаснее: он откажется удалять непустую структуру."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-files-directories-remove-quiz",
+      "slug": "remove-quiz",
+      "title": "Проверьте себя: Удаление без сюрпризов",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "filesystem",
+      "concept": "remove_paths",
+      "version": 1,
+      "questionSlugs": [
+        "zto-files-directories-remove-command",
+        "storage-free-filesystems"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-files-directories-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "filesystem",
+      "concept": "files_directories_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-clean-temporary-artifacts",
+        "filesystem-restore-config-from-template"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-files-directories-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "filesystem",
+      "concept": "files_directories_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-backup-service-manifest"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-files-directories-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Файлы и каталоги",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "filesystem",
+      "concept": "files_directories_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-files-directories-checkpoint-1",
+        "zto-files-directories-checkpoint-2",
+        "zto-files-directories-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

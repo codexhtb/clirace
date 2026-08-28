@@ -1,0 +1,296 @@
+{
+  "slug": "permissions",
+  "title": "Права доступа",
+  "description": "Читайте `rwx`, меняйте режимы осознанно и учитывайте разные правила для файлов и каталогов.",
+  "order": 6,
+  "prerequisites": [
+    "search"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-permissions-read-mode-lesson",
+      "slug": "read-mode",
+      "title": "Как читать `rwx`",
+      "type": "theory",
+      "order": 1,
+      "category": "permissions",
+      "concept": "read_permissions",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Как читать `rwx`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Три тройки прав относятся к владельцу, группе и остальным. В каждой тройке `r`, `w`, `x` означают чтение, запись и выполнение."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ls -l deploy.sh"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите права и владельца `deploy.sh` в длинном формате.",
+            "Результат: Первая тройка описывает владельца, вторая — группу, третья — остальных."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Первая тройка описывает владельца, вторая — группу, третья — остальных."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-permissions-read-mode-quiz",
+      "slug": "read-mode-quiz",
+      "title": "Проверьте себя: Как читать `rwx`",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "permissions",
+      "concept": "read_permissions",
+      "version": 1,
+      "questionSlugs": [
+        "zto-permissions-read-mode-command",
+        "permissions-mode-750"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-permissions-chmod-symbolic-lesson",
+      "slug": "chmod-symbolic",
+      "title": "Символьный `chmod`",
+      "type": "theory",
+      "order": 3,
+      "category": "permissions",
+      "concept": "chmod_symbolic",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Символьный `chmod`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Символьная запись точно указывает аудиторию: `u` — владелец, `g` — группа, `o` — остальные, `a` — все."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "chmod u+x script.sh"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Добавьте владельцу право выполнения `script.sh`, не меняя остальные биты.",
+            "Результат: `chmod u+x` меняет только execute-бит владельца и сохраняет прочие права."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `chmod u+x` меняет только execute-бит владельца и сохраняет прочие права."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-permissions-chmod-symbolic-quiz",
+      "slug": "chmod-symbolic-quiz",
+      "title": "Проверьте себя: Символьный `chmod`",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "permissions",
+      "concept": "chmod_symbolic",
+      "version": 1,
+      "questionSlugs": [
+        "zto-permissions-chmod-symbolic-command",
+        "zto-permissions-chmod-symbolic-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-permissions-directory-mode-lesson",
+      "slug": "directory-mode",
+      "title": "Права каталога",
+      "type": "theory",
+      "order": 5,
+      "category": "permissions",
+      "concept": "directory_permissions",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Права каталога"
+        },
+        {
+          "type": "paragraph",
+          "text": "Для каталога `r` позволяет видеть имена, `w` — менять записи, а `x` — проходить по пути и обращаться к известным именам."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "chmod 750 shared"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Разрешите владельцу полный доступ, группе чтение и проход, остальным ничего.",
+            "Результат: У каталога режим без `x` может показывать имена, но блокировать доступ к объектам."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: У каталога режим без `x` может показывать имена, но блокировать доступ к объектам."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-permissions-directory-mode-quiz",
+      "slug": "directory-mode-quiz",
+      "title": "Проверьте себя: Права каталога",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "permissions",
+      "concept": "directory_permissions",
+      "version": 1,
+      "questionSlugs": [
+        "zto-permissions-directory-mode-command",
+        "permissions-directory-execute"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-permissions-safe-secrets-lesson",
+      "slug": "safe-secrets",
+      "title": "Безопасные права секретов",
+      "type": "theory",
+      "order": 7,
+      "category": "permissions",
+      "concept": "secret_permissions",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Безопасные права секретов"
+        },
+        {
+          "type": "paragraph",
+          "text": "Приватные ключи и токены обычно должны быть доступны только владельцу. Широкие права могут привести к отказу клиента или утечке."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "chmod 600 id_ed25519"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Закройте приватный ключ для группы и остальных.",
+            "Результат: Режим `600` оставляет владельцу чтение и запись, остальным — ничего."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Режим `600` оставляет владельцу чтение и запись, остальным — ничего."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-permissions-safe-secrets-quiz",
+      "slug": "safe-secrets-quiz",
+      "title": "Проверьте себя: Безопасные права секретов",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "permissions",
+      "concept": "secret_permissions",
+      "version": 1,
+      "questionSlugs": [
+        "zto-permissions-safe-secrets-command",
+        "ssh-key-permissions"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-permissions-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "permissions",
+      "concept": "permissions_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "permissions-enable-deploy-script",
+        "permissions-remove-world-write-config"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-permissions-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "permissions",
+      "concept": "permissions_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "permissions-lock-private-key"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-permissions-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Права доступа",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "permissions",
+      "concept": "permissions_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-permissions-checkpoint-1",
+        "zto-permissions-checkpoint-2",
+        "zto-permissions-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

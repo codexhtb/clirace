@@ -1,0 +1,296 @@
+{
+  "slug": "search",
+  "title": "Поиск файлов и текста",
+  "description": "Ищите объекты через `find`, строки через `grep` и избегайте шумных или слишком широких запросов.",
+  "order": 5,
+  "prerequisites": [
+    "viewing-files"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-search-find-name-lesson",
+      "slug": "find-name",
+      "title": "Поиск по имени",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "find_name",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Поиск по имени"
+        },
+        {
+          "type": "paragraph",
+          "text": "`find` обходит дерево от указанной точки. Условия `-type` и `-name` сужают результат до нужных объектов."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "find /workspace -type f -name '*.conf'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Найдите обычные файлы `*.conf` внутри `/workspace`.",
+            "Результат: Точка поиска идёт перед условиями, а кавычки защищают glob от раннего раскрытия."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Точка поиска идёт перед условиями, а кавычки защищают glob от раннего раскрытия."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-search-find-name-quiz",
+      "slug": "find-name-quiz",
+      "title": "Проверьте себя: Поиск по имени",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "find_name",
+      "version": 1,
+      "questionSlugs": [
+        "zto-search-find-name-command",
+        "zto-search-find-name-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-search-grep-text-lesson",
+      "slug": "grep-text",
+      "title": "Поиск строк через `grep`",
+      "type": "theory",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "grep_text",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Поиск строк через `grep`"
+        },
+        {
+          "type": "paragraph",
+          "text": "`grep` печатает строки, совпавшие с шаблоном. Флаг `-n` добавляет номера строк, а `-i` отключает учёт регистра."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "grep -i error app.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Найдите слово `error` без учёта регистра в `app.log`.",
+            "Результат: `grep` читает файл и пишет совпавшие строки, не меняя источник."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `grep` читает файл и пишет совпавшие строки, не меняя источник."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-search-grep-text-quiz",
+      "slug": "grep-text-quiz",
+      "title": "Проверьте себя: Поиск строк через `grep`",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "grep_text",
+      "version": 1,
+      "questionSlugs": [
+        "zto-search-grep-text-command",
+        "zto-search-grep-text-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-search-recursive-grep-lesson",
+      "slug": "recursive-grep",
+      "title": "Рекурсивный поиск текста",
+      "type": "theory",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "grep_recursive",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Рекурсивный поиск текста"
+        },
+        {
+          "type": "paragraph",
+          "text": "`grep -r` проходит файлы под каталогом. Полезно ограничивать расширения через `--include`, чтобы не читать лишнее."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "grep -r --include='*.conf' timeout config"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Найдите `timeout` только в файлах `.conf` дерева `config`.",
+            "Результат: Начинайте поиск с самого узкого каталога и подходящего типа файлов."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Начинайте поиск с самого узкого каталога и подходящего типа файлов."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-search-recursive-grep-quiz",
+      "slug": "recursive-grep-quiz",
+      "title": "Проверьте себя: Рекурсивный поиск текста",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "filesystem",
+      "concept": "grep_recursive",
+      "version": 1,
+      "questionSlugs": [
+        "zto-search-recursive-grep-command",
+        "zto-search-recursive-grep-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-search-quiet-count-lesson",
+      "slug": "quiet-count",
+      "title": "Код результата и подсчёт",
+      "type": "theory",
+      "order": 7,
+      "category": "filesystem",
+      "concept": "grep_result",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Код результата и подсчёт"
+        },
+        {
+          "type": "paragraph",
+          "text": "`grep -q` не печатает строки, а сообщает наличие совпадения кодом завершения. `grep -c` считает совпавшие строки."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "grep -q READY state.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Проверьте наличие `READY` в `state.txt` без вывода строки.",
+            "Результат: `grep -q` удобен в условиях shell: ноль означает, что совпадение найдено."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `grep -q` удобен в условиях shell: ноль означает, что совпадение найдено."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-search-quiet-count-quiz",
+      "slug": "quiet-count-quiz",
+      "title": "Проверьте себя: Код результата и подсчёт",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "filesystem",
+      "concept": "grep_result",
+      "version": 1,
+      "questionSlugs": [
+        "zto-search-quiet-count-command",
+        "logs-current-boot-errors"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-search-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "filesystem",
+      "concept": "search_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "text-list-large-cache-files",
+        "text-find-exposed-secrets"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-search-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "filesystem",
+      "concept": "search_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "text-find-debug-configs"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-search-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Поиск файлов и текста",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "filesystem",
+      "concept": "search_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-search-checkpoint-1",
+        "zto-search-checkpoint-2",
+        "zto-search-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

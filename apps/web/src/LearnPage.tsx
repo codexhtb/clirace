@@ -108,10 +108,15 @@ function CourseCatalog({ catalog, error }: { catalog: Catalog | null; error: str
     <p className="learn-lead">Выберите формат: быстрые проверки знаний или последовательный путь с теорией, командами и настоящими shell-лабораторными.</p>
     {error && <p className="play-error mt-6" role="alert">{error}</p>}
     <div className="learn-course-grid">
-      <Link className="learn-course-card featured" to="/learn/paths/linux-foundations">
-        <span className="mode-card-icon"><MapIcon size={18} /></span><small>Последовательный курс</small>
-        <h2>Linux Foundations</h2><p>10 модулей: теория → проверка → CLI-практика → Shell Lab → checkpoint.</p>
-        <strong>Открыть учебный путь <ArrowRight size={15} /></strong>
+      <Link className="learn-course-card featured" to="/learn/paths/linux-zero-to-operator">
+        <span className="mode-card-icon"><MapIcon size={18} /></span><small>Главный курс · для новичка</small>
+        <h2>Linux с нуля</h2><p>68 коротких уроков: объяснение → пример → вопросы → настоящая практика в shell.</p>
+        <strong>Начать с первой команды <ArrowRight size={15} /></strong>
+      </Link>
+      <Link className="learn-course-card" to="/learn/paths/linux-foundations">
+        <span className="mode-card-icon"><MapIcon size={18} /></span><small>Классический путь</small>
+        <h2>Linux Foundations</h2><p>Существующий курс из 10 модулей — весь прежний прогресс сохранён.</p>
+        <strong>Открыть курс <ArrowRight size={15} /></strong>
       </Link>
       <Link className="learn-course-card" to="/learn/linux-core">
         <span className="mode-card-icon"><Terminal size={18} /></span><small>Быстрая проверка</small>

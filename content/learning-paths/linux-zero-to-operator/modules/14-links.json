@@ -1,0 +1,296 @@
+{
+  "slug": "links",
+  "title": "Жёсткие и символические ссылки",
+  "description": "Понимайте, что именно связывает `ln`, как распознать битую ссылку и безопасно переключать current-release.",
+  "order": 14,
+  "prerequisites": [
+    "environment-path"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-links-symlink-lesson",
+      "slug": "symlink",
+      "title": "Символическая ссылка",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "symbolic_links",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Символическая ссылка"
+        },
+        {
+          "type": "paragraph",
+          "text": "Символическая ссылка хранит текстовый путь к цели. Она может пересекать файловые системы и становиться битой, если цель исчезла."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ln -s releases/v2 current"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Создайте ссылку `current` на каталог `releases/v2`.",
+            "Результат: `ln -s TARGET LINK` записывает путь TARGET внутрь нового symlink."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `ln -s TARGET LINK` записывает путь TARGET внутрь нового symlink."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-links-symlink-quiz",
+      "slug": "symlink-quiz",
+      "title": "Проверьте себя: Символическая ссылка",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "symbolic_links",
+      "version": 1,
+      "questionSlugs": [
+        "zto-links-symlink-command",
+        "filesystem-symlink-behavior"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-links-readlink-lesson",
+      "slug": "readlink",
+      "title": "Проверка назначения ссылки",
+      "type": "theory",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "readlink",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверка назначения ссылки"
+        },
+        {
+          "type": "paragraph",
+          "text": "`ls -l` показывает стрелку, а `readlink` печатает сохранённую цель. `readlink -f` пытается разрешить всю цепочку в абсолютный путь."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "readlink current"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите сохранённую цель ссылки `current`.",
+            "Результат: `readlink` проверяет сам объект ссылки, не меняя его."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `readlink` проверяет сам объект ссылки, не меняя его."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-links-readlink-quiz",
+      "slug": "readlink-quiz",
+      "title": "Проверьте себя: Проверка назначения ссылки",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "readlink",
+      "version": 1,
+      "questionSlugs": [
+        "zto-links-readlink-command",
+        "zto-links-readlink-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-links-hard-link-lesson",
+      "slug": "hard-link",
+      "title": "Жёсткая ссылка",
+      "type": "theory",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "hard_links",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Жёсткая ссылка"
+        },
+        {
+          "type": "paragraph",
+          "text": "Жёсткие ссылки — разные имена одного inode. Обычно их нельзя создавать для каталогов и нельзя переносить через границу файловой системы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ln config config.copy"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Создайте жёсткую ссылку `config.copy` на файл `config`.",
+            "Результат: Содержимое живёт, пока на inode остаётся хотя бы одна жёсткая ссылка."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Содержимое живёт, пока на inode остаётся хотя бы одна жёсткая ссылка."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-links-hard-link-quiz",
+      "slug": "hard-link-quiz",
+      "title": "Проверьте себя: Жёсткая ссылка",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "filesystem",
+      "concept": "hard_links",
+      "version": 1,
+      "questionSlugs": [
+        "zto-links-hard-link-command",
+        "zto-links-hard-link-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-links-atomic-switch-lesson",
+      "slug": "atomic-switch",
+      "title": "Атомарное переключение ссылки",
+      "type": "theory",
+      "order": 7,
+      "category": "filesystem",
+      "concept": "atomic_symlink",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Атомарное переключение ссылки"
+        },
+        {
+          "type": "paragraph",
+          "text": "Для release-схемы новую ссылку готовят отдельно и затем переименовывают на `current`. Это уменьшает окно, когда потребитель видит промежуточное состояние."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ln -sfn releases/v3 current"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Замените symlink `current` ссылкой на `releases/v3` одной командой GNU ln.",
+            "Результат: `-sfn` заменяет саму ссылку, не копируя каталог релиза."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `-sfn` заменяет саму ссылку, не копируя каталог релиза."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-links-atomic-switch-quiz",
+      "slug": "atomic-switch-quiz",
+      "title": "Проверьте себя: Атомарное переключение ссылки",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "filesystem",
+      "concept": "atomic_symlink",
+      "version": 1,
+      "questionSlugs": [
+        "zto-links-atomic-switch-command",
+        "zto-links-atomic-switch-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-links-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "filesystem",
+      "concept": "links_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-repair-config-symlink",
+        "filesystem-link-shared-runtime-config"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-links-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "filesystem",
+      "concept": "links_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-switch-current-release"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-links-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Жёсткие и символические ссылки",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "filesystem",
+      "concept": "links_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-links-checkpoint-1",
+        "zto-links-checkpoint-2",
+        "zto-links-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

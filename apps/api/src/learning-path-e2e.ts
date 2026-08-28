@@ -20,7 +20,7 @@ const check = (condition: unknown, label: string) => { assert.ok(condition, labe
 
 try {
   const loaded = await loadAndValidateLearningPathsContent();
-  check(loaded.report.courses === 1 && loaded.report.modules === 10 && loaded.report.items === 50, 'content dataset report');
+  check(loaded.report.courses === 2 && loaded.report.modules === 27 && loaded.report.items === 237, 'content dataset report');
   const importedBefore = await importLearningPaths(dependencies.postgres);
   const countsBefore = await contentCounts();
   await importLearningPaths(dependencies.postgres);
@@ -107,6 +107,35 @@ try {
   check(masteryCount >= 8, 'mastery persisted with sufficient evidence');
   const profile = await paths.profile(userId) as Array<{ status: string; progress: number; finalScore: number | null }>;
   check(profile[0]?.status === 'completed' && profile[0].progress === 100 && profile[0].finalScore === state.enrollment.finalScore, 'profile integration');
+
+  const catalog = await paths.catalog(userId) as { courses: Array<{ slug: string; enrollment: unknown }> };
+  check(catalog.courses[0]?.slug === 'linux-zero-to-operator', 'Zero to Operator is the primary course');
+  let beginner = asState(await paths.enroll(userId, 'linux-zero-to-operator'));
+  check(beginner.resume?.module === 'terminal-basics' && beginner.resume.item === 'linux-shell', 'beginner course starts at the first lesson');
+  await paths.completeTheory(userId, 'linux-zero-to-operator', 'zto-terminal-basics-linux-shell-lesson');
+  let beginnerQuiz = asSession(await paths.startAssessment(userId, 'linux-zero-to-operator', 'zto-terminal-basics-linux-shell-quiz'));
+  await finishAssessment(beginnerQuiz.id, true);
+  beginner = asState(await paths.sync(userId, 'linux-zero-to-operator'));
+  check(beginner.resume?.item === 'prompt-command', 'lesson quiz advances to the next lesson');
+  for (const lessonSlug of ['prompt-command', 'help-manuals', 'exit-status']) {
+    await paths.completeTheory(userId, 'linux-zero-to-operator', `zto-terminal-basics-${lessonSlug}-lesson`);
+    beginnerQuiz = asSession(await paths.startAssessment(userId, 'linux-zero-to-operator', `zto-terminal-basics-${lessonSlug}-quiz`));
+    await finishAssessment(beginnerQuiz.id, true);
+  }
+  beginner = asState(await paths.sync(userId, 'linux-zero-to-operator'));
+  const optional = findItem(beginner, 'zto-terminal-basics-optional-practice');
+  const requiredLab = findItem(beginner, 'zto-terminal-basics-required-lab');
+  check(optional.status === 'available' && optional.optional === true && requiredLab.status === 'current', 'optional practice does not block required lab');
+  await recordChallengeCompletion('packages-audit-bash-runtime');
+  beginner = asState(await paths.sync(userId, 'linux-zero-to-operator'));
+  check(findItem(beginner, 'zto-terminal-basics-checkpoint').status === 'current', 'canonical Practice completion unlocks checkpoint');
+  const beginnerCheckpoint = asSession(await paths.startAssessment(userId, 'linux-zero-to-operator', 'zto-terminal-basics-checkpoint'));
+  await finishAssessment(beginnerCheckpoint.id, true);
+  beginner = asState(await paths.sync(userId, 'linux-zero-to-operator'));
+  check(beginner.modules[0]?.status === 'completed' && beginner.modules[1]?.status === 'current', 'beginner module completion unlocks the next module');
+  check(beginner.enrollment.progress === 6, 'optional practice is excluded from required progress');
+  const beginnerRestored = asState(await new LearningPathService(dependencies.postgres).sync(userId, 'linux-zero-to-operator'));
+  check(beginnerRestored.resume?.module === 'filesystem-navigation', 'beginner resume persists server-side');
   check(checks >= 25, 'minimum 25 engine checks');
 
   console.log(JSON.stringify({ ok: true, checks, course: 'linux-foundations', modules: 10, items: 50, finalScore: state.enrollment.finalScore, passed }, null, 2));
@@ -175,7 +204,7 @@ async function contentCounts() {
 }
 async function scalar(query: string, values: unknown[]): Promise<number> { const result = await dependencies.postgres.query<{ count: number }>(query, values); return result.rows[0]!.count; }
 function findItem(state: StatePayload, stableId: string) { const item = state.modules.flatMap((module) => module.items).find((candidate) => candidate.stableId === stableId); assert(item, stableId); return item; }
-type StatePayload = { enrollment: { status: string; progress: number; finalScore: number | null }; modules: Array<{ status: string; items: Array<{ stableId: string; type: string; status: string }> }>; resume: { module: string; item: string } | null };
+type StatePayload = { enrollment: { status: string; progress: number; finalScore: number | null }; modules: Array<{ status: string; items: Array<{ stableId: string; type: string; status: string; optional?: boolean }> }>; resume: { module: string; item: string } | null };
 type SessionPayload = { id: string; status: 'active' | 'completed'; progress?: { current: number } };
 function asState(value: unknown): StatePayload { return value as StatePayload; }
 function asSession(value: unknown): SessionPayload { return value as SessionPayload; }

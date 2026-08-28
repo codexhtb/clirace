@@ -1,0 +1,296 @@
+{
+  "slug": "shell-fundamentals",
+  "title": "Основы shell",
+  "description": "Используйте кавычки, подстановки, последовательности и условия так, чтобы команды оставались предсказуемыми.",
+  "order": 12,
+  "prerequisites": [
+    "text-processing"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-shell-fundamentals-quotes-lesson",
+      "slug": "quotes",
+      "title": "Одинарные и двойные кавычки",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "shell_quoting",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Одинарные и двойные кавычки"
+        },
+        {
+          "type": "paragraph",
+          "text": "Одинарные кавычки сохраняют текст буквально. Двойные сохраняют пробелы, но разрешают подстановку переменных и команд."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "printf '%s\n' '$HOME'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Напечатайте буквальный текст `$HOME` без подстановки.",
+            "Результат: Кавычки управляют тем, какие преобразования shell выполняет до запуска программы."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Кавычки управляют тем, какие преобразования shell выполняет до запуска программы."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-quotes-quiz",
+      "slug": "quotes-quiz",
+      "title": "Проверьте себя: Одинарные и двойные кавычки",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "bash",
+      "concept": "shell_quoting",
+      "version": 1,
+      "questionSlugs": [
+        "zto-shell-fundamentals-quotes-command",
+        "zto-shell-fundamentals-quotes-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-command-substitution-lesson",
+      "slug": "command-substitution",
+      "title": "Подстановка результата команды",
+      "type": "theory",
+      "order": 3,
+      "category": "bash",
+      "concept": "command_substitution",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Подстановка результата команды"
+        },
+        {
+          "type": "paragraph",
+          "text": "Конструкция `$(command)` запускает команду и подставляет её stdout. Вложенная форма читается лучше старых обратных кавычек."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "HERE=$(pwd)"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Сохраните текущий каталог в переменную `HERE`.",
+            "Результат: Подстановка превращает вывод команды в часть другой shell-строки."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Подстановка превращает вывод команды в часть другой shell-строки."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-command-substitution-quiz",
+      "slug": "command-substitution-quiz",
+      "title": "Проверьте себя: Подстановка результата команды",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "bash",
+      "concept": "command_substitution",
+      "version": 1,
+      "questionSlugs": [
+        "zto-shell-fundamentals-command-substitution-command",
+        "zto-shell-fundamentals-command-substitution-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-and-or-lesson",
+      "slug": "and-or",
+      "title": "Условные связки `&&` и `||`",
+      "type": "theory",
+      "order": 5,
+      "category": "bash",
+      "concept": "conditional_lists",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Условные связки `&&` и `||`"
+        },
+        {
+          "type": "paragraph",
+          "text": "`cmd1 && cmd2` запускает вторую команду только после успеха первой. `cmd1 || cmd2` запускает вторую после неуспеха."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "test -d /workspace && touch ready"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Создайте маркер только если тест каталога прошёл.",
+            "Результат: Связки позволяют строить короткие, явно обусловленные действия."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Связки позволяют строить короткие, явно обусловленные действия."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-and-or-quiz",
+      "slug": "and-or-quiz",
+      "title": "Проверьте себя: Условные связки `&&` и `||`",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "bash",
+      "concept": "conditional_lists",
+      "version": 1,
+      "questionSlugs": [
+        "zto-shell-fundamentals-and-or-command",
+        "zto-shell-fundamentals-and-or-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-scripts-cron-lesson",
+      "slug": "scripts-cron",
+      "title": "Скрипт и расписание",
+      "type": "theory",
+      "order": 7,
+      "category": "bash",
+      "concept": "script_schedule",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Скрипт и расписание"
+        },
+        {
+          "type": "paragraph",
+          "text": "Скрипт — текстовый файл команд с интерпретатором в shebang. Cron использует отдельное окружение, поэтому пути в заданиях лучше задавать явно."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "bash check.sh"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Запустите локальный Bash-скрипт `check.sh` через интерпретатор.",
+            "Результат: Явный `bash check.sh` не требует execute-бита у самого файла."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Явный `bash check.sh` не требует execute-бита у самого файла."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-scripts-cron-quiz",
+      "slug": "scripts-cron-quiz",
+      "title": "Проверьте себя: Скрипт и расписание",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "bash",
+      "concept": "script_schedule",
+      "version": 1,
+      "questionSlugs": [
+        "zto-shell-fundamentals-scripts-cron-command",
+        "cron-weekday-backup"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "bash",
+      "concept": "shell_fundamentals_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-assemble-release-notes",
+        "shell-create-markers-from-service-list"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "bash",
+      "concept": "shell_fundamentals_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-write-service-config-heredoc"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-shell-fundamentals-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Основы shell",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "bash",
+      "concept": "shell_fundamentals_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-shell-fundamentals-checkpoint-1",
+        "zto-shell-fundamentals-checkpoint-2",
+        "zto-shell-fundamentals-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

@@ -188,8 +188,8 @@ function SetupScreen({ categories, library, shellEnabled, busy, error, newPlayer
       </div>
 
       {newPlayer && <section className="onboarding-card" aria-labelledby="first-step-title">
-        <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Выберите подходящий первый шаг.</h2><p>Новичкам подойдёт последовательный Linux Foundations. Если основы знакомы — проверьте знания или сразу откройте практику.</p></div>
-        <div className="onboarding-actions"><Link className="primary-button" to="/learn/paths/linux-foundations"><MapIcon size={15} /> Linux Foundations</Link><Link className="secondary-button" to="/learn/linux-core"><BookOpen size={15} /> Проверить знания</Link><Link className="secondary-button" to="#practice"><Terminal size={15} /> Первая задача</Link></div>
+        <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Выберите подходящий первый шаг.</h2><p>Новичкам подойдёт курс «Linux с нуля». Если основы знакомы — проверьте знания или сразу откройте практику.</p></div>
+        <div className="onboarding-actions"><Link className="primary-button" to="/learn/paths/linux-zero-to-operator"><MapIcon size={15} /> Linux с нуля</Link><Link className="secondary-button" to="/learn/linux-core"><BookOpen size={15} /> Проверить знания</Link><Link className="secondary-button" to="#practice"><Terminal size={15} /> Первая задача</Link></div>
       </section>}
 
       <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>

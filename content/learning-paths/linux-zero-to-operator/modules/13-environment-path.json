@@ -1,0 +1,296 @@
+{
+  "slug": "environment-path",
+  "title": "Окружение и PATH",
+  "description": "Различайте shell-переменные и environment, находите исполняемые файлы и делайте изменения локальными.",
+  "order": 13,
+  "prerequisites": [
+    "shell-fundamentals"
+  ],
+  "estimatedMinutes": 35,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "zto-environment-path-variables-lesson",
+      "slug": "variables",
+      "title": "Shell-переменные",
+      "type": "theory",
+      "order": 1,
+      "category": "environment",
+      "concept": "shell_variables",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Shell-переменные"
+        },
+        {
+          "type": "paragraph",
+          "text": "Присваивание `NAME=value` не содержит пробелов вокруг `=`. Такая переменная принадлежит текущему shell и не обязана быть видна дочерним процессам."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "MODE=test"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Создайте shell-переменную `MODE` со значением `test`.",
+            "Результат: Двойные кавычки сохраняют значение одним аргументом даже при пробелах."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Двойные кавычки сохраняют значение одним аргументом даже при пробелах."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-environment-path-variables-quiz",
+      "slug": "variables-quiz",
+      "title": "Проверьте себя: Shell-переменные",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "environment",
+      "concept": "shell_variables",
+      "version": 1,
+      "questionSlugs": [
+        "zto-environment-path-variables-command",
+        "zto-environment-path-variables-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-environment-path-export-lesson",
+      "slug": "export",
+      "title": "Переменные окружения",
+      "type": "theory",
+      "order": 3,
+      "category": "environment",
+      "concept": "environment_variables",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Переменные окружения"
+        },
+        {
+          "type": "paragraph",
+          "text": "`export` помечает переменную для передачи будущим дочерним процессам. Уже запущенные процессы не получают изменение задним числом."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "export MODE=prod"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Передайте `MODE=prod` будущим дочерним командам shell.",
+            "Результат: Префикс `NAME=value command` создаёт локальное окружение только для этой команды."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Префикс `NAME=value command` создаёт локальное окружение только для этой команды."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-environment-path-export-quiz",
+      "slug": "export-quiz",
+      "title": "Проверьте себя: Переменные окружения",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "environment",
+      "concept": "environment_variables",
+      "version": 1,
+      "questionSlugs": [
+        "zto-environment-path-export-command",
+        "environment-temporary-variable"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-environment-path-path-lesson",
+      "slug": "path",
+      "title": "Как shell ищет команды",
+      "type": "theory",
+      "order": 5,
+      "category": "environment",
+      "concept": "path_lookup",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Как shell ищет команды"
+        },
+        {
+          "type": "paragraph",
+          "text": "Переменная `PATH` содержит список каталогов через двоеточие. Shell ищет исполняемый файл слева направо и не ищет текущий каталог автоматически."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "command -v bash"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Покажите путь, по которому будет запущена команда `bash`.",
+            "Результат: `command -v` — встроенный переносимый способ проверить разрешение имени команды."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: `command -v` — встроенный переносимый способ проверить разрешение имени команды."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-environment-path-path-quiz",
+      "slug": "path-quiz",
+      "title": "Проверьте себя: Как shell ищет команды",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "environment",
+      "concept": "path_lookup",
+      "version": 1,
+      "questionSlugs": [
+        "zto-environment-path-path-command",
+        "zto-environment-path-path-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-environment-path-safe-path-lesson",
+      "slug": "safe-path",
+      "title": "Безопасное изменение PATH",
+      "type": "theory",
+      "order": 7,
+      "category": "environment",
+      "concept": "path_safety",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Безопасное изменение PATH"
+        },
+        {
+          "type": "paragraph",
+          "text": "Новый каталог добавляют к существующему PATH, а не заменяют его целиком. Пустые и недоверенные каталоги в начале PATH повышают риск запуска не той программы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "export PATH=\"$PATH:$HOME/bin\""
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Задача: Добавьте `$HOME/bin` в конец текущего PATH.",
+            "Результат: Сохранение `$PATH` оставляет доступными базовые системные команды."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Попробуйте сначала прочитать команду слева направо: Сохранение `$PATH` оставляет доступными базовые системные команды."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "zto-environment-path-safe-path-quiz",
+      "slug": "safe-path-quiz",
+      "title": "Проверьте себя: Безопасное изменение PATH",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "environment",
+      "concept": "path_safety",
+      "version": 1,
+      "questionSlugs": [
+        "zto-environment-path-safe-path-command",
+        "zto-environment-path-safe-path-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "zto-environment-path-optional-practice",
+      "slug": "optional-practice",
+      "title": "Ещё две быстрые задачи",
+      "type": "practice",
+      "order": 9,
+      "category": "environment",
+      "concept": "environment_path_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-build-safe-runtime-env",
+        "packages-record-git-availability"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "zto-environment-path-required-lab",
+      "slug": "required-lab",
+      "title": "Практический checkpoint в shell",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "environment",
+      "concept": "environment_path_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-export-selected-environment"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "zto-environment-path-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Окружение и PATH",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "environment",
+      "concept": "environment_path_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "zto-environment-path-checkpoint-1",
+        "zto-environment-path-checkpoint-2",
+        "zto-environment-path-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}
