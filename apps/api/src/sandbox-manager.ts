@@ -570,6 +570,10 @@ export class SandboxManager {
   private async handleSocketClosed(sessionId: string, socket: WebSocket, reason: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session || session.closing || session.socket !== socket) return;
+    if (!session.battle && !session.replayRecorder) {
+      await this.destroySession(sessionId, reason);
+      return;
+    }
     session.socket = null;
     await this.transitionLifecycle(sessionId, session.lifecycleState, 'idle').catch(() => undefined);
     session.lifecycleState = 'idle';

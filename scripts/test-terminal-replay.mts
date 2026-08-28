@@ -95,6 +95,7 @@ const migrationSource = await readFile(new URL('../apps/api/migrations/017_termi
 check(!managerSource.includes('recordInput') && !managerSource.includes("type: 'input', data: message.data"), 'raw client input has no recorder path');
 check(managerSource.includes('session.stream.write(message.data)') && managerSource.includes('session.replayRecorder?.recordOutput(chunk)'), 'input goes only to PTY while authoritative output goes to recorder');
 check(managerSource.indexOf('session.replayRecorder?.recordOutput(chunk)') < managerSource.indexOf('socket.send(chunk, { binary: true })'), 'recording occurs before WebSocket delivery');
+check(managerSource.includes('if (!session.battle && !session.replayRecorder)') && managerSource.includes("destroySession(sessionId, reason)"), 'reconnect grace is limited to Battle and recorded Practice sessions');
 check(managerSource.includes('terminal_replay_persist_failed') && managerSource.includes('.catch((error: unknown)'), 'replay persistence failure is isolated from completion');
 check(serviceSource.includes('tr.user_id = $2') && routesSource.includes('deleteOwned(parsed.data.id, user.id)'), 'GET and DELETE are owner-scoped');
 check(routesSource.includes("reply.code(404)"), 'unauthorized replay enumeration uses not-found semantics');
