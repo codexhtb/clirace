@@ -47,7 +47,7 @@
       "category": "logs",
       "concept": "log_filtering",
       "version": 1,
-      "challengeSlugs": ["shell-log-investigation"],
+        "challengeSlugs": ["text-collect-error-lines"],
       "completion": { "requireAll": true }
     },
     {

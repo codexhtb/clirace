@@ -47,7 +47,7 @@
       "category": "bash",
       "concept": "text_processing",
       "version": 1,
-      "challengeSlugs": ["shell-replace-moon"],
+        "challengeSlugs": ["shell-append-deployment-audit"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "bash",
       "concept": "configuration_editing",
       "version": 1,
-      "challengeSlugs": ["shell-production-config"],
+        "challengeSlugs": ["shell-build-unique-user-pipeline"],
       "completion": { "requireAll": true }
     },
     {

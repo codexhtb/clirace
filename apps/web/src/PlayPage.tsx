@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, Map, RotateCcw, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
+import { ArrowLeft, BookOpen, BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock3, Flame, LoaderCircle, Map as MapIcon, RotateCcw, Search, Send, SkipForward, Swords, Terminal, Trophy } from 'lucide-react';
 import { lazy, Suspense, type FormEvent, useEffect, useRef, useState } from 'react';
 import { CommunityHeader } from './CommunityHeader';
 import { currentUser } from './auth-client';
@@ -12,6 +12,11 @@ import { shouldAutoStartNextShell } from './flow-intents';
 const GameShellTerminal = lazy(() => import('./GameShellTerminal').then((module) => ({ default: module.GameShellTerminal })));
 
 interface Category { slug: string; name: string; description: string; challenge_count: number; }
+interface LibraryChallenge {
+  slug: string; title: string; description: string; difficulty: 'Easy' | 'Medium' | 'Hard';
+  category_slug: string; category_name: string; tier: 'foundation' | 'operator' | 'engineer' | 'troubleshooter';
+  concepts: string[]; estimatedDurationSeconds: number; completed: boolean;
+}
 interface GameSession {
   id: string;
   status: 'active' | 'completed';
@@ -51,6 +56,7 @@ export function PlayPage() {
   const [auth, setAuth] = useState<'loading' | 'guest' | 'ready'>('loading');
   const [categories, setCategories] = useState<Category[]>([]);
   const [shellEnabled, setShellEnabled] = useState(false);
+  const [library, setLibrary] = useState<LibraryChallenge[]>([]);
   const [newPlayer, setNewPlayer] = useState(false);
   const [game, setGame] = useState<GameState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,10 +69,12 @@ export function PlayPage() {
       currentUser(),
       fetch('/api/categories', { signal: controller.signal }).then((response) => response.json() as Promise<{ categories: Category[] }>),
       fetch('/api/sandbox/status', { signal: controller.signal }).then((response) => response.json() as Promise<{ enabled: boolean; healthy?: boolean }>),
-    ]).then(async ([authPayload, categoryPayload, sandboxPayload]) => {
+      fetch('/api/challenges?type=real_shell&libraryVersion=2&limit=200', { signal: controller.signal }).then((response) => response.json() as Promise<{ challenges: LibraryChallenge[] }>),
+    ]).then(async ([authPayload, categoryPayload, sandboxPayload, libraryPayload]) => {
       setAuth(authPayload.user ? 'ready' : 'guest');
       setCategories(categoryPayload.categories ?? []);
       setShellEnabled(sandboxPayload.enabled === true && sandboxPayload.healthy !== false);
+      setLibrary(libraryPayload.challenges ?? []);
       if (authPayload.user) {
         const response = await fetch(`/api/profiles/${encodeURIComponent(authPayload.user.username)}`, { cache: 'no-store', signal: controller.signal });
         if (response.ok) {
@@ -140,7 +148,7 @@ export function PlayPage() {
         {auth === 'loading' && <PageLoader label="Проверяем аккаунт" />}
         {auth === 'guest' && <GuestState />}
         {auth === 'ready' && !game && (
-          <SetupScreen categories={categories} shellEnabled={shellEnabled} busy={busy} error={error} newPlayer={newPlayer} onSubmit={createGame} />
+          <SetupScreen categories={categories} library={library} shellEnabled={shellEnabled} busy={busy} error={error} newPlayer={newPlayer} onSubmit={createGame} />
         )}
         {auth === 'ready' && game?.session.status === 'active' && game.task && (
           <RunScreen game={game} busy={busy} feedback={feedback} setBusy={setBusy} setGame={setGame} setFeedback={setFeedback} setError={setError} />
@@ -154,13 +162,23 @@ export function PlayPage() {
   );
 }
 
-function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmit }: {
-  categories: Category[]; shellEnabled: boolean; busy: boolean; error: string | null; newPlayer: boolean; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+function SetupScreen({ categories, library, shellEnabled, busy, error, newPlayer, onSubmit }: {
+  categories: Category[]; library: LibraryChallenge[]; shellEnabled: boolean; busy: boolean; error: string | null; newPlayer: boolean; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [librarySearch, setLibrarySearch] = useState('');
+  const [libraryTier, setLibraryTier] = useState('all');
+  const [libraryCategory, setLibraryCategory] = useState('all');
+  const [showAllLibrary, setShowAllLibrary] = useState(false);
   const requestedDefaults = getPlayDefaults();
   const defaults = requestedDefaults.mode === 'real_shell' && !shellEnabled
     ? { ...requestedDefaults, mode: 'mixed' as const }
     : requestedDefaults;
+  const normalizedSearch = librarySearch.trim().toLocaleLowerCase('ru');
+  const filteredLibrary = library.filter((challenge) =>
+    (libraryTier === 'all' || challenge.tier === libraryTier)
+    && (libraryCategory === 'all' || challenge.category_slug === libraryCategory)
+    && (!normalizedSearch || `${challenge.title} ${challenge.description} ${challenge.concepts.join(' ')}`.toLocaleLowerCase('ru').includes(normalizedSearch)));
+  const visibleLibrary = showAllLibrary ? filteredLibrary : filteredLibrary.slice(0, 12);
   return (
     <section className="mx-auto max-w-4xl">
       <div className="mb-10">
@@ -171,7 +189,7 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
 
       {newPlayer && <section className="onboarding-card" aria-labelledby="first-step-title">
         <div><p className="eyebrow">Начните здесь</p><h2 id="first-step-title">Выберите подходящий первый шаг.</h2><p>Новичкам подойдёт последовательный Linux Foundations. Если основы знакомы — проверьте знания или сразу откройте практику.</p></div>
-        <div className="onboarding-actions"><Link className="primary-button" to="/learn/paths/linux-foundations"><Map size={15} /> Linux Foundations</Link><Link className="secondary-button" to="/learn/linux-core"><BookOpen size={15} /> Проверить знания</Link><Link className="secondary-button" to="#practice"><Terminal size={15} /> Первая задача</Link></div>
+        <div className="onboarding-actions"><Link className="primary-button" to="/learn/paths/linux-foundations"><MapIcon size={15} /> Linux Foundations</Link><Link className="secondary-button" to="/learn/linux-core"><BookOpen size={15} /> Проверить знания</Link><Link className="secondary-button" to="#practice"><Terminal size={15} /> Первая задача</Link></div>
       </section>}
 
       <form id="practice" className="play-panel scroll-mt-28 p-5 sm:p-8" onSubmit={onSubmit}>
@@ -230,6 +248,27 @@ function SetupScreen({ categories, shellEnabled, busy, error, newPlayer, onSubmi
           </button>
         </div>
       </form>
+
+      {library.length > 0 && <section className="mt-12" aria-labelledby="practice-library-title">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div><p className="eyebrow">Unified Linux Library V2</p><h2 id="practice-library-title" className="mt-2 text-2xl font-semibold text-white">Выберите конкретную задачу.</h2><p className="mt-2 text-sm text-slate-500">{library.length} real-shell задач · прогресс сохраняется в аккаунте</p></div>
+          <span className="font-mono text-[10px] uppercase tracking-[.13em] text-slate-600">Найдено: {filteredLibrary.length}</span>
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_190px_210px]">
+          <label className="play-field"><span>Поиск</span><div className="relative"><Search className="pointer-events-none absolute left-3 top-3 text-slate-600" size={15} /><input className="w-full rounded-md border border-line bg-panel py-2.5 pl-9 pr-3 text-sm text-white outline-none focus:border-acid/60" value={librarySearch} onChange={(event) => { setLibrarySearch(event.target.value); setShowAllLibrary(false); }} placeholder="порт, права, logs…" /></div></label>
+          <label className="play-field"><span>Уровень</span><select value={libraryTier} onChange={(event) => { setLibraryTier(event.target.value); setShowAllLibrary(false); }}><option value="all">Все уровни</option><option value="foundation">Foundation</option><option value="operator">Operator</option><option value="engineer">Engineer</option><option value="troubleshooter">Troubleshooter</option></select></label>
+          <label className="play-field"><span>Направление</span><select value={libraryCategory} onChange={(event) => { setLibraryCategory(event.target.value); setShowAllLibrary(false); }}><option value="all">Все направления</option>{[...new Map(library.map((challenge) => [challenge.category_slug, challenge.category_name])).entries()].map(([slug, name]) => <option key={slug} value={slug}>{name}</option>)}</select></label>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visibleLibrary.map((challenge) => <Link key={challenge.slug} to={`/play?mode=real_shell&challenge=${encodeURIComponent(challenge.slug)}`} className="group rounded-lg border border-line bg-panel/70 p-5 transition hover:border-acid/40 hover:bg-panel">
+            <div className="flex items-center justify-between gap-3"><span className="font-mono text-[9px] uppercase tracking-[.13em] text-cyan-300">{challenge.category_name}</span>{challenge.completed ? <span className="inline-flex items-center gap-1 text-[10px] text-acid"><CheckCircle2 size={12} /> выполнено</span> : <span className="font-mono text-[9px] uppercase text-slate-600">{tierLabel(challenge.tier)}</span>}</div>
+            <h3 className="mt-3 text-base font-semibold text-white transition group-hover:text-acid">{challenge.title}</h3><p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{challenge.description}</p>
+            <div className="mt-4 flex items-center justify-between border-t border-line pt-3 font-mono text-[9px] uppercase tracking-[.11em] text-slate-600"><span>{difficultyLabel(challenge.difficulty, true)}</span><span>≈ {Math.max(1, Math.round(challenge.estimatedDurationSeconds / 60))} мин <ChevronRight className="inline" size={12} /></span></div>
+          </Link>)}
+        </div>
+        {filteredLibrary.length === 0 && <p className="play-panel mt-5 p-6 text-sm text-slate-500">По этим фильтрам задач нет. Попробуйте другое слово или уровень.</p>}
+        {filteredLibrary.length > 12 && <button type="button" className="secondary-button mt-5" onClick={() => setShowAllLibrary((value) => !value)}>{showAllLibrary ? 'Показать первые 12' : `Показать все ${filteredLibrary.length}`}</button>}
+      </section>}
 
       <Link className="mt-6 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-white" to="/online"><Swords size={15} /> Хотите играть против других? Перейти в Онлайн <ChevronRight size={14} /></Link>
 
@@ -456,4 +495,8 @@ function formatDuration(milliseconds: number): string {
 function courseReturnTo(): string | null {
   const value = new URLSearchParams(window.location.search).get('returnTo');
   return value?.startsWith('/learn/paths/') && !value.startsWith('//') ? value : null;
+}
+
+function tierLabel(tier: LibraryChallenge['tier']): string {
+  return ({ foundation: 'Foundation', operator: 'Operator', engineer: 'Engineer', troubleshooter: 'Troubleshooter' })[tier];
 }

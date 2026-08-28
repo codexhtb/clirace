@@ -47,7 +47,7 @@
       "category": "permissions",
       "concept": "chmod_symbolic",
       "version": 1,
-      "challengeSlugs": ["shell-executable-spell"],
+        "challengeSlugs": ["permissions-enable-deploy-script"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "permissions",
       "concept": "chmod_octal",
       "version": 1,
-      "challengeSlugs": ["linux-directory-mode"],
+        "challengeSlugs": ["permissions-lock-private-key"],
       "completion": { "requireAll": true }
     },
     {

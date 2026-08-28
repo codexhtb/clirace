@@ -59,7 +59,7 @@
       "category": "filesystem",
       "concept": "symbolic_links",
       "version": 1,
-      "challengeSlugs": ["shell-release-symlink"],
+        "challengeSlugs": ["filesystem-switch-current-release"],
       "completion": { "requireAll": true }
     },
     {

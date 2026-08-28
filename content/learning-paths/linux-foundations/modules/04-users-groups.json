@@ -47,7 +47,7 @@
       "category": "users_groups",
       "concept": "ownership",
       "version": 1,
-      "challengeSlugs": ["shell-readonly-scroll"],
+        "challengeSlugs": ["users-create-operations-group"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "users_groups",
       "concept": "secure_ownership",
       "version": 1,
-      "challengeSlugs": ["shell-secure-secret"],
+        "challengeSlugs": ["users-add-deploy-to-releases"],
       "completion": { "requireAll": true }
     },
     {

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { loadAndValidateLinuxCoreContent } from './learning-content.js';
-import { listSandboxChallenges } from './sandbox-challenges.js';
+import { listSandboxChallenges, sandboxChallengeCatalogSlug } from './sandbox-challenges.js';
 
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120);
 const theoryBlockSchema = z.discriminatedUnion('type', [
@@ -83,9 +83,7 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
   const courseDirectories = ['linux-foundations'];
   const linuxCore = await loadAndValidateLinuxCoreContent();
   const questionSlugs = new Set(linuxCore.questions.filter((question) => question.enabled).map((question) => question.slug));
-  const challengeSlugs = new Set(listSandboxChallenges().map((challenge) =>
-    challenge.id === 'directory-mode' ? 'linux-directory-mode'
-      : challenge.id.startsWith('interview-') ? challenge.id : `shell-${challenge.id}`));
+  const challengeSlugs = new Set(listSandboxChallenges().map(sandboxChallengeCatalogSlug));
   const courses: LearningPathCourseContent[] = [];
   const allCourseSlugs = new Set<string>();
   const allItemIds = new Set<string>();

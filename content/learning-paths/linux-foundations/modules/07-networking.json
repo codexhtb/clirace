@@ -47,7 +47,7 @@
       "category": "networking",
       "concept": "network_output",
       "version": 1,
-      "challengeSlugs": ["shell-count-stars"],
+        "challengeSlugs": ["networking-start-local-tcp-service"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "networking",
       "concept": "http_diagnostics",
       "version": 1,
-      "challengeSlugs": ["shell-local-http"],
+        "challengeSlugs": ["networking-fetch-local-status-endpoint"],
       "completion": { "requireAll": true }
     },
     {

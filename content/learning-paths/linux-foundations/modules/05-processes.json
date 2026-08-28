@@ -47,7 +47,7 @@
       "category": "processes",
       "concept": "process_output",
       "version": 1,
-      "challengeSlugs": ["shell-last-cookie"],
+        "challengeSlugs": ["process-start-idle-worker"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "processes",
       "concept": "signals",
       "version": 1,
-      "challengeSlugs": ["shell-stop-worker"],
+        "challengeSlugs": ["process-stop-stalled-worker"],
       "completion": { "requireAll": true }
     },
     {

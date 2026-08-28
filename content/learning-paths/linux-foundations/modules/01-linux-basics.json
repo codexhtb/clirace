@@ -59,7 +59,7 @@
       "category": "filesystem",
       "concept": "directory_creation",
       "version": 1,
-      "challengeSlugs": ["shell-build-castle"],
+        "challengeSlugs": ["filesystem-create-cache-layout"],
       "completion": { "requireAll": true }
     },
     {

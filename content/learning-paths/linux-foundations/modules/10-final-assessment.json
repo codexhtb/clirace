@@ -47,7 +47,7 @@
       "category": "bash",
       "concept": "final_practice",
       "version": 1,
-      "challengeSlugs": ["shell-copy-treasure", "shell-sort-pets", "shell-filter-json"],
+        "challengeSlugs": ["filesystem-organize-service-logs", "permissions-secure-secret-layout", "text-enabled-services-from-json"],
       "completion": { "requireAll": true }
     },
     {
@@ -59,7 +59,7 @@
       "category": "filesystem",
       "concept": "final_lab",
       "version": 1,
-      "challengeSlugs": ["shell-rename-backups"],
+        "challengeSlugs": ["troubleshooting-reconcile-release-v6"],
       "completion": { "requireAll": true }
     },
     {
