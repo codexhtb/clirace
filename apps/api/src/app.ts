@@ -103,7 +103,7 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager, 
   });
 
   void app.register(async (catalogApp) => {
-    await registerCatalogRoutes(catalogApp, dependencies);
+    await registerCatalogRoutes(catalogApp, config, dependencies);
   });
 
   void app.register(async (communityApp) => {

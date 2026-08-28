@@ -16,6 +16,7 @@
     "test:shell-e2e": "node scripts/test-shell-e2e.mjs",
     "test:sandbox-platform": "pnpm --filter @clirace/api exec tsx ../../scripts/test-sandbox-platform.mts",
     "test:checker-framework": "pnpm --filter @clirace/api exec tsx ../../scripts/test-checker-framework.mts",
+    "test:challenge-library-v2": "pnpm --filter @clirace/api exec tsx ../../scripts/test-challenge-library-v2.mts",
     "test:shell-completion": "pnpm --filter @clirace/api exec tsx ../../scripts/test-shell-completion.mts",
     "test:checker-production": "node scripts/test-checker-production.mjs",
     "test:terminal-replay": "pnpm --filter @clirace/api exec tsx ../../scripts/test-terminal-replay.mts",

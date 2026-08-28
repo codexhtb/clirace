@@ -7,6 +7,14 @@ import type { AppConfig } from './config.js';
 import { RankedService, type PublicRankedStats, type RankedApplication, type RankedBattleResult } from './ranked-service.js';
 import type { SandboxManager, SessionTicket } from './sandbox-manager.js';
 import type { Dependencies } from './services.js';
+import { listBattleEligibleChallenges } from './challenge-library-v2/catalog.js';
+import {
+  createBattleChallengeSnapshot,
+  parseBattleChallengeSnapshot,
+  type BattleChallengeSnapshot,
+  type ChallengeV2,
+} from './challenge-library-v2/model.js';
+import { selectBattleChallengeDefinitions } from './challenge-library-v2/selection.js';
 
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -56,6 +64,16 @@ interface CurrentChallengeRow {
   category_slug: string;
   category_name: string;
   validation_config: Record<string, unknown>;
+  challenge_version?: number;
+  definition_hash?: string;
+  tier?: string;
+  concepts?: string[];
+}
+
+interface SelectedBattleChallenge {
+  databaseId: string;
+  definition: ChallengeV2;
+  snapshot: BattleChallengeSnapshot;
 }
 
 export class BattleStateError extends Error {
@@ -158,11 +176,8 @@ export class BattleManager implements BattleSandboxHooks {
       FROM categories
       JOIN challenges ON challenges.category_id = categories.id
         AND challenges.enabled AND challenges.type = 'real_shell'
-        AND NOT EXISTS (
-          SELECT 1 FROM challenge_collection_items ci
-          JOIN challenge_collections cc ON cc.id = ci.collection_id
-          WHERE ci.challenge_id = challenges.id AND cc.slug = 'interview-100'
-        )
+        AND challenges.validation_config->>'libraryVersion' = '2'
+        AND COALESCE((challenges.validation_config->'battleEligible'->>'private')::boolean, false)
       WHERE categories.enabled
       GROUP BY categories.id
       HAVING count(challenges.id) >= 3
@@ -202,13 +217,13 @@ export class BattleManager implements BattleSandboxHooks {
       await this.lockBattleUsers(client, [user.id]);
       await this.assertUsersActive(client, [user.id]);
       await this.assertNoActiveBattle(client, user.id);
-      const selection = await this.selectBattleChallenges(client, rounds, categorySlug);
+      const selection = await this.selectBattleChallenges(client, rounds, categorySlug, 'private', [user.id]);
       const expiresAt = new Date(Date.now() + this.config.BATTLE_WAITING_TTL_SECONDS * 1_000);
       const battle = await this.insertBattle(client, {
         hostUserId: user.id,
         rounds,
         categoryId: selection.categoryId,
-        challengeIds: selection.challengeIds,
+        challenges: selection.challenges,
         expiresAt,
         mode: 'private',
       });
@@ -248,16 +263,17 @@ export class BattleManager implements BattleSandboxHooks {
       await this.assertUsersActive(client, users);
       await this.assertNoActiveBattle(client, first.id);
       await this.assertNoActiveBattle(client, second.id);
-      const selection = await this.selectBattleChallenges(client, 3, 'all');
+      const battleMode = pool === 'ranked' ? 'ranked' : 'quick';
+      const selection = await this.selectBattleChallenges(client, 3, 'all', battleMode, [first.id, second.id]);
       const battle = await this.insertBattle(client, {
         hostUserId: first.id,
         rounds: 3,
         categoryId: selection.categoryId,
-        challengeIds: selection.challengeIds,
+        challenges: selection.challenges,
         expiresAt: new Date(Date.now() + this.config.MATCHMAKING_BATTLE_WAITING_TTL_SECONDS * 1_000),
         matchmakingId,
         matchmakingPool: pool,
-        mode: pool === 'ranked' ? 'ranked' : 'quick',
+        mode: battleMode,
       });
       await client.query(`
         INSERT INTO battle_players (id, battle_id, user_id)
@@ -317,7 +333,7 @@ export class BattleManager implements BattleSandboxHooks {
     const players = await this.loadPlayers(battle.id);
     const viewer = players.find((player) => player.user_id === viewerUserId);
     const challenge = viewer && battle.status !== 'finished' && battle.status !== 'cancelled'
-      ? await this.loadChallenge(battle.challenge_ids[viewer.current_round - 1])
+      ? await this.loadChallenge(battle.id, viewer.current_round, battle.challenge_ids[viewer.current_round - 1])
       : undefined;
     const results = battle.status === 'finished' ? await this.loadResults(battle.id, players) : undefined;
     const rankedResult = battle.mode === 'ranked' && ['finished', 'cancelled'].includes(battle.status)
@@ -358,13 +374,19 @@ export class BattleManager implements BattleSandboxHooks {
       battle_id: string; status: BattleRow['status']; round_count: number;
       player_id: string; current_round: number; completed_rounds: number; ready: boolean;
       challenge_id: string; validation_config: Record<string, unknown>;
+      canonical_challenge_id: string | null; challenge_version: number | null;
+      definition_hash: string | null; definition_snapshot: unknown | null;
     }>(`
       SELECT b.id AS battle_id, b.status, b.round_count,
              bp.id AS player_id, bp.current_round, bp.completed_rounds, bp.ready,
-             c.id AS challenge_id, c.validation_config
+             c.id AS challenge_id, c.validation_config,
+             bcp.canonical_challenge_id, bcp.challenge_version,
+             bcp.definition_hash, bcp.definition_snapshot
       FROM battles b
       JOIN battle_players bp ON bp.battle_id = b.id AND bp.user_id = $2
       JOIN challenges c ON c.id = b.challenge_ids[bp.current_round]
+      LEFT JOIN battle_challenge_pins bcp
+        ON bcp.battle_id=b.id AND bcp.round_number=bp.current_round AND bcp.challenge_id=c.id
       WHERE b.room_code = $1
     `, [roomCode, userId]);
     const row = result.rows[0];
@@ -380,7 +402,8 @@ export class BattleManager implements BattleSandboxHooks {
       `, [row.battle_id]);
       if ((readiness.rows[0]?.ready ?? 0) !== 2) throw new BattleStateError('Ждём Ready второго игрока.', 409);
     }
-    const sandboxChallengeId = row.validation_config.sandboxChallengeId;
+    const pinned = row.definition_snapshot ? parseBattleChallengeSnapshot(row.definition_snapshot) : undefined;
+    const sandboxChallengeId = pinned?.id ?? row.validation_config.sandboxChallengeId;
     if (typeof sandboxChallengeId !== 'string') throw new BattleStateError('Для задания не настроен sandbox.', 500);
     return this.sandboxManager.createTicket({
       userId,
@@ -391,6 +414,11 @@ export class BattleManager implements BattleSandboxHooks {
         roundNumber: row.current_round,
         challengeId: row.challenge_id,
         sandboxChallengeId,
+        ...(pinned ? {
+          challengeVersion: pinned.version,
+          definitionHash: pinned.definitionHash,
+          challengeSnapshot: pinned,
+        } : {}),
         inputLocked: row.status !== 'running',
       },
     });
@@ -813,30 +841,46 @@ export class BattleManager implements BattleSandboxHooks {
     client: PoolClient,
     rounds: 3 | 5 | 10,
     categorySlug: string,
-  ): Promise<{ categoryId: number | null; challengeIds: string[] }> {
+    mode: 'private' | 'quick' | 'ranked',
+    userIds: string[],
+  ): Promise<{ categoryId: number | null; challenges: SelectedBattleChallenge[] }> {
     const category = categorySlug === 'all' ? null : await client.query<{ id: number }>(
       'SELECT id FROM categories WHERE slug = $1 AND enabled', [categorySlug],
     ).then((result) => result.rows[0] ?? null);
     if (categorySlug !== 'all' && !category) throw new BattleStateError('Категория не найдена.', 400);
 
-    const challenges = await client.query<{ id: string }>(`
-      SELECT id FROM challenges
-      WHERE enabled AND type = 'real_shell'
-        AND ($1::smallint IS NULL OR category_id = $1)
-        AND NOT EXISTS (
-          SELECT 1 FROM challenge_collection_items ci
-          JOIN challenge_collections cc ON cc.id = ci.collection_id
-          WHERE ci.challenge_id = challenges.id AND cc.slug = 'interview-100'
-        )
-      ORDER BY random()
-      LIMIT $2
-    `, [category?.id ?? null, rounds]);
-    if (challenges.rows.length !== rounds) {
+    const eligibleDefinitions = listBattleEligibleChallenges(mode)
+      .filter((challenge) => categorySlug === 'all' || challenge.category === categorySlug);
+    const databaseRows = await client.query<{ id: string; slug: string }>(`
+      SELECT id, slug FROM challenges
+      WHERE enabled AND type='real_shell' AND slug=ANY($1::varchar[])
+    `, [eligibleDefinitions.map((challenge) => challenge.id)]);
+    const databaseIds = new Map(databaseRows.rows.map((row) => [row.slug, row.id]));
+    const available = eligibleDefinitions.filter((challenge) => databaseIds.has(challenge.id));
+    if (available.length < rounds) {
       throw new BattleStateError(`В этой категории пока меньше ${rounds} Shell-заданий. Выберите меньше раундов или все категории.`, 422);
     }
+
+    const recent = await client.query<{ canonical_challenge_id: string }>(`
+      SELECT DISTINCT recent.canonical_challenge_id FROM (
+        SELECT bcp.canonical_challenge_id, b.created_at
+        FROM battle_challenge_pins bcp
+        JOIN battles b ON b.id=bcp.battle_id
+        JOIN battle_players bp ON bp.battle_id=b.id
+        WHERE bp.user_id=ANY($1::bigint[])
+        ORDER BY b.created_at DESC
+        LIMIT 40
+      ) recent
+    `, [userIds]);
+    const recentIds = new Set(recent.rows.map((row) => row.canonical_challenge_id));
+    const selected = selectBattleChallengeDefinitions({ available, rounds, recentIds });
     return {
       categoryId: category?.id ?? null,
-      challengeIds: challenges.rows.map((challenge) => challenge.id),
+      challenges: selected.map((definition) => ({
+        databaseId: databaseIds.get(definition.id)!,
+        definition,
+        snapshot: createBattleChallengeSnapshot(definition),
+      })),
     };
   }
 
@@ -844,7 +888,7 @@ export class BattleManager implements BattleSandboxHooks {
     hostUserId: string;
     rounds: 3 | 5 | 10;
     categoryId: number | null;
-    challengeIds: string[];
+    challenges: SelectedBattleChallenge[];
     expiresAt: Date;
     matchmakingId?: string;
     matchmakingPool?: string;
@@ -866,14 +910,32 @@ export class BattleManager implements BattleSandboxHooks {
         options.hostUserId,
         options.categoryId,
         options.rounds,
-        options.challengeIds,
+        options.challenges.map((challenge) => challenge.databaseId),
         options.expiresAt,
         options.matchmakingId ?? null,
         options.matchmakingPool ?? null,
         options.mode,
       ]);
       const roomCode = inserted.rows[0]?.room_code;
-      if (roomCode) return { id: battleId, roomCode };
+      if (roomCode) {
+        for (const [index, challenge] of options.challenges.entries()) {
+          await client.query(`
+            INSERT INTO battle_challenge_pins (
+              battle_id, round_number, challenge_id, canonical_challenge_id,
+              challenge_version, definition_hash, definition_snapshot
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
+          `, [
+            battleId,
+            index + 1,
+            challenge.databaseId,
+            challenge.definition.id,
+            challenge.definition.version,
+            challenge.snapshot.definitionHash,
+            JSON.stringify(challenge.snapshot),
+          ]);
+        }
+        return { id: battleId, roomCode };
+      }
     }
     throw new BattleStateError('Не удалось создать уникальный код комнаты. Повторите попытку.', 503);
   }
@@ -917,8 +979,36 @@ export class BattleManager implements BattleSandboxHooks {
     return result.rows;
   }
 
-  private async loadChallenge(challengeId: string | undefined): Promise<CurrentChallengeRow | undefined> {
+  private async loadChallenge(battleId: string, roundNumber: number, challengeId: string | undefined): Promise<CurrentChallengeRow | undefined> {
     if (!challengeId) return undefined;
+    const pinned = await this.dependencies.postgres.query<{
+      definition_snapshot: unknown; definition_hash: string; challenge_version: number;
+      category_slug: string; category_name: string;
+    }>(`
+      SELECT bcp.definition_snapshot, bcp.definition_hash, bcp.challenge_version,
+             categories.slug AS category_slug, categories.name AS category_name
+      FROM battle_challenge_pins bcp
+      JOIN challenges c ON c.id=bcp.challenge_id
+      JOIN categories ON categories.id=c.category_id
+      WHERE bcp.battle_id=$1 AND bcp.round_number=$2 AND bcp.challenge_id=$3
+    `, [battleId, roundNumber, challengeId]);
+    if (pinned.rows[0]) {
+      const snapshot = parseBattleChallengeSnapshot(pinned.rows[0].definition_snapshot);
+      return {
+        id: challengeId,
+        slug: snapshot.id,
+        title: snapshot.title,
+        description: snapshot.description,
+        difficulty: snapshot.difficulty,
+        category_slug: pinned.rows[0].category_slug,
+        category_name: pinned.rows[0].category_name,
+        validation_config: {},
+        challenge_version: snapshot.version,
+        definition_hash: snapshot.definitionHash,
+        tier: snapshot.tier,
+        concepts: snapshot.concepts,
+      };
+    }
     const result = await this.dependencies.postgres.query<CurrentChallengeRow>(`
       SELECT c.id, c.slug, c.title, c.description, c.difficulty, c.validation_config,
              categories.slug AS category_slug, categories.name AS category_name
@@ -1014,6 +1104,10 @@ function publicBattleState(
       title: challenge.title,
       description: challenge.description,
       difficulty: challenge.difficulty,
+      version: challenge.challenge_version ?? 1,
+      definitionHash: challenge.definition_hash ?? null,
+      tier: challenge.tier ?? null,
+      concepts: challenge.concepts ?? [],
       category: { slug: challenge.category_slug, name: challenge.category_name },
     } : null,
     ...(results ? { results } : {}),

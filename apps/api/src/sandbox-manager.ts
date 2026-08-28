@@ -7,6 +7,7 @@ import type { BattleRoundCompletion, BattleSandboxHooks, BattleSandboxMetadata }
 import {
   getSandboxChallenge,
   pickSandboxChallenge,
+  sandboxChallengeFromBattleSnapshot,
   toPublicChallenge,
   type PublicSandboxChallenge,
   type SandboxChallenge,
@@ -300,10 +301,17 @@ export class SandboxManager {
 
     const challenge = options.game
       ? getSandboxChallenge(options.game.sandboxChallengeId)
-      : options.battle
-        ? getSandboxChallenge(options.battle.sandboxChallengeId)
+      : options.battle?.challengeSnapshot
+        ? sandboxChallengeFromBattleSnapshot(options.battle.challengeSnapshot)
+        : options.battle
+          ? getSandboxChallenge(options.battle.sandboxChallengeId)
         : pickSandboxChallenge(options.excludeChallengeId);
     if (!challenge) throw new SandboxUnavailableError('Sandbox challenge does not exist.');
+    if (options.battle?.challengeSnapshot && (
+      challenge.id !== options.battle.sandboxChallengeId
+      || challenge.challengeVersion !== options.battle.challengeVersion
+      || challenge.definitionHash !== options.battle.definitionHash
+    )) throw new SandboxUnavailableError('Pinned Battle challenge does not match its immutable definition.');
     const sessionId = randomUUID();
     const token = randomBytes(32).toString('base64url');
     const expiresAt = Date.now() + 30_000;
@@ -755,7 +763,9 @@ export class SandboxManager {
     if (pending.expiresAt < Date.now() || !safeTokenMatch(pending.tokenHash, token)) {
       throw new Error('Session token is invalid.');
     }
-    const challenge = getSandboxChallenge(pending.challengeId);
+    const challenge = pending.battle?.challengeSnapshot
+      ? sandboxChallengeFromBattleSnapshot(pending.battle.challengeSnapshot)
+      : getSandboxChallenge(pending.challengeId);
     if (!challenge) throw new Error('Session challenge does not exist.');
     if (socket.readyState !== socket.OPEN) throw new Error('Socket is already closed.');
 

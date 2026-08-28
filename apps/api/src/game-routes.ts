@@ -92,6 +92,7 @@ export async function registerGameRoutes(
       FROM challenges c
       JOIN categories ON categories.id = c.category_id
       WHERE c.enabled AND categories.enabled
+        AND COALESCE((c.validation_config->'availability'->>'practice')::boolean, true)
         AND c.type = ANY($1::varchar[])
         AND ($2::smallint IS NULL OR c.category_id = $2)
         AND ($3::varchar IS NULL OR c.difficulty = $3)

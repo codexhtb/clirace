@@ -1,18 +1,25 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Dependencies } from './services.js';
+import { AuthService } from './auth-service.js';
+import type { AppConfig } from './config.js';
 
 const querySchema = z.object({
   category: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(),
   difficulty: z.enum(['Easy', 'Medium', 'Hard', 'Expert']).optional(),
   type: z.enum(['typing', 'recall', 'quick', 'real_shell']).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  tier: z.enum(['foundation', 'operator', 'engineer', 'troubleshooter']).optional(),
+  q: z.string().trim().min(1).max(80).optional(),
+  libraryVersion: z.literal('2').optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
 }).strict();
 
 export async function registerCatalogRoutes(
   app: FastifyInstance,
+  config: AppConfig,
   dependencies: Dependencies,
 ): Promise<void> {
+  const auth = new AuthService(config, dependencies);
   app.get('/api/categories', async (_request, reply) => {
     const result = await dependencies.postgres.query<{
       slug: string;
@@ -54,6 +61,15 @@ export async function registerCatalogRoutes(
       values.push(parsed.data.type);
       filters.push(`challenges.type = $${values.length}`);
     }
+    if (parsed.data.tier) {
+      values.push(parsed.data.tier);
+      filters.push(`challenges.validation_config->>'tier' = $${values.length}`);
+    }
+    if (parsed.data.q) {
+      values.push(`%${parsed.data.q}%`);
+      filters.push(`(challenges.title ILIKE $${values.length} OR challenges.description ILIKE $${values.length})`);
+    }
+    if (parsed.data.libraryVersion) filters.push(`challenges.validation_config->>'libraryVersion' = '2'`);
     values.push(parsed.data.limit);
 
     const result = await dependencies.postgres.query<PublicChallengeRow>(`
@@ -64,6 +80,7 @@ export async function registerCatalogRoutes(
         challenges.difficulty,
         challenges.type,
         challenges.scoring_config,
+        challenges.validation_config,
         categories.slug AS category_slug,
         categories.name AS category_name
       FROM challenges
@@ -73,7 +90,20 @@ export async function registerCatalogRoutes(
       LIMIT $${values.length}
     `, values);
 
-    return reply.header('cache-control', 'public, max-age=30').send({ challenges: result.rows });
+    const user = await auth.currentUser(request);
+    const completed = user && result.rows.length
+      ? await dependencies.postgres.query<{ slug: string }>(`
+          SELECT DISTINCT c.slug
+          FROM results r
+          JOIN session_tasks st ON st.id=r.session_task_id
+          JOIN challenges c ON c.id=st.challenge_id
+          WHERE r.user_id=$1 AND r.correct AND c.slug=ANY($2::varchar[])
+        `, [user.id, result.rows.map((row) => row.slug)])
+      : { rows: [] as Array<{ slug: string }> };
+    const completedSlugs = new Set(completed.rows.map((row) => row.slug));
+    return reply.header('cache-control', user ? 'private, no-store' : 'public, max-age=30').send({
+      challenges: result.rows.map((row) => publicChallenge(row, completedSlugs.has(row.slug))),
+    });
   });
 
   app.get('/api/challenges/:slug', async (request, reply) => {
@@ -89,6 +119,7 @@ export async function registerCatalogRoutes(
         challenges.difficulty,
         challenges.type,
         challenges.scoring_config,
+        challenges.validation_config,
         categories.slug AS category_slug,
         categories.name AS category_name
       FROM challenges
@@ -97,7 +128,7 @@ export async function registerCatalogRoutes(
     `, [slug]);
     const challenge = result.rows[0];
     if (!challenge) return reply.code(404).send({ error: 'Not Found', message: 'Задание не найдено.' });
-    return reply.header('cache-control', 'public, max-age=30').send({ challenge });
+    return reply.header('cache-control', 'public, max-age=30').send({ challenge: publicChallenge(challenge, false) });
   });
 }
 
@@ -108,6 +139,29 @@ interface PublicChallengeRow {
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Expert';
   type: 'typing' | 'recall' | 'quick' | 'real_shell';
   scoring_config: Record<string, unknown>;
+  validation_config: Record<string, unknown>;
   category_slug: string;
   category_name: string;
+}
+
+function publicChallenge(row: PublicChallengeRow, completed: boolean) {
+  const config = row.validation_config;
+  return {
+    slug: row.slug,
+    title: row.title,
+    description: row.description,
+    difficulty: row.difficulty,
+    type: row.type,
+    scoring_config: row.scoring_config,
+    category_slug: row.category_slug,
+    category_name: row.category_name,
+    completed,
+    ...(config.libraryVersion === 2 ? {
+      libraryVersion: 2,
+      version: config.challengeVersion,
+      tier: config.tier,
+      concepts: config.concepts,
+      estimatedDurationSeconds: config.estimatedDurationSeconds,
+    } : {}),
+  };
 }

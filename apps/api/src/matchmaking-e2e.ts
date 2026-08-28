@@ -38,10 +38,10 @@ async function main(): Promise<void> {
   const stores = [new MatchmakingStore(dependencies.redis, prefix), new MatchmakingStore(dependencies.redis, lowPrefix)];
 
   try {
-    const users = await createUsers(app, dependencies, suffix, password, 8);
+    const users = await createUsers(app, dependencies, suffix, password, 10);
     createdUserIds.push(...users.map((user) => user.id));
-    const [a, b, c, d, e, f, g, h] = users;
-    assert(a && b && c && d && e && f && g && h, 'temporary users missing');
+    const [a, b, c, d, e, f, g, h, i, j] = users;
+    assert(a && b && c && d && e && f && g && h && i && j, 'temporary users missing');
 
     equal((await inject(app, 'POST', '/api/matchmaking/queue')).statusCode, 401, 'unauthenticated enqueue');
 
@@ -63,9 +63,43 @@ async function main(): Promise<void> {
       SELECT count(*)::int AS count FROM battles WHERE id = $1 AND matchmaking_pool = 'quick'
     `, [statusA.battleId]);
     equal(pairCount.rows[0]?.count, 1, 'exactly one existing Battle persisted');
+    const quickPins = await dependencies.postgres.query<{
+      canonical_challenge_id: string; challenge_version: number; definition_hash: string;
+      definition_snapshot: { id: string; version: number; definitionHash: string };
+    }>(`
+      SELECT canonical_challenge_id,challenge_version,definition_hash,definition_snapshot
+      FROM battle_challenge_pins WHERE battle_id=$1 ORDER BY round_number
+    `, [statusA.battleId]);
+    equal(quickPins.rows.length, 3, 'Quick Match pins all three canonical challenge definitions');
+    assert(quickPins.rows.every((pin) => pin.challenge_version >= 1 && pin.definition_hash === pin.definition_snapshot.definitionHash), 'Quick Match pin version/hash matches immutable snapshot');
+    assert(new Set(quickPins.rows.map((pin) => pin.canonical_challenge_id)).size === 3, 'Quick Match rounds do not repeat a challenge');
+    const [quickStateA, quickStateB] = await Promise.all([
+      inject(app, 'GET', `/api/battles/${statusA.roomCode}`, a.cookie),
+      inject(app, 'GET', `/api/battles/${statusB.roomCode}`, b.cookie),
+    ]);
+    const currentA = quickStateA.json<{ battle: { challenge: { slug: string; version: number; definitionHash: string } } }>().battle.challenge;
+    const currentB = quickStateB.json<{ battle: { challenge: { slug: string; version: number; definitionHash: string } } }>().battle.challenge;
+    equal(currentA.slug, currentB.slug, 'both Quick Match players receive the same canonical challenge ID');
+    equal(currentA.version, currentB.version, 'both Quick Match players receive the same challenge version');
+    equal(currentA.definitionHash, currentB.definitionHash, 'both Quick Match players receive the same definition hash');
+
+    equal((await inject(app, 'POST', '/api/matchmaking/queue', i.cookie, { mode: 'ranked' })).statusCode, 200, 'first Ranked user queued');
+    equal((await inject(app, 'POST', '/api/matchmaking/queue', j.cookie, { mode: 'ranked' })).statusCode, 200, 'second Ranked user queued');
+    const rankedStatus = (await inject(app, 'GET', '/api/matchmaking/status?mode=ranked', i.cookie)).json<{ status: string; battleId: string }>();
+    equal(rankedStatus.status, 'matched', 'Ranked pair matched');
+    const rankedPool = await dependencies.postgres.query<{ mode: string; pins: number }>(`
+      SELECT b.mode, count(bcp.*)::int AS pins
+      FROM battles b JOIN battle_challenge_pins bcp ON bcp.battle_id=b.id
+      WHERE b.id=$1 GROUP BY b.id
+    `, [rankedStatus.battleId]);
+    equal(rankedPool.rows[0]?.mode, 'ranked', 'Ranked Battle mode remains unchanged');
+    equal(rankedPool.rows[0]?.pins, 3, 'Ranked uses three pinned canonical challenges');
 
     const privateBattle = await inject(app, 'POST', '/api/battles', c.cookie, { rounds: 3, category: 'all' });
     equal(privateBattle.statusCode, 201, 'private active Battle fixture');
+    const privateBattleId = privateBattle.json<{ battle: { id: string } }>().battle.id;
+    const privatePins = await dependencies.postgres.query<{ count: number }>('SELECT count(*)::int AS count FROM battle_challenge_pins WHERE battle_id=$1', [privateBattleId]);
+    equal(privatePins.rows[0]?.count, 3, 'Private Battle uses the same pinned canonical library');
     const activeRejected = await inject(app, 'POST', '/api/matchmaking/queue', c.cookie);
     equal(activeRejected.statusCode, 409, 'active Battle enqueue rejected');
     equal(activeRejected.json<{ code: string }>().code, 'active_battle', 'active Battle machine code');
@@ -95,7 +129,7 @@ async function main(): Promise<void> {
 
     console.log(JSON.stringify({
       ok: true,
-      checks: 22,
+      checks: 36,
       exactlyOneBattle: statusA.battleId,
       duplicateEnqueue: 'idempotent',
       reconnect: 'restored',

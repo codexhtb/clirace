@@ -3,11 +3,23 @@ import {
   linuxCoreRuntime,
   type ChallengeCheckerContract,
 } from './checker-contract.js';
+import { listChallengeLibraryV2 } from './challenge-library-v2/catalog.js';
+import {
+  challengeDefinitionHash,
+  parseBattleChallengeSnapshot,
+  type BattleChallengeSnapshot,
+  type ChallengeAvailabilityMode,
+  type ChallengeTier,
+  type ChallengeV2,
+} from './challenge-library-v2/model.js';
+import { compileDeclarativeSetup } from './challenge-library-v2/setup.js';
 
 export type SandboxDifficulty = 'Easy' | 'Medium' | 'Hard';
 
 export interface SandboxChallenge {
   id: string;
+  source: 'legacy' | 'library-v2';
+  challengeVersion: number;
   title: string;
   description: string;
   category: string;
@@ -20,14 +32,19 @@ export interface SandboxChallenge {
   runtime?: ChallengeCheckerContract['runtime'];
   checks?: ChallengeCheckerContract['checks'];
   /** Executed only by integrity tests; never sent to the browser. */
-  referenceSolution: string;
+  referenceSolution?: string;
+  definitionHash?: string;
+  tier?: ChallengeTier;
+  concepts?: readonly string[];
+  availability?: Readonly<Record<ChallengeAvailabilityMode, boolean>>;
+  estimatedDurationSeconds?: number;
 }
 
-type SandboxChallengeDefinition = Omit<SandboxChallenge, 'referenceSolution'>;
+type SandboxChallengeDefinition = Omit<SandboxChallenge, 'source' | 'challengeVersion' | 'referenceSolution'>;
 
 export type PublicSandboxChallenge = Pick<
   SandboxChallenge,
-  'id' | 'title' | 'description' | 'category' | 'difficulty' | 'hint'
+  'id' | 'challengeVersion' | 'title' | 'description' | 'category' | 'difficulty' | 'hint'
 >;
 
 const baseChallengeDefinitions: readonly SandboxChallengeDefinition[] = [
@@ -663,6 +680,8 @@ const checkerContractsById: Readonly<Record<string, ChallengeCheckerContract>> =
 
 const baseChallenges: readonly SandboxChallenge[] = baseChallengeDefinitions.map((challenge) => ({
   ...challenge,
+  source: 'legacy' as const,
+  challengeVersion: 1,
   ...(checkerContractsById[challenge.id] ?? {}),
   referenceSolution: baseReferenceSolutions[challenge.id] ?? challenge.hint,
 }));
@@ -671,6 +690,8 @@ const interviewChallenges: readonly SandboxChallenge[] = INTERVIEW_100
   .filter((task) => task.sandbox)
   .map((task) => ({
     id: task.slug,
+    source: 'legacy' as const,
+    challengeVersion: 1,
     title: task.title,
     description: task.description,
     category: INTERVIEW_TOPIC_LABELS[task.topic],
@@ -682,7 +703,9 @@ const interviewChallenges: readonly SandboxChallenge[] = INTERVIEW_100
     referenceSolution: task.solution,
   }));
 
-const challenges: readonly SandboxChallenge[] = [...baseChallenges, ...interviewChallenges];
+const v2Challenges: readonly SandboxChallenge[] = listChallengeLibraryV2().map(toSandboxChallengeV2);
+
+const challenges: readonly SandboxChallenge[] = [...baseChallenges, ...interviewChallenges, ...v2Challenges];
 
 export function pickSandboxChallenge(excludeId?: string): SandboxChallenge {
   const candidates = excludeId
@@ -691,16 +714,71 @@ export function pickSandboxChallenge(excludeId?: string): SandboxChallenge {
   return candidates[Math.floor(Math.random() * candidates.length)] ?? challenges[0]!;
 }
 
-export function getSandboxChallenge(id: string): SandboxChallenge | undefined {
-  return challenges.find((challenge) => challenge.id === id);
+export function getSandboxChallenge(id: string, version?: number): SandboxChallenge | undefined {
+  return challenges.find((challenge) => challenge.id === id && (version === undefined || challenge.challengeVersion === version));
+}
+
+export function sandboxChallengeFromBattleSnapshot(input: unknown): SandboxChallenge {
+  return toSandboxChallengeV2Snapshot(parseBattleChallengeSnapshot(input));
 }
 
 export function toPublicChallenge(challenge: SandboxChallenge): PublicSandboxChallenge {
-  const { id, title, description, category, difficulty, hint } = challenge;
-  return { id, title, description, category, difficulty, hint };
+  const { id, challengeVersion, title, description, category, difficulty, hint } = challenge;
+  return { id, challengeVersion, title, description, category, difficulty, hint };
 }
 
 export function listSandboxChallenges(): readonly SandboxChallenge[] {
   return challenges;
 }
+
+export function sandboxChallengeCatalogSlug(challenge: SandboxChallenge): string {
+  if (challenge.source === 'library-v2') return challenge.id;
+  return challenge.id === 'directory-mode' ? 'linux-directory-mode'
+    : challenge.id.startsWith('interview-') ? challenge.id : `shell-${challenge.id}`;
+}
+
+function toSandboxChallengeV2(challenge: ChallengeV2): SandboxChallenge {
+  return toSandboxChallengeV2Snapshot({
+    libraryVersion: 2 as const,
+    id: challenge.id,
+    version: challenge.version,
+    definitionHash: challengeDefinitionHash(challenge),
+    title: challenge.title,
+    description: challenge.description,
+    category: challenge.category,
+    concepts: [...challenge.concepts],
+    tier: challenge.tier,
+    difficulty: challenge.difficulty,
+    runtime: challenge.runtime,
+    setup: challenge.setup,
+    checks: challenge.checks,
+    hint: challenge.hint,
+    successMessage: challenge.successMessage,
+    estimatedDurationSeconds: challenge.estimatedDurationSeconds,
+  });
+}
+
+function toSandboxChallengeV2Snapshot(snapshot: BattleChallengeSnapshot): SandboxChallenge {
+  return {
+    id: snapshot.id,
+    source: 'library-v2',
+    challengeVersion: snapshot.version,
+    definitionHash: snapshot.definitionHash,
+    title: snapshot.title,
+    description: snapshot.description,
+    category: snapshot.category,
+    difficulty: snapshot.difficulty,
+    hint: snapshot.hint,
+    successMessage: snapshot.successMessage,
+    setupScript: compileDeclarativeSetup(snapshot.setup),
+    checkScript: '',
+    runtime: snapshot.runtime,
+    checks: snapshot.checks,
+    tier: snapshot.tier,
+    concepts: snapshot.concepts,
+    availability: { practice: true, quick: true, ranked: true, private: true },
+    estimatedDurationSeconds: snapshot.estimatedDurationSeconds,
+  };
+}
+
 import { INTERVIEW_100, INTERVIEW_TOPIC_LABELS } from './interview-data.js';

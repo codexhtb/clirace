@@ -4,10 +4,13 @@ import { PassThrough } from 'node:stream';
 import { listSandboxChallenges, type SandboxChallenge } from './sandbox-challenges.js';
 import { CheckerService, type CheckerExecOptions, type CheckerExecResult } from './checker-service.js';
 import { checkerContract, linuxCoreRuntime, type ChallengeCheckerContract } from './checker-contract.js';
+import { getChallengeV2 } from './challenge-library-v2/catalog.js';
+import { alternativeSolutionFixtures, trustedSolutionForChallenge } from './challenge-library-v2/test-solutions.js';
 
 interface IntegrityResult {
   total: number;
   passed: number;
+  alternativeSolutions: number;
   failed: Array<{ id: string; stage: string; output: string }>;
   durationMs: number;
 }
@@ -36,9 +39,25 @@ export async function runRealShellIntegrity(options: {
     }
   });
   await Promise.all(workers);
+  const alternatives = Object.entries(alternativeSolutionFixtures).flatMap(([id, solutions]) =>
+    solutions.map((solution, index) => ({ id, solution, index: index + 1 })));
+  let alternativeCursor = 0;
+  const alternativeWorkers = Array.from({ length: Math.max(1, Math.min(options.concurrency ?? 4, 8)) }, async () => {
+    while (alternativeCursor < alternatives.length) {
+      const fixture = alternatives[alternativeCursor++];
+      if (!fixture) break;
+      const challenge = getSandboxChallengeForIntegrity(fixture.id);
+      const failure = challenge
+        ? await verifyChallenge(docker, options.image, challenge, fixture.solution, `alternative_${fixture.index}`)
+        : { id: fixture.id, stage: 'alternative_fixture', output: 'challenge missing' };
+      if (failure) failed.push(failure);
+    }
+  });
+  await Promise.all(alternativeWorkers);
   return {
     total: challenges.length,
-    passed: challenges.length - failed.length,
+    passed: challenges.length - failed.filter((failure) => !failure.stage.startsWith('alternative_')).length,
+    alternativeSolutions: alternatives.length,
     failed,
     durationMs: Math.round(performance.now() - startedAt),
   };
@@ -48,12 +67,15 @@ async function verifyChallenge(
   docker: Docker,
   image: string,
   challenge: SandboxChallenge,
+  solutionOverride?: string,
+  stagePrefix = '',
 ): Promise<{ id: string; stage: string; output: string } | undefined> {
   let container: Container | undefined;
+  const stage = (name: string) => stagePrefix ? `${stagePrefix}_${name}` : name;
   try {
     container = await docker.createContainer({
       Image: image,
-      Cmd: ['/bin/bash', '-lc', `set -e\n${challenge.setupScript}\ntouch /tmp/clirace-integrity-ready\nexec tail -f /dev/null`],
+      Cmd: ['/bin/bash', '-lc', `set -e\n${challenge.setupScript}\ntouch /tmp/clirace-integrity-ready\nexec /bin/bash`],
       Tty: true,
       OpenStdin: true,
       Labels: {
@@ -81,21 +103,26 @@ async function verifyChallenge(
     });
     await container.start();
     const ready = await exec(container, 'for i in $(seq 1 100); do [ -f /tmp/clirace-integrity-ready ] && exit 0; sleep 0.05; done; exit 1');
-    if (ready.exitCode !== 0) return { id: challenge.id, stage: 'setup', output: ready.output };
+    if (ready.exitCode !== 0) return { id: challenge.id, stage: stage('setup'), output: ready.output };
     const inspection = await container.inspect();
     assertSecurityInvariants(inspection.HostConfig);
+    const idempotentSetup = await exec(container, challenge.setupScript);
+    if (idempotentSetup.exitCode !== 0) return { id: challenge.id, stage: stage('setup_idempotency'), output: idempotentSetup.output };
     if (challenge.runtime && challenge.checks) {
       const initial = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
       if (initial.outcome !== 'failed') {
-        return { id: challenge.id, stage: 'initial_checker', output: `expected failed, received ${initial.outcome}` };
+        return { id: challenge.id, stage: stage('initial_checker'), output: `expected failed, received ${initial.outcome}` };
       }
     }
-    const solution = await exec(container, challenge.referenceSolution);
-    if (solution.exitCode !== 0) return { id: challenge.id, stage: 'reference_solution', output: solution.output };
+    const v2 = challenge.source === 'library-v2' ? getChallengeV2(challenge.id, challenge.challengeVersion) : undefined;
+    const trustedSolution = solutionOverride ?? (v2 ? trustedSolutionForChallenge(v2) : challenge.referenceSolution);
+    if (!trustedSolution) return { id: challenge.id, stage: stage('reference_solution'), output: 'trusted test solution missing' };
+    const solution = await exec(container, trustedSolution);
+    if (solution.exitCode !== 0) return { id: challenge.id, stage: stage('reference_solution'), output: solution.output };
     if (challenge.runtime && challenge.checks) {
       const contractCheck = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
       if (contractCheck.outcome !== 'passed') {
-        return { id: challenge.id, stage: 'contract_checker', output: JSON.stringify(contractCheck.results) };
+        return { id: challenge.id, stage: stage('contract_checker'), output: JSON.stringify(contractCheck.results) };
       }
       if (challenge.id === 'secure-secret') {
         const reset = await exec(container, 'chmod 0644 /workspace/secret.env');
@@ -117,14 +144,20 @@ async function verifyChallenge(
         }
       }
     }
-    const check = await exec(container, challenge.checkScript);
-    if (check.exitCode !== 0) return { id: challenge.id, stage: 'checker', output: check.output };
+    if (challenge.source === 'legacy') {
+      const check = await exec(container, challenge.checkScript);
+      if (check.exitCode !== 0) return { id: challenge.id, stage: stage('checker'), output: check.output };
+    }
     return undefined;
   } catch (error) {
-    return { id: challenge.id, stage: 'container', output: error instanceof Error ? error.message : String(error) };
+    return { id: challenge.id, stage: stage('container'), output: error instanceof Error ? error.message : String(error) };
   } finally {
     await container?.remove({ force: true, v: true }).catch(() => undefined);
   }
+}
+
+function getSandboxChallengeForIntegrity(id: string): SandboxChallenge | undefined {
+  return listSandboxChallenges().find((challenge) => challenge.id === id && challenge.source === 'library-v2');
 }
 
 async function evaluateContract(container: Container, contract: ChallengeCheckerContract) {

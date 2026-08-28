@@ -156,8 +156,10 @@ await test('checker execution uses fixed argv and no shell interpreter', async (
 await test('default environment is registered and versioned', () => {
   assert.equal(CHECKER_ENVIRONMENTS[DEFAULT_CHECKER_ENVIRONMENT]?.runtimeVersion, 1);
 });
-await test('14 existing challenges use Runtime Contract V1', () => {
-  assert.equal(listSandboxChallenges().filter((challenge) => challenge.runtime?.version === 1).length, 14);
+await test('legacy migrations and all 150 V2 challenges use Runtime Contract V1', () => {
+  const runtimeChallenges = listSandboxChallenges().filter((challenge) => challenge.runtime?.version === 1);
+  assert.equal(runtimeChallenges.filter((challenge) => challenge.source === 'library-v2').length, 150);
+  assert.equal(runtimeChallenges.length, 164);
 });
 await test('every migrated challenge has non-empty validated checks', () => {
   for (const challenge of listSandboxChallenges().filter((item) => item.runtime)) {
