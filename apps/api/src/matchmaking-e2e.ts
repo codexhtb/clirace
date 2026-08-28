@@ -19,6 +19,8 @@ interface InjectResult {
 
 interface FixtureUser extends AuthUser { cookie: string }
 
+const clientIpByCookie = new Map<string, string>();
+
 async function main(): Promise<void> {
   const config = loadConfig();
   const dependencies = createDependencies(config);
@@ -139,6 +141,7 @@ async function main(): Promise<void> {
       creationFailure: 'requeued',
     }, null, 2));
   } finally {
+    clientIpByCookie.clear();
     await Promise.allSettled(stores.map((store) => store.clearForTest()));
     const auth = new AuthService(config, dependencies);
     await Promise.allSettled(createdUserIds.map((userId) => auth.revokeAllSessions(userId)));
@@ -173,7 +176,12 @@ async function createUsers(
     const row = inserted.rows[0]!;
     await dependencies.postgres.query('INSERT INTO user_ratings (user_id, category_id) VALUES ($1, NULL)', [row.id]);
     await dependencies.postgres.query('INSERT INTO user_progress (user_id) VALUES ($1)', [row.id]);
-    const cookie = await login(app, username, password);
+    // Give each synthetic player its own client address. The E2E runs through
+    // the real rate limiter, so ten legitimate users must not share one
+    // light-my-request loopback bucket.
+    const clientIp = `198.18.0.${index + 1}`;
+    const cookie = await login(app, username, password, clientIp);
+    clientIpByCookie.set(cookie, clientIp);
     users.push({
       id: row.id, username: row.username, email: row.email, createdAt: row.created_at.toISOString(),
       role: row.role, accountStatus: row.account_status, cookie,
@@ -182,8 +190,8 @@ async function createUsers(
   return users;
 }
 
-async function login(app: FastifyInstance, identifier: string, password: string): Promise<string> {
-  const response = await inject(app, 'POST', '/api/auth/login', undefined, { identifier, password });
+async function login(app: FastifyInstance, identifier: string, password: string, clientIp: string): Promise<string> {
+  const response = await inject(app, 'POST', '/api/auth/login', undefined, { identifier, password }, clientIp);
   equal(response.statusCode, 200, `login ${identifier}`);
   const header = response.headers['set-cookie'];
   const cookie = (Array.isArray(header) ? header[0] : header)?.split(';')[0];
@@ -197,10 +205,12 @@ async function inject(
   url: string,
   cookie?: string,
   payload?: unknown,
+  clientIp = cookie ? clientIpByCookie.get(cookie) : undefined,
 ): Promise<InjectResult> {
   return await app.inject({
     method,
     url,
+    ...(clientIp ? { remoteAddress: clientIp } : {}),
     headers: { host: 'localhost', origin: 'http://localhost', ...(cookie ? { cookie } : {}) },
     ...(payload ? { payload } : {}),
   }) as unknown as InjectResult;
