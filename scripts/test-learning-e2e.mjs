@@ -37,10 +37,10 @@ try {
   const catalogResponse = await request('/api/learn/linux-core');
   equal(catalogResponse.status, 200, 'catalog response');
   const catalog = await catalogResponse.json();
-  equal(catalog.totalQuestions, 25, 'fixture count');
+  equal(catalog.totalQuestions, 187, 'expanded question count');
   equal(catalog.modes.find((mode) => mode.id === 'quick').available, true, 'Quick available');
   equal(catalog.modes.find((mode) => mode.id === 'standard').available, true, 'Standard available');
-  equal(catalog.modes.find((mode) => mode.id === 'full').available, false, 'Full hidden until enough unique content');
+  equal(catalog.modes.find((mode) => mode.id === 'full').available, true, 'Full available with expanded content');
 
   const registration = await request('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, email: `${username}@e2e.invalid`, password }) });
   equal(registration.status, 201, 'temporary account registration');
