@@ -78,8 +78,6 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
     terminal.loadAddon(fit);
     terminal.open(host);
     fit.fit();
-    terminal.writeln('\x1b[38;2;182;240;74mCLIRace game shell\x1b[0m');
-    terminal.writeln('Запустите одноразовую песочницу для этого задания.\r\n');
     const input = terminal.onData((data) => {
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         socketRef.current.send(JSON.stringify({ type: 'input', data }));
@@ -113,7 +111,6 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
     scoreRef.current = 0;
     replayIdRef.current = undefined;
     terminalRef.current?.clear();
-    terminalRef.current?.writeln('\x1b[38;2;82;211;247mГотовим терминал…\x1b[0m');
     try {
       let payload: SandboxSessionPayload | null = null;
       for (let attempt = 0; ; attempt += 1) {

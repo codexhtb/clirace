@@ -51,6 +51,7 @@ async function runTerminal(ticket, marker) {
   });
   socket.close(1000, 'production_smoke_complete');
   await new Promise((resolve) => setTimeout(resolve, 750));
+  return output;
 }
 
 async function createSandboxTicketWithRetry() {
@@ -101,9 +102,11 @@ try {
   assert.equal((await me.json()).user.username, username);
 
   const firstTicket = await createSandboxTicketWithRetry();
-  await runTerminal(firstTicket, 'CLIRACE_PRODUCTION_OK');
+  const firstOutput = await runTerminal(firstTicket, 'CLIRACE_PRODUCTION_OK');
+  assert.equal(firstOutput.split('CLIRace sandbox').length - 1, 1, 'first terminal startup banner must appear exactly once');
   const secondTicket = await createSandboxTicketWithRetry();
-  await runTerminal(secondTicket, 'CLIRACE_CLEANUP_OK');
+  const secondOutput = await runTerminal(secondTicket, 'CLIRACE_CLEANUP_OK');
+  assert.equal(secondOutput.split('CLIRace sandbox').length - 1, 1, 'second terminal startup banner must appear exactly once');
 
   console.log(JSON.stringify({
     ok: true,
@@ -113,6 +116,7 @@ try {
     secureCookie: true,
     terminalWebSocket: true,
     shellCommand: true,
+    startupBannerCount: 1,
     sessionCleanup: true,
   }, null, 2));
 } finally {

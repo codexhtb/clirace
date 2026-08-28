@@ -4,6 +4,8 @@ export LESSSECURE=1
 export PAGER=less
 export PS1='\[\e[38;2;182;240;74m\]clirace@sandbox\[\e[0m\]:\[\e[38;2;82;211;247m\]\w\[\e[0m\]$ '
 
-printf '\033[38;2;182;240;74mCLIRace sandbox\033[0m — одноразовая Linux-сессия без сети.\n'
-printf 'Лимиты: 256 МБ RAM · 0,25 CPU · 64 PID · максимум 15 минут.\n\n'
-printf 'Рабочая область: /workspace\n\n'
+if [[ $- == *i* ]]; then
+  printf '\033[38;2;182;240;74mCLIRace sandbox\033[0m — одноразовая Linux-сессия без сети.\n'
+  printf 'Лимиты: 256 МБ RAM · 0,25 CPU · 64 PID · максимум 15 минут.\n\n'
+  printf 'Рабочая область: /workspace\n\n'
+fi

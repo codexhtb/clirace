@@ -20,6 +20,7 @@
     "test:checker-production": "node scripts/test-checker-production.mjs",
     "test:terminal-replay": "pnpm --filter @clirace/api exec tsx ../../scripts/test-terminal-replay.mts",
     "test:terminal-replay-production": "node scripts/test-terminal-replay-production.mjs",
+    "test:terminal-startup-banner": "pnpm --filter @clirace/api exec tsx ../../scripts/test-terminal-startup-banner.mts",
     "test:real-shell-integrity": "node scripts/test-real-shell-integrity.mjs",
     "test:interview-100": "node scripts/test-interview-100.mjs",
     "test:production-smoke": "node scripts/test-production-smoke.mjs",
