@@ -13,6 +13,8 @@ import {
 } from './sandbox-challenges.js';
 import type { Dependencies } from './services.js';
 import { completeShellTask, recordFailedShellCheck } from './shell-game-service.js';
+import { TerminalReplayRecorder } from './terminal-replay-recorder.js';
+import { TerminalReplayService } from './terminal-replay-service.js';
 import {
   CheckerService,
   type CheckerEvaluation,
@@ -43,6 +45,7 @@ interface PendingSession {
   userId: string;
   gameSessionId?: string;
   sessionTaskId?: string;
+  databaseChallengeId?: string;
   reconnect?: boolean;
   battle?: BattleSandboxMetadata;
 }
@@ -63,6 +66,8 @@ interface ActiveSession {
   userId: string;
   gameSessionId?: string;
   sessionTaskId?: string;
+  databaseChallengeId?: string;
+  replayRecorder?: TerminalReplayRecorder;
   battle?: BattleSandboxMetadata;
   inputLocked: boolean;
   checking: boolean;
@@ -72,7 +77,7 @@ interface ActiveSession {
 }
 
 interface TerminalMessage {
-  type: 'auth' | 'input' | 'resize' | 'check';
+  type: 'auth' | 'input' | 'resize' | 'check' | 'stop';
   token?: string;
   data?: string;
   cols?: number;
@@ -141,6 +146,7 @@ export interface SandboxReconciliationResult {
 export class SandboxManager {
   private readonly docker: Docker;
   private readonly checkerService = new CheckerService();
+  private readonly replayService: TerminalReplayService;
   private readonly sessions = new Map<string, ActiveSession>();
   private readonly closingSessions = new Map<string, Promise<void>>();
   private readonly metrics = new SandboxMetrics();
@@ -152,6 +158,7 @@ export class SandboxManager {
     private readonly dependencies: Dependencies,
   ) {
     this.docker = new Docker({ socketPath: config.SANDBOX_DOCKER_SOCKET });
+    this.replayService = new TerminalReplayService(dependencies);
   }
 
   get enabled(): boolean {
@@ -163,7 +170,13 @@ export class SandboxManager {
     try {
       await this.inspectDaemon();
       await this.reconcileAfterRestart();
-      this.maintenanceTimer = setInterval(() => void this.sweepExpiredTickets(), 30_000);
+      await this.replayService.cleanupExpired().catch(() => undefined);
+      this.maintenanceTimer = setInterval(() => {
+        void this.sweepExpiredTickets();
+        void this.replayService.cleanupExpired().catch((error: unknown) => {
+          console.error('terminal_replay_cleanup_failed', { reason: error instanceof Error ? error.message : 'unknown' });
+        });
+      }, 30_000);
       this.maintenanceTimer.unref();
     } catch (error) {
       // Sandbox is a degradable subsystem. The API remains available and the
@@ -252,6 +265,15 @@ export class SandboxManager {
     }
 
     const requestedBattle = options.battle;
+    if (options.game) {
+      const existing = [...this.sessions.values()].find((session) =>
+        !session.closing && !session.battle
+        && session.userId === options.userId
+        && session.gameSessionId === options.game?.gameSessionId
+        && session.sessionTaskId === options.game?.sessionTaskId,
+      );
+      if (existing) return this.issueReconnectTicket(existing);
+    }
     if (requestedBattle) {
       const existing = [...this.sessions.values()].find((session) =>
         !session.closing
@@ -293,6 +315,7 @@ export class SandboxManager {
       ...(options.game ? {
         gameSessionId: options.game.gameSessionId,
         sessionTaskId: options.game.sessionTaskId,
+        databaseChallengeId: options.game.challengeId,
       } : {}),
       ...(options.battle ? { battle: options.battle } : {}),
     };
@@ -429,6 +452,7 @@ export class SandboxManager {
       reconnect: true,
       ...(session.gameSessionId ? { gameSessionId: session.gameSessionId } : {}),
       ...(session.sessionTaskId ? { sessionTaskId: session.sessionTaskId } : {}),
+      ...(session.databaseChallengeId ? { databaseChallengeId: session.databaseChallengeId } : {}),
       ...(session.battle ? { battle: session.battle } : {}),
     };
     await this.dependencies.redis.set(`${SESSION_PREFIX}${session.id}`, JSON.stringify(pending), { EX: 30 });
@@ -546,10 +570,6 @@ export class SandboxManager {
   private async handleSocketClosed(sessionId: string, socket: WebSocket, reason: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session || session.closing || session.socket !== socket) return;
-    if (!session.battle) {
-      await this.destroySession(sessionId, reason);
-      return;
-    }
     session.socket = null;
     await this.transitionLifecycle(sessionId, session.lifecycleState, 'idle').catch(() => undefined);
     session.lifecycleState = 'idle';
@@ -737,9 +757,13 @@ export class SandboxManager {
 
     const reconnecting = this.sessions.get(sessionId);
     if (reconnecting) {
-      if (!pending.reconnect || !reconnecting.battle || pending.userId !== reconnecting.userId
-        || pending.battle?.battleId !== reconnecting.battle.battleId
-        || pending.battle.roundNumber !== reconnecting.battle.roundNumber) {
+      const battleMatches = Boolean(reconnecting.battle
+        && pending.battle?.battleId === reconnecting.battle.battleId
+        && pending.battle.roundNumber === reconnecting.battle.roundNumber);
+      const practiceMatches = Boolean(!reconnecting.battle
+        && pending.gameSessionId === reconnecting.gameSessionId
+        && pending.sessionTaskId === reconnecting.sessionTaskId);
+      if (!pending.reconnect || pending.userId !== reconnecting.userId || (!battleMatches && !practiceMatches)) {
         throw new Error('Reconnect ticket does not match the active session.');
       }
       if (reconnecting.reconnectTimer) {
@@ -748,7 +772,9 @@ export class SandboxManager {
       }
       const previous = reconnecting.socket;
       reconnecting.socket = socket;
-      await this.transitionLifecycle(sessionId, reconnecting.lifecycleState, 'attached');
+      if (reconnecting.lifecycleState !== 'attached') {
+        await this.transitionLifecycle(sessionId, reconnecting.lifecycleState, 'attached');
+      }
       reconnecting.lifecycleState = 'attached';
       if (previous && previous !== socket && previous.readyState === previous.OPEN) {
         previous.close(1000, 'reconnected_elsewhere');
@@ -875,6 +901,8 @@ export class SandboxManager {
 
       await this.transitionLifecycle(sessionId, 'ready', 'attached');
       const now = Date.now();
+      const normalizedCols = clamp(cols, 40, 240);
+      const normalizedRows = clamp(rows, 10, 80);
       const session: ActiveSession = {
         id: sessionId,
         container,
@@ -896,6 +924,10 @@ export class SandboxManager {
         userId: pending.userId,
         ...(pending.gameSessionId ? { gameSessionId: pending.gameSessionId } : {}),
         ...(pending.sessionTaskId ? { sessionTaskId: pending.sessionTaskId } : {}),
+        ...(pending.databaseChallengeId ? { databaseChallengeId: pending.databaseChallengeId } : {}),
+        ...(!pending.battle && pending.gameSessionId && pending.sessionTaskId
+          ? { replayRecorder: new TerminalReplayRecorder(normalizedCols, normalizedRows) }
+          : {}),
         ...(pending.battle ? { battle: pending.battle } : {}),
         inputLocked: pending.battle?.inputLocked ?? false,
         reconnectTimer: undefined,
@@ -949,6 +981,11 @@ export class SandboxManager {
 
     this.refreshIdleTimer(session);
 
+    if (message.type === 'stop') {
+      await this.destroySession(sessionId, 'user_stopped');
+      return;
+    }
+
     if (message.type === 'input') {
       if (session.inputLocked) return;
       if (typeof message.data !== 'string' || Buffer.byteLength(message.data) > 16 * 1024) {
@@ -972,10 +1009,13 @@ export class SandboxManager {
     }
 
     if (message.type === 'resize') {
+      const rows = clamp(message.rows ?? 28, 10, 80);
+      const cols = clamp(message.cols ?? 100, 40, 240);
       await session.container.resize({
-        h: clamp(message.rows ?? 28, 10, 80),
-        w: clamp(message.cols ?? 100, 40, 240),
+        h: rows,
+        w: cols,
       });
+      session.replayRecorder?.recordResize(cols, rows);
       return;
     }
 
@@ -990,7 +1030,12 @@ export class SandboxManager {
           : await evaluateLegacyCheck(session.container, session.challenge.checkScript);
         const passed = evaluation.outcome === 'passed';
         const systemError = evaluation.outcome === 'error';
+        session.replayRecorder?.recordChecker({
+          status: evaluation.outcome,
+          checks: evaluation.results.map((item) => ({ id: item.id, status: item.status })),
+        });
         let completion: BattleRoundCompletion | { scoreAwarded: number; gameCompleted: boolean } | undefined;
+        let replayId: string | undefined;
         if (session.battle && passed) {
           completion = await this.battleHooks?.onBattleRoundCompleted(session.battle, session.userId);
         } else if (session.gameSessionId && session.sessionTaskId) {
@@ -1002,6 +1047,25 @@ export class SandboxManager {
               session.userId,
               session.challenge.id,
             );
+            if (session.replayRecorder && session.databaseChallengeId) {
+              replayId = await this.replayService.persistCompleted({
+                recorder: session.replayRecorder,
+                userId: session.userId,
+                gameSessionId: session.gameSessionId,
+                sessionTaskId: session.sessionTaskId,
+                sandboxSessionId: session.id,
+                challengeId: session.databaseChallengeId,
+                scoreAwarded: completion.scoreAwarded,
+                gameCompleted: completion.gameCompleted,
+              }).catch((error: unknown) => {
+                console.error('terminal_replay_persist_failed', {
+                  sessionId: session.id,
+                  challengeId: session.challenge.id,
+                  reason: error instanceof Error ? error.message : 'unknown',
+                });
+                return undefined;
+              });
+            }
           } else if (!systemError) {
             await recordFailedShellCheck(
               this.dependencies,
@@ -1037,6 +1101,7 @@ export class SandboxManager {
               ...(item.failureHint ? { hint: item.failureHint } : {}),
             })),
             ...(completion ?? {}),
+            ...(replayId ? { replayId } : {}),
           }));
         }
         if (passed) {
@@ -1050,7 +1115,9 @@ export class SandboxManager {
 
   private forwardOutput(session: ActiveSession, chunk: Buffer): void {
     const socket = session.socket;
-    if (session.closing || !socket || socket.readyState !== socket.OPEN) return;
+    if (session.closing) return;
+
+    session.replayRecorder?.recordOutput(chunk);
 
     const now = Date.now();
     if (now - session.outputWindowStartedAt >= 1_000) {
@@ -1059,12 +1126,13 @@ export class SandboxManager {
     }
     session.outputBytes += chunk.length;
 
-    if (session.outputBytes > OUTPUT_BYTES_PER_SECOND || socket.bufferedAmount > MAX_SOCKET_BUFFER) {
+    if (session.outputBytes > OUTPUT_BYTES_PER_SECOND || (socket && socket.bufferedAmount > MAX_SOCKET_BUFFER)) {
       void this.destroySession(session.id, 'output_rate_limit');
       return;
     }
 
     this.refreshIdleTimer(session);
+    if (!socket || socket.readyState !== socket.OPEN) return;
     socket.send(chunk, { binary: true });
   }
 

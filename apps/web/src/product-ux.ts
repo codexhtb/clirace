@@ -18,6 +18,7 @@ export function routeMetadata(path: string): RouteMeta {
   if (path === '/learn/paths/linux-foundations') return meta('Linux Foundations — структурированный курс Linux | CLIRace', 'Пройдите основы Linux от команд и файлов до сетей, systemd и диагностики с практикой в настоящем терминале.', '/learn/paths/linux-foundations');
   if (path.startsWith('/learn/paths/')) return meta('Учебный модуль — CLIRace', 'Персональный прогресс учебного пути CLIRace.', path, false);
   if (path === '/play') return meta('Практика и соревнования — CLIRace', 'Решайте Linux-задачи в настоящем терминале или найдите соперника в Quick Match и Ranked.', '/play');
+  if (path.startsWith('/practice/replay/')) return meta('Повтор терминала — CLIRace', 'Личный повтор завершённой Practice shell-сессии.', path, false);
   if (path === '/learn') return meta('Обучение Linux с разбором ошибок — CLIRace', 'Изучайте Linux Core с объяснениями ответов и переходите от слабых тем к практике в терминале.', '/learn');
   if (path === '/learn/linux-core') return meta('Linux Core — обучение Linux с объяснениями | CLIRace', 'Проверьте знания Linux, разберите каждый ответ и закрепите слабые темы в настоящем терминале.', '/learn/linux-core');
   if (path === '/interview') return meta('Interview 100 — подготовка к Linux-собеседованию | CLIRace', 'Сто практических Linux и DevOps задач для подготовки к техническому собеседованию.', '/interview');

@@ -119,6 +119,16 @@ SQL
       echo 'Challenge Runtime Contract V1 test-account cleanup passed.'
     fi
 
+    replay_validation_marker=/var/lib/clirace/terminal-replay-v1-validated
+    if [[ ! -f "$replay_validation_marker" ]]; then
+      echo 'Running one-time Terminal Replay V1 database validation...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/terminal-replay-e2e.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$replay_validation_marker"
+      echo 'Terminal Replay V1 database validation passed.'
+    fi
+
     validation_marker=/var/lib/clirace/sandbox-platform-v2-validated
     if [[ ! -f "$validation_marker" ]]; then
       echo 'Running one-time Sandbox Platform V2 production validation...'

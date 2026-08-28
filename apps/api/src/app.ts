@@ -19,6 +19,7 @@ import type { MatchmakingManager } from './matchmaking-service.js';
 import type { RankedService } from './ranked-service.js';
 import type { SandboxManager } from './sandbox-manager.js';
 import { registerSandboxRoutes } from './sandbox-routes.js';
+import { registerTerminalReplayRoutes } from './terminal-replay-routes.js';
 import { checkDependencies, type Dependencies } from './services.js';
 
 interface BuildAppOptions {
@@ -91,6 +92,10 @@ export function buildApp({ config, dependencies, sandboxManager, battleManager, 
 
   void app.register(async (sandboxApp) => {
     await registerSandboxRoutes(sandboxApp, sandboxManager, config, dependencies);
+  });
+
+  void app.register(async (replayApp) => {
+    await registerTerminalReplayRoutes(replayApp, config, dependencies);
   });
 
   void app.register(async (authApp) => {

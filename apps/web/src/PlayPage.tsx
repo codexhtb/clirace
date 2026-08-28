@@ -57,7 +57,7 @@ export function PlayPage() {
   const [game, setGame] = useState<GameState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ kind: 'correct' | 'wrong' | 'skip'; text: string; score?: number } | null>(null);
+  const [feedback, setFeedback] = useState<{ kind: 'correct' | 'wrong' | 'skip'; text: string; score?: number; replayId?: string } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -288,10 +288,10 @@ function getPlayDefaults() {
 function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setError }: {
   game: GameState;
   busy: boolean;
-  feedback: { kind: 'correct' | 'wrong' | 'skip'; text: string; score?: number } | null;
+  feedback: { kind: 'correct' | 'wrong' | 'skip'; text: string; score?: number; replayId?: string } | null;
   setBusy: (value: boolean) => void;
   setGame: (value: GameState) => void;
-  setFeedback: (value: { kind: 'correct' | 'wrong' | 'skip'; text: string; score?: number } | null) => void;
+  setFeedback: (value: { kind: 'correct' | 'wrong' | 'skip'; text: string; score?: number; replayId?: string } | null) => void;
   setError: (value: string | null) => void;
 }) {
   const task = game.task!;
@@ -348,13 +348,13 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
   }, [pendingGame, task.type]);
 
   const progress = Math.round(((task.position - 1) / task.total) * 100);
-  const refreshAfterShell = async (scoreAwarded: number) => {
+  const refreshAfterShell = async (scoreAwarded: number, replayId?: string) => {
     setBusy(true);
     try {
       const response = await fetch(`/api/game/sessions/${game.session.id}`);
       const state = await response.json() as GameState & { message?: string };
       if (!response.ok) throw new Error(state.message ?? 'Не удалось продолжить забег.');
-      setFeedback({ kind: 'correct', text: 'Состояние песочницы проверено сервером.', score: scoreAwarded });
+      setFeedback({ kind: 'correct', text: 'Состояние песочницы проверено сервером.', score: scoreAwarded, ...(replayId ? { replayId } : {}) });
       setPendingGame(state);
     } catch (refreshError) {
       setError(humanizeError(refreshError, 'Задача решена, но следующий шаг не загрузился. Обновите страницу.'));
@@ -389,7 +389,7 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
           {task.type === 'real_shell' ? (
             <div className={pendingGame ? 'pointer-events-none' : ''} aria-disabled={pendingGame !== null}>
               <Suspense fallback={<div className="game-shell mt-8 flex h-[480px] items-center justify-center"><LoaderCircle size={20} className="animate-spin text-acid" /></div>}>
-                <GameShellTerminal key={task.slug} gameSessionId={game.session.id} autoStart={autoStartShellTaskSlug === task.slug} onAutoStartConsumed={() => setAutoStartShellTaskSlug(null)} {...(task.hint ? { hint: task.hint } : {})} onCompleted={(score) => void refreshAfterShell(score)} onSkip={() => void request('skip')} />
+                <GameShellTerminal key={task.slug} gameSessionId={game.session.id} autoStart={autoStartShellTaskSlug === task.slug} onAutoStartConsumed={() => setAutoStartShellTaskSlug(null)} {...(task.hint ? { hint: task.hint } : {})} onCompleted={(score, replayId) => void refreshAfterShell(score, replayId)} onSkip={() => void request('skip')} />
               </Suspense>
             </div>
           ) : (
@@ -407,7 +407,8 @@ function RunScreen({ game, busy, feedback, setBusy, setGame, setFeedback, setErr
               {feedback.kind === 'correct' ? <CheckCircle2 size={16} /> : feedback.kind === 'skip' ? <SkipForward size={16} /> : <Terminal size={16} />}
               <span>{feedback.text}</span>
               {feedback.score ? <strong>+{feedback.score}</strong> : null}
-              {pendingGame && <button type="button" className="terminal-action ml-auto" onClick={() => { setAutoStartShellTaskSlug(shouldAutoStartNextShell(true, pendingGame.task?.type) ? pendingGame.task?.slug ?? null : null); setGame(pendingGame); setPendingGame(null); setFeedback(null); }}>Продолжить <ChevronRight size={13} /></button>}
+              {feedback.replayId && <Link className="terminal-action ml-auto" to={`/practice/replay/${feedback.replayId}`}>Смотреть повтор</Link>}
+              {pendingGame && <button type="button" className={feedback.replayId ? 'terminal-action' : 'terminal-action ml-auto'} onClick={() => { setAutoStartShellTaskSlug(shouldAutoStartNextShell(true, pendingGame.task?.type) ? pendingGame.task?.slug ?? null : null); setGame(pendingGame); setPendingGame(null); setFeedback(null); }}>Продолжить <ChevronRight size={13} /></button>}
             </div>
           )}
 

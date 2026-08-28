@@ -23,7 +23,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
   hint?: string;
   autoStart?: boolean;
   onAutoStartConsumed?: () => void;
-  onCompleted: (scoreAwarded: number) => void;
+  onCompleted: (scoreAwarded: number, replayId?: string) => void;
   onSkip: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -32,6 +32,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
   const socketRef = useRef<WebSocket | null>(null);
   const passedRef = useRef(false);
   const scoreRef = useRef(0);
+  const replayIdRef = useRef<string | undefined>(undefined);
   const startInFlightRef = useRef(false);
   const autoStartAttemptedRef = useRef(false);
   const [status, setStatus] = useState<TerminalStatus>('idle');
@@ -110,6 +111,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
     setRemainingSeconds(null);
     passedRef.current = false;
     scoreRef.current = 0;
+    replayIdRef.current = undefined;
     terminalRef.current?.clear();
     terminalRef.current?.writeln('\x1b[38;2;82;211;247mГотовим терминал…\x1b[0m');
     try {
@@ -144,7 +146,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
           terminalRef.current?.write(new Uint8Array(event.data as ArrayBuffer));
           return;
         }
-        const message = JSON.parse(event.data) as { type: string; passed?: boolean; error?: boolean; checks?: PublicCheckResult[]; message?: string; scoreAwarded?: number; reason?: string; expiresInSeconds?: number };
+        const message = JSON.parse(event.data) as { type: string; passed?: boolean; error?: boolean; checks?: PublicCheckResult[]; message?: string; scoreAwarded?: number; replayId?: string; reason?: string; expiresInSeconds?: number };
         if (message.type === 'ready') {
           setStatus('ready');
           setRemainingSeconds(message.expiresInSeconds ?? null);
@@ -155,6 +157,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
           const passed = message.passed === true;
           passedRef.current = passed;
           scoreRef.current = message.scoreAwarded ?? 0;
+          replayIdRef.current = message.replayId;
           setCheckStatus(message.error ? 'error' : passed ? 'passed' : 'failed');
           setCheckResults(message.checks ?? []);
           const feedback = message.error
@@ -177,7 +180,7 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
         startInFlightRef.current = false;
         socketRef.current = null;
         setStatus((current) => current === 'error' ? current : 'closed');
-        if (passedRef.current) onCompleted(scoreRef.current);
+        if (passedRef.current) onCompleted(scoreRef.current, replayIdRef.current);
       };
     } catch (startError) {
       startInFlightRef.current = false;
@@ -203,7 +206,9 @@ export function GameShellTerminal({ gameSessionId, hint, autoStart = false, onAu
     setCheckResults([]);
     socketRef.current.send(JSON.stringify({ type: 'check' }));
   };
-  const stop = () => socketRef.current?.close(1000, 'user_stopped');
+  const stop = () => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: 'stop' }));
+  };
   const active = status === 'connecting' || status === 'ready';
 
   return (

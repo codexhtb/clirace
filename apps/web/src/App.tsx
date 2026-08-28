@@ -21,6 +21,7 @@ const ProfilePage = lazy(() => import('./ProfilePage').then((module) => ({ defau
 const InterviewPage = lazy(() => import('./InterviewPage').then((module) => ({ default: module.InterviewPage })));
 const AdminConsole = lazy(() => import('./AdminConsole').then((module) => ({ default: module.AdminConsole })));
 const LearnPage = lazy(() => import('./LearnPage').then((module) => ({ default: module.LearnPage })));
+const TerminalReplayPage = lazy(() => import('./TerminalReplayPage').then((module) => ({ default: module.TerminalReplayPage })));
 
 function BattlePageFallback() {
   return <AppPage><PageLoader label="Загружаем раздел" /></AppPage>;
@@ -266,6 +267,7 @@ export function App() {
   if (path === '/' || path === '/login' || path === '/register') return <HomePage />;
   if (path === '/admin' || path.startsWith('/admin/')) return <Suspense fallback={<RouteFallback />}><AdminConsole /></Suspense>;
   if (path === '/play') return <Suspense fallback={<RouteFallback />}><PlayPage /></Suspense>;
+  if (/^\/practice\/replay\/[0-9a-f-]{36}$/i.test(path)) return <Suspense fallback={<RouteFallback />}><TerminalReplayPage /></Suspense>;
   if (path === '/learn') return <Suspense fallback={<RouteFallback />}><LearnPage catalogOnly /></Suspense>;
   if (path === '/learn/paths' || path.startsWith('/learn/paths/')) return <Suspense fallback={<BattlePageFallback />}><LearningPathsPage /></Suspense>;
   if (path === '/learn/linux-core') return <Suspense fallback={<RouteFallback />}><LearnPage /></Suspense>;

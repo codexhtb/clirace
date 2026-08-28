@@ -57,6 +57,20 @@ button { cursor: pointer; }
 .xterm-host .xterm-viewport { scrollbar-color: #334155 #070a0e; scrollbar-width: thin; }
 .terminal-action { @apply inline-flex min-h-8 items-center justify-center gap-2 rounded border border-acid/30 bg-acid/10 px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-acid transition-colors hover:bg-acid/20 disabled:cursor-not-allowed disabled:opacity-50; }
 .terminal-action-stop { @apply border-rose-400/30 bg-rose-400/10 text-rose-300 hover:bg-rose-400/20; }
+.replay-warning { @apply mt-6 rounded border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3 text-sm text-amber-200; }
+.replay-panel { @apply mt-8 min-w-0 overflow-hidden rounded-lg border border-[#2a3542] bg-[#06090c] shadow-2xl; }
+.replay-terminal { @apply h-[480px] min-w-0 overflow-hidden p-3 sm:h-[560px] sm:p-4; }
+.replay-terminal .xterm { height: 100%; }
+.replay-controls { @apply flex flex-wrap items-center gap-2 border-t border-line bg-[#10161d] px-3 py-3 sm:px-4; }
+.replay-controls > span { @apply ml-auto font-mono text-[10px] text-slate-500; }
+.replay-speeds { @apply flex overflow-hidden rounded border border-line; }
+.replay-speeds button { @apply min-h-8 min-w-10 bg-transparent px-2 font-mono text-[10px] text-slate-500 hover:text-white; }
+.replay-speeds button.active { @apply bg-acid/15 text-acid; }
+.replay-range { @apply block h-8 w-full cursor-pointer accent-acid; }
+.replay-markers { @apply mt-3 grid gap-2 sm:grid-cols-2; }
+.replay-markers button { @apply flex min-h-12 items-center gap-4 rounded border border-line bg-panel px-4 text-left hover:border-acid/30; }
+.replay-markers span { @apply font-mono text-[10px] text-acid; }
+.replay-markers strong { @apply text-xs font-medium text-slate-300; }
 .challenge-brief { @apply border-b border-line bg-[#0c1219] px-4 py-4 sm:px-5; }
 .challenge-category { @apply rounded border border-cyan/30 bg-cyan/[0.07] px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-cyan; }
 .run-counter { @apply font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500; }
