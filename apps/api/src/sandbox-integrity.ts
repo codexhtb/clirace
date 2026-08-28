@@ -246,19 +246,20 @@ if (process.argv[1]?.endsWith('sandbox-integrity.js')) {
     image: process.env.SANDBOX_IMAGE ?? 'clirace-sandbox:0.2.0',
     concurrency: Number(process.env.SANDBOX_INTEGRITY_CONCURRENCY ?? 4),
   }).then(async (result) => {
+    console.log(JSON.stringify(result, null, 2));
     if (process.env.DATABASE_URL) {
       const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1, application_name: 'clirace-integrity' });
       try {
+        const mainFailures = result.total - result.passed;
         await pool.query(`
           INSERT INTO admin_integrity_runs
             (source, total, passed, failed, duration_ms, failed_challenge_ids)
           VALUES ('production_deploy', $1, $2, $3, $4, $5::text[])
-        `, [result.total, result.passed, result.failed.length, result.durationMs, result.failed.map((failure) => failure.id)]);
+        `, [result.total, result.passed, mainFailures, result.durationMs, result.failed.map((failure) => failure.id)]);
       } finally {
         await pool.end();
       }
     }
-    console.log(JSON.stringify(result, null, 2));
     if (result.failed.length > 0) process.exitCode = 1;
   }).catch((error) => {
     console.error(error);
