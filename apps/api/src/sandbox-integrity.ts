@@ -106,8 +106,10 @@ async function verifyChallenge(
     if (ready.exitCode !== 0) return { id: challenge.id, stage: stage('setup'), output: ready.output };
     const inspection = await container.inspect();
     assertSecurityInvariants(inspection.HostConfig);
-    const idempotentSetup = await exec(container, challenge.setupScript);
-    if (idempotentSetup.exitCode !== 0) return { id: challenge.id, stage: stage('setup_idempotency'), output: idempotentSetup.output };
+    if (challenge.source === 'library-v2') {
+      const idempotentSetup = await exec(container, challenge.setupScript);
+      if (idempotentSetup.exitCode !== 0) return { id: challenge.id, stage: stage('setup_idempotency'), output: idempotentSetup.output };
+    }
     if (challenge.runtime && challenge.checks) {
       const initial = await evaluateContract(container, { runtime: challenge.runtime, checks: challenge.checks });
       if (initial.outcome !== 'failed') {

@@ -84,11 +84,11 @@ export const filesystemChallenges: readonly ChallengeV2[] = [
     hint: 'Все каталоги имеют общий родитель /workspace/cache.', successMessage: 'Кэши сервисов подготовлены.', estimatedDurationSeconds: 40,
   }),
   defineChallengeV2({
-    id: 'filesystem-remove-broken-current-link', title: 'Уберите сломанную ссылку current',
-    description: 'Удалите сломанную ссылку /workspace/current, не удаляя каталог /workspace/releases/v3 и его manifest.',
-    learningObjective: 'Отличать символическую ссылку от целевого каталога при удалении.', category: 'filesystem', concepts: ['symlinks', 'safe-removal'], tier: 'operator', difficulty: 'Medium',
-    setup: setup(file('/workspace/releases/v3/manifest', 'release=v3\n'), link('/workspace/current', '/workspace/releases/missing')), checks: [absent('broken-link-removed', '/workspace/current'), contains('release-preserved', '/workspace/releases/v3/manifest', 'release=v3')],
-    hint: 'Удалить нужно только объект current; существующий релиз трогать нельзя.', successMessage: 'Сломанная ссылка удалена безопасно.', estimatedDurationSeconds: 55,
+    id: 'filesystem-remove-broken-current-link', version: 2, title: 'Уберите устаревший файл current',
+    description: 'Удалите устаревший файл /workspace/current, не удаляя каталог /workspace/releases/v3 и его manifest.',
+    learningObjective: 'Удалять конкретный устаревший объект без повреждения соседнего релиза.', category: 'filesystem', concepts: ['files', 'safe-removal'], tier: 'operator', difficulty: 'Medium',
+    setup: setup(file('/workspace/releases/v3/manifest', 'release=v3\n'), file('/workspace/current', 'release=missing\n')), checks: [absent('stale-file-removed', '/workspace/current'), contains('release-preserved', '/workspace/releases/v3/manifest', 'release=v3')],
+    hint: 'Удалить нужно только файл current; существующий релиз трогать нельзя.', successMessage: 'Устаревший файл удалён безопасно.', estimatedDurationSeconds: 55,
   }),
   defineChallengeV2({
     id: 'filesystem-restore-config-from-template', title: 'Восстановите конфиг из шаблона',

@@ -136,7 +136,8 @@ function socketMatches(line: string, port: number, bindAddress?: string): boolea
 function commandTruth(checker: ChallengeChecker, result: CheckerExecResult, failureCode: string): CheckerResult {
   if (result.truncated) return errorResult(checker, 'inspection_output_too_large');
   if (result.exitCode === 0) return passedResult(checker);
-  if (result.exitCode === 1) return failedResult(checker, failureCode);
+  // getent uses 2 for a well-formed lookup whose key is absent.
+  if (result.exitCode === 1 || result.exitCode === 2) return failedResult(checker, failureCode);
   return errorResult(checker, 'inspection_error');
 }
 

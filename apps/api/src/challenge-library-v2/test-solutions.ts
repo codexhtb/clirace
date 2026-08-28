@@ -6,9 +6,11 @@ import type { ChallengeV2 } from './model.js';
  * it is never referenced by an HTTP route or serialized into challenge metadata.
  */
 export function trustedSolutionForChallenge(challenge: ChallengeV2): string {
+  const orderedChecks = [...challenge.checks].sort((left, right) =>
+    Number(left.type === 'permission_equals') - Number(right.type === 'permission_equals'));
   return [
     'set -euo pipefail',
-    ...challenge.checks.flatMap(solutionForChecker),
+    ...orderedChecks.flatMap(solutionForChecker),
   ].join('\n');
 }
 
@@ -38,8 +40,8 @@ export const alternativeSolutionFixtures: Readonly<Record<string, readonly [stri
     'pkill -x sleep',
   ],
   'networking-start-local-tcp-service': [
-    "python3 -m http.server 18200 --bind 127.0.0.1 >/dev/null 2>&1 &",
-    "python3 -c 'import socket,time;s=socket.socket();s.bind((\"127.0.0.1\",18200));s.listen();time.sleep(900)' >/dev/null 2>&1 &",
+    "setsid -f python3 -m http.server 18200 --bind 127.0.0.1 >/dev/null 2>&1",
+    "setsid -f python3 -c 'import socket,time;s=socket.socket();s.bind((\"127.0.0.1\",18200));s.listen();time.sleep(900)' >/dev/null 2>&1",
   ],
   'text-extract-failing-client-ip': [
     "awk '$4 == 503 {print $1}' /workspace/logs/access.log > /workspace/result.txt",
@@ -87,9 +89,9 @@ function solutionForChecker(checker: ChallengeChecker): string[] {
         `id -nG ${quote(checker.user)} | tr ' ' '\\n' | grep -Fxq -- ${quote(checker.group)} || usermod -aG ${quote(checker.group)} -- ${quote(checker.user)}`,
       ];
     case 'process_running':
-      if (checker.process === 'sleep') return ['sleep 900 </dev/null >/dev/null 2>&1 &'];
-      if (checker.process === 'tail') return ['tail -f /dev/null </dev/null >/dev/null 2>&1 &'];
-      return ["python3 -c 'import time;time.sleep(900)' </dev/null >/dev/null 2>&1 &"];
+      if (checker.process === 'sleep') return ['setsid -f sleep 900 </dev/null >/dev/null 2>&1'];
+      if (checker.process === 'tail') return ['setsid -f tail -f /dev/null </dev/null >/dev/null 2>&1'];
+      return ["setsid -f python3 -c 'import time;time.sleep(900)' </dev/null >/dev/null 2>&1"];
     case 'process_not_running':
       return [`pkill -x -- ${quote(checker.process)} 2>/dev/null || true`, 'sleep 0.05'];
     case 'port_listening':
@@ -103,7 +105,7 @@ function trustedListenerCommand(protocol: 'tcp' | 'udp', port: number, bindAddre
   const socketType = protocol === 'udp' ? 'SOCK_DGRAM' : 'SOCK_STREAM';
   const listen = protocol === 'udp' ? '' : ';s.listen(8)';
   const program = `import socket,time;s=socket.socket(socket.AF_INET,socket.${socketType});s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1);s.bind((${JSON.stringify(bindAddress)},${port}))${listen};time.sleep(900)`;
-  return `python3 -c ${quote(program)} </dev/null >/dev/null 2>&1 &`;
+  return `setsid -f python3 -c ${quote(program)} </dev/null >/dev/null 2>&1`;
 }
 
 function ensureParent(path: string): string {

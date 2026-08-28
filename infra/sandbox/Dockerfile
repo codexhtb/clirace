@@ -42,11 +42,14 @@ RUN apt-get update \
     && (find / -xdev -type f -perm /6000 -exec chmod a-s {} + 2>/dev/null || true)
 
 COPY bashrc /tmp/clirace-bashrc
+COPY identity-tool.py /usr/local/lib/clirace-identity-tool
 
 # Deployment may originate on Windows. Normalize again inside the image so a
 # stale CRLF working tree can never break the interactive prompt.
 RUN tr -d '\r' < /tmp/clirace-bashrc > /root/.bashrc \
-    && rm /tmp/clirace-bashrc
+    && rm /tmp/clirace-bashrc \
+    && chmod 0755 /usr/local/lib/clirace-identity-tool \
+    && for command in useradd groupadd usermod gpasswd; do ln -s /usr/local/lib/clirace-identity-tool "/usr/local/sbin/$command"; done
 
 RUN mkdir -p /workspace
 
