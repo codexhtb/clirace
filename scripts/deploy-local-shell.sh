@@ -260,6 +260,18 @@ SQL
       echo 'Unified Challenge Library V2 production validation passed.'
     fi
 
+    linux_learning_v2_validation_marker=/var/lib/clirace/linux-learning-v2-zero-to-operator-validated
+    if [[ ! -f "$linux_learning_v2_validation_marker" ]]; then
+      echo 'Running one-time Linux Learning V2 production regressions...'
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        env SANDBOX_INTEGRITY_CONCURRENCY=4 node apps/api/dist/sandbox-integrity.js
+      docker compose -f docker-compose.yml -f docker-compose.sandbox.yml exec -T api \
+        node apps/api/dist/matchmaking-e2e.js
+      install -d -m 0755 /var/lib/clirace
+      touch "$linux_learning_v2_validation_marker"
+      echo 'Linux Learning V2 production regressions passed.'
+    fi
+
     # The legacy archive runner may have populated a real Git checkout. Verify
     # every deployed tracked file byte-for-byte before advancing HEAD/index;
     # this also handles files that are new relative to the old local index.
