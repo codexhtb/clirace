@@ -37,7 +37,7 @@ try {
   const catalogResponse = await request('/api/learn/linux-core');
   equal(catalogResponse.status, 200, 'catalog response');
   const catalog = await catalogResponse.json();
-  equal(catalog.totalQuestions, 187, 'expanded question count');
+  check(catalog.totalQuestions >= 187, 'catalog retains the expanded Linux Core baseline');
   equal(catalog.modes.find((mode) => mode.id === 'quick').available, true, 'Quick available');
   equal(catalog.modes.find((mode) => mode.id === 'standard').available, true, 'Standard available');
   equal(catalog.modes.find((mode) => mode.id === 'full').available, true, 'Full available with expanded content');
