@@ -5,7 +5,7 @@ import { LearningService } from './learning-service.js';
 type ItemType = 'theory' | 'knowledge_check' | 'practice' | 'shell_lab' | 'checkpoint';
 type CourseRow = {
   id: string; slug: string; title: string; description: string; version: number; sort_order: number;
-  estimated_minutes: number; level: string;
+  estimated_minutes: number; level: string; prerequisites: string[];
 };
 type ModuleRow = {
   id: string; course_id: string; slug: string; title: string; description: string; sort_order: number;
@@ -52,7 +52,7 @@ export class LearningPathService {
 
   async catalog(userId?: string): Promise<unknown> {
     const courses = await this.database.query<CourseRow>(`
-      SELECT id, slug, title, description, version, sort_order, estimated_minutes, level
+      SELECT id, slug, title, description, version, sort_order, estimated_minutes, level, prerequisites
       FROM learning_courses WHERE enabled ORDER BY sort_order, id
     `);
     const enrollment = userId ? await this.database.query<EnrollmentRow>(`
@@ -63,7 +63,7 @@ export class LearningPathService {
     return {
       courses: courses.rows.map((course) => ({
         slug: course.slug, title: course.title, description: course.description, version: course.version,
-        estimatedMinutes: course.estimated_minutes, level: course.level,
+        estimatedMinutes: course.estimated_minutes, level: course.level, prerequisites: course.prerequisites,
         enrollment: byCourse.get(course.id) ? publicEnrollment(byCourse.get(course.id)!) : null,
       })),
     };
@@ -345,7 +345,7 @@ export class LearningPathService {
 
   private async loadStructure(database: Pool | PoolClient, courseSlug: string): Promise<CourseStructure> {
     const courseResult = await database.query<CourseRow>(`
-      SELECT id,slug,title,description,version,sort_order,estimated_minutes,level
+      SELECT id,slug,title,description,version,sort_order,estimated_minutes,level,prerequisites
       FROM learning_courses WHERE slug=$1 AND enabled
     `, [courseSlug]);
     const course = courseResult.rows[0];
@@ -476,7 +476,7 @@ function deterministicRecommendations(module: CourseModule, scores: ReturnType<t
 
 function courseSummary(course: CourseRow) {
   return { slug: course.slug, title: course.title, description: course.description, version: course.version,
-    estimatedMinutes: course.estimated_minutes, level: course.level };
+    estimatedMinutes: course.estimated_minutes, level: course.level, prerequisites: course.prerequisites };
 }
 function moduleSummary(module: CourseModule, state: ModuleState) {
   return { slug: module.slug, title: module.title, description: module.description, order: module.sort_order,

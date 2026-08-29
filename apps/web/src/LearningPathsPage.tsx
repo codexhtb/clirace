@@ -15,7 +15,7 @@ type PathModule = {
   itemCount?: number; items?: PathItem[]; result?: ModuleResult | null;
 };
 type CourseState = {
-  course: { slug: string; title: string; description: string; version: number; estimatedMinutes: number; level: string };
+  course: { slug: string; title: string; description: string; version: number; estimatedMinutes: number; level: string; prerequisites: string[] };
   enrollment: Enrollment | null; modules: PathModule[]; resume?: { module: string; item: string; title: string } | null;
 };
 type ItemType = 'theory' | 'knowledge_check' | 'practice' | 'shell_lab' | 'checkpoint';
@@ -57,7 +57,7 @@ function PathsCatalog() {
   useEffect(() => { const controller = new AbortController(); fetch('/api/learn/paths', { signal: controller.signal }).then(readJson<{ courses: CatalogCourse[] }>).then((payload) => setCourses(payload.courses)).catch((reason) => { if (reason.name !== 'AbortError') setError(humanizeError(reason, 'Не удалось загрузить учебные пути.')); }); return () => controller.abort(); }, []);
   return <Page><section className="path-hero"><p className="eyebrow">Learning Paths</p><h1>Linux — последовательно.<br /><span>От идеи до настоящего shell.</span></h1><p>Короткая теория сразу переходит в вопросы, команды, лабораторные и checkpoint. Прогресс хранится на сервере.</p></section>
     {error && <p className="play-error mt-6" role="alert">{error}</p>}
-    {!courses ? <Loading label="Загружаем учебные пути" /> : <div className="path-catalog-grid">{courses.map((course) => <Link className={`path-course-card ${course.slug === 'linux-zero-to-operator' ? 'featured' : ''}`} to={`/learn/paths/${course.slug}`} key={course.slug}><span className="mode-card-icon"><MapIcon size={19} /></span><small>{course.enrollment?.status === 'completed' ? 'Курс завершён' : course.enrollment ? `${course.enrollment.progress}% пройдено` : course.slug === 'linux-zero-to-operator' ? 'Основной курс · с нуля' : 'Классический путь'}</small><h2>{course.title}</h2><p>{course.description}</p><div><span><Clock3 size={13} /> ≈ {formatMinutes(course.estimatedMinutes)}</span><strong>{course.enrollment ? 'Продолжить' : course.slug === 'linux-zero-to-operator' ? 'Начать обучение' : 'Открыть путь'} <ArrowRight size={15} /></strong></div></Link>)}</div>}
+    {!courses ? <Loading label="Загружаем учебные пути" /> : <div className="path-catalog-grid">{courses.map((course) => <Link className={`path-course-card ${course.slug === 'linux-zero-to-operator' ? 'featured' : ''}`} to={`/learn/paths/${course.slug}`} key={course.slug}><span className="mode-card-icon"><MapIcon size={19} /></span><small>{course.enrollment?.status === 'completed' ? 'Курс завершён' : course.enrollment ? `${course.enrollment.progress}% пройдено` : course.slug === 'linux-zero-to-operator' ? 'Основной курс · с нуля' : course.slug === 'linux-operator' ? 'Следующий уровень · operator' : 'Классический путь'}</small><h2>{course.title}</h2><p>{course.description}</p><div><span><Clock3 size={13} /> ≈ {formatMinutes(course.estimatedMinutes)}</span><strong>{course.enrollment ? 'Продолжить' : course.slug === 'linux-zero-to-operator' ? 'Начать обучение' : 'Открыть путь'} <ArrowRight size={15} /></strong></div></Link>)}</div>}
   </Page>;
 }
 
@@ -66,23 +66,33 @@ function CoursePage({ courseSlug, moduleSlug }: { courseSlug: string; moduleSlug
   const [auth, setAuth] = useState<'loading' | 'guest' | 'ready'>('loading');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const load = () => Promise.all([currentUser(), fetch(`/api/learn/paths/${encodeURIComponent(courseSlug)}`).then(readJson<CourseState>)]).then(([user, payload]) => { setAuth(user.user ? 'ready' : 'guest'); setState(payload); });
+  const [recommendedPrerequisites, setRecommendedPrerequisites] = useState<CatalogCourse[]>([]);
+  const load = () => Promise.all([
+    currentUser(),
+    fetch(`/api/learn/paths/${encodeURIComponent(courseSlug)}`).then(readJson<CourseState>),
+    fetch('/api/learn/paths').then(readJson<{ courses: CatalogCourse[] }>),
+  ]).then(([user, payload, catalog]) => {
+    setAuth(user.user ? 'ready' : 'guest');
+    setState(payload);
+    setRecommendedPrerequisites(catalog.courses.filter((course) => payload.course.prerequisites.includes(course.slug) && course.enrollment?.status !== 'completed'));
+  });
   useEffect(() => { load().catch((reason) => setError(humanizeError(reason, 'Не удалось загрузить курс.'))).finally(() => setAuth((value) => value === 'loading' ? 'guest' : value)); }, [courseSlug]);
   const enroll = async () => { setBusy(true); setError(null); try { const response = await fetch(`/api/learn/paths/${courseSlug}/enroll`, { method: 'POST' }); setState(await readJson<CourseState>(response)); setAuth('ready'); } catch (reason) { setError(humanizeError(reason, 'Не удалось начать курс.')); } finally { setBusy(false); } };
   if (!state) return <Page>{error ? <p className="play-error" role="alert">{error}</p> : <Loading label="Загружаем курс" />}</Page>;
   const selectedModule = moduleSlug ? state.modules.find((module) => module.slug === moduleSlug) : null;
   if (moduleSlug && !selectedModule) return <Page><p className="play-error">Модуль не найден.</p></Page>;
   return <Page>
-    {selectedModule ? <ModuleView course={state} module={selectedModule} auth={auth} /> : <CourseMap state={state} auth={auth} busy={busy} onEnroll={enroll} />}
+    {selectedModule ? <ModuleView course={state} module={selectedModule} auth={auth} /> : <CourseMap state={state} auth={auth} busy={busy} recommendedPrerequisites={recommendedPrerequisites} onEnroll={enroll} />}
     {error && <p className="play-error mt-6" role="alert">{error}</p>}
   </Page>;
 }
 
-function CourseMap({ state, auth, busy, onEnroll }: { state: CourseState; auth: string; busy: boolean; onEnroll: () => void }) {
+function CourseMap({ state, auth, busy, recommendedPrerequisites, onEnroll }: { state: CourseState; auth: string; busy: boolean; recommendedPrerequisites: CatalogCourse[]; onEnroll: () => void }) {
   return <>
     <Link className="eyebrow hover:text-white" to="/learn/paths">Learning Paths</Link>
     <section className="path-course-head"><div><h1>{state.course.title}</h1><p>{state.course.description}</p></div><div className="path-overall"><strong>{state.enrollment?.progress ?? 0}%</strong><span>{state.enrollment?.status === 'completed' ? `Завершено · ${state.enrollment.finalScore}%` : 'общий прогресс'}</span></div></section>
-    {!state.enrollment && <div className="path-start-panel"><div><strong>Готовы начать?</strong><p>Модули открываются последовательно. Курс не блокирует обычную практику и Linux Core.</p></div>{auth === 'guest' ? <Link className="primary-button" to={`/?auth=1&returnTo=${encodeURIComponent(`/learn/paths/${state.course.slug}`)}`}>Войти и начать <ArrowRight size={15} /></Link> : <button className="primary-button" disabled={busy} onClick={onEnroll}>{busy ? <LoaderCircle className="animate-spin" size={15} /> : <MapIcon size={15} />} Начать курс</button>}</div>}
+    {!state.enrollment && recommendedPrerequisites.length > 0 && <aside className="path-review"><BookOpen size={18} /><div><strong>Рекомендуемый порядок</strong><p>Сначала пройдите <Link className="text-acid hover:text-white" to={`/learn/paths/${recommendedPrerequisites[0]!.slug}`}>{recommendedPrerequisites[0]!.title}</Link>. Это рекомендация, а не блокировка: если основы знакомы, можно сразу начать Linux Operator.</p></div></aside>}
+    {!state.enrollment && <div className="path-start-panel"><div><strong>Готовы начать?</strong><p>Модули открываются последовательно. Курс не блокирует обычную практику и Linux Core.</p></div>{auth === 'guest' ? <Link className="primary-button" to={`/?auth=1&returnTo=${encodeURIComponent(`/learn/paths/${state.course.slug}`)}`}>Войти и начать <ArrowRight size={15} /></Link> : <button className="primary-button" disabled={busy} onClick={onEnroll}>{busy ? <LoaderCircle className="animate-spin" size={15} /> : <MapIcon size={15} />} {recommendedPrerequisites.length > 0 ? 'Всё равно начать' : 'Начать курс'}</button>}</div>}
     {state.resume && <Link className="path-resume" to={itemHref(state.course.slug, state.resume.module, state.resume.item)}><div><small>Продолжить курс</small><strong>{state.resume.title}</strong></div><span>{state.enrollment?.progress}%</span><ArrowRight size={17} /></Link>}
     {state.enrollment?.status === 'completed' && <CourseResult state={state} />}
     <section className="path-map" aria-label="Карта курса">{state.modules.map((module, index) => <ModuleNode key={module.slug} courseSlug={state.course.slug} module={module} index={index} enrolled={Boolean(state.enrollment)} />)}</section>

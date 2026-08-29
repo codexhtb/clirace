@@ -15,7 +15,7 @@ check(primaryNavigation.length === 4, 'primary navigation stays focused');
 check(primaryNavigation.every((item) => item.href.startsWith('/')), 'primary navigation uses crawlable internal links');
 check(new Set(primaryNavigation.map((item) => item.label)).size === 4, 'primary navigation labels are distinct');
 
-const publicRoutes = ['/', '/play', '/online', '/learn', '/learn/linux-core', '/interview', '/daily', '/rating'];
+const publicRoutes = ['/', '/play', '/online', '/learn', '/learn/linux-core', '/learn/paths/linux-operator', '/interview', '/daily', '/rating'];
 const metadata = publicRoutes.map(routeMetadata);
 check(metadata.every((item) => item.indexable), 'public routes remain indexable');
 check(new Set(metadata.map((item) => item.title)).size === publicRoutes.length, 'public route titles are unique');
@@ -53,6 +53,7 @@ const battle = await readFile(join(webRoot, 'BattlePages.tsx'), 'utf8');
 check(play.includes('Начните здесь') && !play.includes('QuickMatchPanel') && !play.includes('RankedMatchPanel'), 'Practice is focused on solo onboarding');
 check(online.includes('QuickMatchPanel') && online.includes('RankedMatchPanel') && online.includes('Игра с другом'), 'Online owns all PvP entry points');
 check(learn.includes('practiceHrefForWeakArea') && learn.includes('Разберём ответ'), 'Learn explanation and next practice action are present');
+check(learn.includes('/learn/paths/linux-operator') && learn.includes('56 коротких уроков'), 'Learn catalog exposes Linux Operator');
 check(battle.includes('Матч не повлиял на MMR') && battle.includes('Снова Ranked'), 'Ranked no-contest and replay actions are present');
 
 const sitemap = await readFile(join(repoRoot, 'apps', 'web', 'public', 'sitemap.xml'), 'utf8');

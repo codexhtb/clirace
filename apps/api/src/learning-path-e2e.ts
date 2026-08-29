@@ -20,7 +20,7 @@ const check = (condition: unknown, label: string) => { assert.ok(condition, labe
 
 try {
   const loaded = await loadAndValidateLearningPathsContent();
-  check(loaded.report.courses === 2 && loaded.report.modules === 27 && loaded.report.items === 237, 'content dataset report');
+  check(loaded.report.courses === 3 && loaded.report.modules === 41 && loaded.report.items === 391, 'content dataset report');
   const importedBefore = await importLearningPaths(dependencies.postgres);
   const countsBefore = await contentCounts();
   await importLearningPaths(dependencies.postgres);
@@ -108,8 +108,9 @@ try {
   const profile = await paths.profile(userId) as Array<{ status: string; progress: number; finalScore: number | null }>;
   check(profile[0]?.status === 'completed' && profile[0].progress === 100 && profile[0].finalScore === state.enrollment.finalScore, 'profile integration');
 
-  const catalog = await paths.catalog(userId) as { courses: Array<{ slug: string; enrollment: unknown }> };
+  const catalog = await paths.catalog(userId) as { courses: Array<{ slug: string; prerequisites: string[]; enrollment: unknown }> };
   check(catalog.courses[0]?.slug === 'linux-zero-to-operator', 'Zero to Operator is the primary course');
+  check(catalog.courses.find((course) => course.slug === 'linux-operator')?.prerequisites[0] === 'linux-zero-to-operator', 'Operator exposes recommended prerequisite');
   let beginner = asState(await paths.enroll(userId, 'linux-zero-to-operator'));
   check(beginner.resume?.module === 'terminal-basics' && beginner.resume.item === 'linux-shell', 'beginner course starts at the first lesson');
   await paths.completeTheory(userId, 'linux-zero-to-operator', 'zto-terminal-basics-linux-shell-lesson');
@@ -136,7 +137,18 @@ try {
   check(beginner.enrollment.progress === 6, 'optional practice is excluded from required progress');
   const beginnerRestored = asState(await new LearningPathService(dependencies.postgres).sync(userId, 'linux-zero-to-operator'));
   check(beginnerRestored.resume?.module === 'filesystem-navigation', 'beginner resume persists server-side');
-  check(checks >= 25, 'minimum 25 engine checks');
+  let operator = asState(await paths.enroll(userId, 'linux-operator'));
+  check(operator.resume?.module === 'system-inspection' && operator.resume.item === 'identity', 'experienced user can bypass recommended prerequisite');
+  await paths.completeTheory(userId, 'linux-operator', 'operator-system-inspection-identity-lesson');
+  const operatorQuiz = asSession(await paths.startAssessment(userId, 'linux-operator', 'operator-system-inspection-identity-quiz'));
+  await finishAssessment(operatorQuiz.id, true);
+  operator = asState(await paths.sync(userId, 'linux-operator'));
+  check(operator.resume?.item === 'uptime-load', 'Operator progress advances independently');
+  const beginnerAfterOperator = asState(await paths.sync(userId, 'linux-zero-to-operator'));
+  check(beginnerAfterOperator.resume?.module === beginnerRestored.resume?.module && beginnerAfterOperator.enrollment.progress === beginnerRestored.enrollment.progress, 'Operator progress does not alter beginner progress');
+  const independentEnrollmentCount = await scalar('SELECT count(*)::int AS count FROM learning_enrollments WHERE user_id=$1', [userId]);
+  check(independentEnrollmentCount === 3, 'all three course enrollments coexist independently');
+  check(checks >= 32, 'minimum 32 engine checks');
 
   console.log(JSON.stringify({ ok: true, checks, course: 'linux-foundations', modules: 10, items: 50, finalScore: state.enrollment.finalScore, passed }, null, 2));
 } finally {

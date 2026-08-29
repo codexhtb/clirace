@@ -42,6 +42,7 @@
 * защищённое от гонок создание ровно одного существующего Battle на пару.
 * Linux Core с объяснением каждого ответа, восстановлением сессии и аналитикой по темам.
 * Linux Foundations: 10 последовательных модулей, теория, проверки знаний, практика, Shell Labs и checkpoint.
+* Linux Operator: второй уровень из 14 модулей с процессами, дисками, Bash, сетями и incident troubleshooting.
 
 ## Learning Paths / Linux Foundations
 
@@ -69,6 +70,18 @@ pnpm test:learning-paths
 
 ```bash
 CLIRACE_URL=https://clirace.fun pnpm test:learning-paths-production
+```
+
+## Linux Operator V1
+
+Курс `/learn/paths/linux-operator` продолжает Zero to Operator: 14 модулей, 56 коротких уроков, 154 вопроса, 14 обязательных shell labs и 43 дополнительных Practice-задачи. Базовый курс показывается как рекомендация, но опытный пользователь может начать Operator сразу. Прогресс обоих курсов хранится раздельно на сервере.
+
+Курс повторно использует 57 уникальных задач из Challenge Library V2 и не добавляет отдельный checker или менее защищённый sandbox. Подробная архитектура и таблица модулей описаны в [`docs/architecture/linux-operator-v1.md`](docs/architecture/linux-operator-v1.md).
+
+```bash
+pnpm operator-v1:check
+pnpm test:linux-operator-v1
+CLIRACE_URL=https://clirace.fun pnpm test:linux-operator-v1-production
 ```
 
 ## CLIRace Learn / Linux Core

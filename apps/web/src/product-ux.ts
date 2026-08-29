@@ -17,6 +17,7 @@ export function routeMetadata(path: string): RouteMeta {
   if (path === '/learn/paths') return meta('Учебные пути Linux — CLIRace', 'Последовательные курсы Linux: короткая теория, проверка знаний, CLI-практика и лабораторные в настоящем shell.', '/learn/paths');
   if (path === '/learn/paths/linux-foundations') return meta('Linux Foundations — структурированный курс Linux | CLIRace', 'Пройдите основы Linux от команд и файлов до сетей, systemd и диагностики с практикой в настоящем терминале.', '/learn/paths/linux-foundations');
   if (path === '/learn/paths/linux-zero-to-operator') return meta('Linux с нуля — Zero to Operator | CLIRace', '68 коротких уроков, 187 вопросов и настоящая Linux-практика: от первой команды до диагностики.', '/learn/paths/linux-zero-to-operator');
+  if (path === '/learn/paths/linux-operator') return meta('Linux Operator — системная практика Linux | CLIRace', '56 коротких уроков, 154 вопроса и настоящие shell-задачи: процессы, диск, Bash, сети и диагностика.', '/learn/paths/linux-operator');
   if (path.startsWith('/learn/paths/')) return meta('Учебный модуль — CLIRace', 'Персональный прогресс учебного пути CLIRace.', path, false);
   if (path === '/play') return meta('Практика Linux и DevOps — CLIRace', 'Решайте индивидуальные Linux-задачи и тренируйтесь в настоящем безопасном терминале.', '/play');
   if (path === '/online') return meta('Онлайн-матчи Linux — CLIRace', 'Играйте против живых соперников в Quick Match, Ranked или приватном матче с другом.', '/online');

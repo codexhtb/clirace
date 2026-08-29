@@ -113,6 +113,11 @@ function CourseCatalog({ catalog, error }: { catalog: Catalog | null; error: str
         <h2>Linux с нуля</h2><p>68 коротких уроков: объяснение → пример → вопросы → настоящая практика в shell.</p>
         <strong>Начать с первой команды <ArrowRight size={15} /></strong>
       </Link>
+      <Link className="learn-course-card" to="/learn/paths/linux-operator">
+        <span className="mode-card-icon"><MapIcon size={18} /></span><small>Следующий уровень · operator</small>
+        <h2>Linux Operator</h2><p>56 коротких уроков: исследование системы, процессы, диск, shell, сети и диагностика неисправностей.</p>
+        <strong>Перейти к уровню Operator <ArrowRight size={15} /></strong>
+      </Link>
       <Link className="learn-course-card" to="/learn/paths/linux-foundations">
         <span className="mode-card-icon"><MapIcon size={18} /></span><small>Классический путь</small>
         <h2>Linux Foundations</h2><p>Существующий курс из 10 модулей — весь прежний прогресс сохранён.</p>
