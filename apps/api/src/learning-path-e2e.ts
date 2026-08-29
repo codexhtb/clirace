@@ -134,7 +134,9 @@ try {
   await finishAssessment(beginnerCheckpoint.id, true);
   beginner = asState(await paths.sync(userId, 'linux-zero-to-operator'));
   check(beginner.modules[0]?.status === 'completed' && beginner.modules[1]?.status === 'current', 'beginner module completion unlocks the next module');
-  check(beginner.enrollment.progress === 6, 'optional practice is excluded from required progress');
+  const beginnerRequiredItems = beginner.modules.flatMap((module) => module.items).filter((item) => !item.optional);
+  const expectedBeginnerProgress = Math.round((beginnerRequiredItems.filter((item) => item.status === 'completed').length / beginnerRequiredItems.length) * 100);
+  check(beginner.enrollment.progress === expectedBeginnerProgress, 'optional practice is excluded from required progress');
   const beginnerRestored = asState(await new LearningPathService(dependencies.postgres).sync(userId, 'linux-zero-to-operator'));
   check(beginnerRestored.resume?.module === 'filesystem-navigation', 'beginner resume persists server-side');
   let operator = asState(await paths.enroll(userId, 'linux-operator'));
