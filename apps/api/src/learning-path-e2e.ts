@@ -73,7 +73,7 @@ try {
   await recordChallengeCompletion('shell-hello-terminal');
   state = asState(await paths.sync(userId, 'linux-foundations'));
   check(findItem(state, 'linux-foundations-basics-practice').status === 'completed', 'existing challenge completion integration');
-  await recordChallengeCompletion('shell-build-castle');
+  await recordChallengeCompletion('filesystem-create-cache-layout');
   state = asState(await paths.sync(userId, 'linux-foundations'));
   check(findItem(state, 'linux-foundations-basics-lab').status === 'completed', 'shell lab completion integration');
 
