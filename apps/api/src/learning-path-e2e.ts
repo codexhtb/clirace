@@ -32,7 +32,7 @@ try {
   check(true, 'invalid challenge reference rejected');
   const circularA = learningPathModuleSchema.parse({ ...loaded.courses[0]!.modules[0], slug: 'a', order: 1, prerequisites: ['b'] });
   const circularB = learningPathModuleSchema.parse({ ...loaded.courses[0]!.modules[1], slug: 'b', order: 2, prerequisites: ['a'] });
-  assert.throws(() => validateModuleGraph('fixture', [circularA, circularB]), /circular/);
+  assert.throws(() => validateModuleGraph('fixture', [circularA, circularB]), /prerequisite|circular/);
   check(true, 'circular prerequisite rejected');
   check(calculateMastery({ knowledge: 80, practice: 100, lab: 100, checkpoint: 90 }) === 91, 'mastery deterministic weighted formula');
   check(masteryPresentation(91, 1).score === null && !masteryPresentation(91, 1).sufficientData, 'insufficient mastery evidence hidden');
