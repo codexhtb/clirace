@@ -1,0 +1,297 @@
+{
+  "slug": "system-troubleshooting",
+  "title": "System Troubleshooting",
+  "description": "Работайте по циклу observe, evidence, hypothesis, minimal change, verify и избегайте случайных разрушительных исправлений.",
+  "order": 13,
+  "prerequisites": [
+    "process-port-troubleshooting"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-system-troubleshooting-observe-lesson",
+      "slug": "observe",
+      "title": "OBSERVE: зафиксируйте symptom",
+      "type": "theory",
+      "order": 1,
+      "category": "troubleshooting",
+      "concept": "observe_symptom",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "OBSERVE: зафиксируйте symptom"
+        },
+        {
+          "type": "paragraph",
+          "text": "Запишите точную command, time, exit code и error text. Не меняйте систему, пока symptom не воспроизводится и scope не понятен."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl -v http://127.0.0.1:8081/status >probe.out 2>probe.err; echo $? >probe.code"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Выполните probe и сохраните stdout/stderr с code.",
+            "Проверка: Воспроизводимый symptom создаёт baseline для последующего VERIFY."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Воспроизводимый symptom создаёт baseline для последующего VERIFY."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-observe-quiz",
+      "slug": "observe-quiz",
+      "title": "Operator check: OBSERVE: зафиксируйте symptom",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "troubleshooting",
+      "concept": "observe_symptom",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-troubleshooting-observe-action",
+        "troubleshooting-service-first-checks"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-evidence-hypothesis-lesson",
+      "slug": "evidence-hypothesis",
+      "title": "COLLECT и HYPOTHESIZE",
+      "type": "theory",
+      "order": 3,
+      "category": "troubleshooting",
+      "concept": "evidence_hypothesis",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "COLLECT и HYPOTHESIZE"
+        },
+        {
+          "type": "paragraph",
+          "text": "Соберите только релевантные facts: process, socket, config, permissions, logs. Гипотеза должна предсказывать наблюдение, которое можно проверить."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ps -eo pid,state,cmd >evidence.ps; ss -lntup >evidence.ss; stat app.conf >evidence.stat"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Соберите компактный evidence bundle без изменений.",
+            "Проверка: Несколько небольших artifacts лучше бесконтрольного полного dump."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Несколько небольших artifacts лучше бесконтрольного полного dump."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-evidence-hypothesis-quiz",
+      "slug": "evidence-hypothesis-quiz",
+      "title": "Operator check: COLLECT и HYPOTHESIZE",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "troubleshooting",
+      "concept": "evidence_hypothesis",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-troubleshooting-evidence-hypothesis-action",
+        "operator-system-troubleshooting-evidence-hypothesis-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-minimal-change-lesson",
+      "slug": "minimal-change",
+      "title": "CHANGE: исправляйте одну причину",
+      "type": "theory",
+      "order": 5,
+      "category": "troubleshooting",
+      "concept": "minimal_change",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "CHANGE: исправляйте одну причину"
+        },
+        {
+          "type": "paragraph",
+          "text": "Выберите изменение, напрямую связанное с подтверждённой причиной. Избегайте recursive chmod, массового kill и удаления данных без inventory."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "chmod o-w app.conf"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Исправьте только world-write bit у config, сохранив остальные права.",
+            "Проверка: Минимальное изменение проще проверить и откатить."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Минимальное изменение проще проверить и откатить."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-minimal-change-quiz",
+      "slug": "minimal-change-quiz",
+      "title": "Operator check: CHANGE: исправляйте одну причину",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "troubleshooting",
+      "concept": "minimal_change",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-troubleshooting-minimal-change-action",
+        "operator-system-troubleshooting-minimal-change-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-verify-document-lesson",
+      "slug": "verify-document",
+      "title": "VERIFY и короткая запись результата",
+      "type": "theory",
+      "order": 7,
+      "category": "troubleshooting",
+      "concept": "verify_document",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "VERIFY и короткая запись результата"
+        },
+        {
+          "type": "paragraph",
+          "text": "Повторите исходный probe, сравните evidence и запишите: symptom, cause, change, verification. Отсутствие error text само по себе не равно success."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl --fail http://127.0.0.1:8081/status -o response.txt; printf \"exit=%s\n\" \"$?\" >verification.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Повторите probe и зафиксируйте итоговый code.",
+            "Проверка: VERIFY должен проверять исходный symptom и отсутствие опасного побочного эффекта."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "VERIFY должен проверять исходный symptom и отсутствие опасного побочного эффекта."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-verify-document-quiz",
+      "slug": "verify-document-quiz",
+      "title": "Operator check: VERIFY и короткая запись результата",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "troubleshooting",
+      "concept": "verify_document",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-troubleshooting-verify-document-action",
+        "operator-system-troubleshooting-verify-document-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "troubleshooting",
+      "concept": "system_troubleshooting_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "troubleshooting-restore-production-config",
+        "troubleshooting-preserve-worker-stop-debug",
+        "troubleshooting-clean-partial-deploy"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "troubleshooting",
+      "concept": "system_troubleshooting_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "troubleshooting-identify-failed-services"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-system-troubleshooting-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: System Troubleshooting",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "troubleshooting",
+      "concept": "system_troubleshooting_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-troubleshooting-checkpoint-1",
+        "operator-system-troubleshooting-checkpoint-2",
+        "operator-system-troubleshooting-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

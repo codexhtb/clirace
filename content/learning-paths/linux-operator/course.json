@@ -1,0 +1,30 @@
+{
+  "slug": "linux-operator",
+  "title": "Linux Operator",
+  "description": "Научитесь исследовать Linux-систему, работать с процессами, диском, shell, сетевыми состояниями и разбирать типовые неисправности.",
+  "version": 1,
+  "enabled": true,
+  "order": 1,
+  "estimatedMinutes": 575,
+  "level": "intermediate",
+  "canonicalChallengeLibrary": 2,
+  "prerequisites": [
+    "linux-zero-to-operator"
+  ],
+  "modules": [
+    "01-system-inspection.json",
+    "02-storage-disk-usage.json",
+    "03-metadata-archives.json",
+    "04-shell-control.json",
+    "05-job-control.json",
+    "06-bash-scripting.json",
+    "07-shared-access.json",
+    "08-logs-incidents.json",
+    "09-networking-ii.json",
+    "10-http-local-services.json",
+    "11-dns-resolution.json",
+    "12-process-port-troubleshooting.json",
+    "13-system-troubleshooting.json",
+    "14-operator-capstone.json"
+  ]
+}

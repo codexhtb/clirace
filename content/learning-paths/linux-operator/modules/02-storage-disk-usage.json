@@ -1,0 +1,297 @@
+{
+  "slug": "storage-disk-usage",
+  "title": "Storage и Disk Usage",
+  "description": "Исследуйте заполнение filesystem от общего capacity до конкретных каталогов и файлов, не выходя за workspace.",
+  "order": 2,
+  "prerequisites": [
+    "system-inspection"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-storage-disk-usage-capacity-lesson",
+      "slug": "capacity",
+      "title": "Сначала filesystem capacity",
+      "type": "theory",
+      "order": 1,
+      "category": "storage",
+      "concept": "filesystem_capacity",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Сначала filesystem capacity"
+        },
+        {
+          "type": "paragraph",
+          "text": "`df` отвечает о смонтированных filesystem, а не о размере отдельного каталога. Начните с `df -h`, чтобы найти заполненный mount point."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "df -h"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите занятое и свободное место всех filesystem.",
+            "Проверка: `df -h` измеряет capacity на уровне filesystem."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`df -h` измеряет capacity на уровне filesystem."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-capacity-quiz",
+      "slug": "capacity-quiz",
+      "title": "Operator check: Сначала filesystem capacity",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "storage",
+      "concept": "filesystem_capacity",
+      "version": 1,
+      "questionSlugs": [
+        "operator-storage-disk-usage-capacity-action",
+        "storage-free-filesystems"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-directory-size-lesson",
+      "slug": "directory-size",
+      "title": "От mount point к каталогу",
+      "type": "theory",
+      "order": 3,
+      "category": "storage",
+      "concept": "directory_size",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "От mount point к каталогу"
+        },
+        {
+          "type": "paragraph",
+          "text": "`du` суммирует реально занятое место по дереву. Ограничивайте глубину и сортируйте human-readable размеры через `sort -h`."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "du -h --max-depth=1 /workspace | sort -h"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Найдите крупнейшие каталоги первого уровня в `/workspace`.",
+            "Проверка: Переход от общего размера к подкаталогам локализует источник заполнения."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Переход от общего размера к подкаталогам локализует источник заполнения."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-directory-size-quiz",
+      "slug": "directory-size-quiz",
+      "title": "Operator check: От mount point к каталогу",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "storage",
+      "concept": "directory_size",
+      "version": 1,
+      "questionSlugs": [
+        "operator-storage-disk-usage-directory-size-action",
+        "operator-storage-disk-usage-directory-size-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-large-files-lesson",
+      "slug": "large-files",
+      "title": "Крупные файлы и безопасная выборка",
+      "type": "theory",
+      "order": 5,
+      "category": "storage",
+      "concept": "large_file_search",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Крупные файлы и безопасная выборка"
+        },
+        {
+          "type": "paragraph",
+          "text": "`find` с `-type f` и `-size` находит кандидатов, но удалять их автоматически опасно. Сначала выведите размер, путь и назначение."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "find /workspace -type f -size +10M -printf '%s %p\n' | sort -n"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите файлы крупнее 10 MiB внутри workspace.",
+            "Проверка: Размер — evidence, но не доказательство, что данные ненужны."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Размер — evidence, но не доказательство, что данные ненужны."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-large-files-quiz",
+      "slug": "large-files-quiz",
+      "title": "Operator check: Крупные файлы и безопасная выборка",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "storage",
+      "concept": "large_file_search",
+      "version": 1,
+      "questionSlugs": [
+        "operator-storage-disk-usage-large-files-action",
+        "operator-storage-disk-usage-large-files-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-verify-cleanup-lesson",
+      "slug": "verify-cleanup",
+      "title": "Cleanup и повторная проверка",
+      "type": "theory",
+      "order": 7,
+      "category": "storage",
+      "concept": "disk_cleanup_verify",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Cleanup и повторная проверка"
+        },
+        {
+          "type": "paragraph",
+          "text": "Исправление disk pressure должно сохранять нужные artifacts. После точечного cleanup повторите исходные `du` и `df`, чтобы проверить эффект."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "du -sh /workspace; df -h /workspace"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Сравните размер workspace до и после выбранного действия.",
+            "Проверка: Минимальное изменение и повторное измерение замыкают diagnostic loop."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Минимальное изменение и повторное измерение замыкают diagnostic loop."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-verify-cleanup-quiz",
+      "slug": "verify-cleanup-quiz",
+      "title": "Operator check: Cleanup и повторная проверка",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "storage",
+      "concept": "disk_cleanup_verify",
+      "version": 1,
+      "questionSlugs": [
+        "operator-storage-disk-usage-verify-cleanup-action",
+        "storage-inodes-full"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "storage",
+      "concept": "storage_disk_usage_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-clean-temporary-artifacts",
+        "filesystem-clean-build-preserve-source",
+        "text-select-latest-successful-backup"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "storage",
+      "concept": "storage_disk_usage_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "text-list-large-cache-files"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-storage-disk-usage-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Storage и Disk Usage",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "storage",
+      "concept": "storage_disk_usage_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-storage-disk-usage-checkpoint-1",
+        "operator-storage-disk-usage-checkpoint-2",
+        "operator-storage-disk-usage-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

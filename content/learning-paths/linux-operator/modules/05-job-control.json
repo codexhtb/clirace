@@ -1,0 +1,297 @@
+{
+  "slug": "job-control",
+  "title": "Job Control и Long-running Processes",
+  "description": "Различайте terminal job и process, управляйте foreground/background и выбирайте корректные сигналы.",
+  "order": 5,
+  "prerequisites": [
+    "shell-control"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-job-control-foreground-background-lesson",
+      "slug": "foreground-background",
+      "title": "Foreground, background и `&`",
+      "type": "theory",
+      "order": 1,
+      "category": "processes",
+      "concept": "foreground_background",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Foreground, background и `&`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Foreground job владеет terminal input. Суффикс `&` запускает pipeline в background текущего shell и сразу возвращает prompt."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "sleep 30 & echo $!"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Запустите короткий sleep в background и покажите его PID.",
+            "Проверка: `&` меняет terminal scheduling, но не превращает процесс в system service."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`&` меняет terminal scheduling, но не превращает процесс в system service."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-job-control-foreground-background-quiz",
+      "slug": "foreground-background-quiz",
+      "title": "Operator check: Foreground, background и `&`",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "processes",
+      "concept": "foreground_background",
+      "version": 1,
+      "questionSlugs": [
+        "operator-job-control-foreground-background-action",
+        "operator-job-control-foreground-background-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-job-control-jobs-fg-bg-lesson",
+      "slug": "jobs-fg-bg",
+      "title": "`jobs`, `fg` и `bg`",
+      "type": "theory",
+      "order": 3,
+      "category": "processes",
+      "concept": "job_table",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`jobs`, `fg` и `bg`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Shell ведёт собственную job table. `jobs -l` связывает job number и PID; `fg` возвращает job на foreground, `bg` продолжает остановленную job в background."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "jobs -l"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите jobs текущего shell вместе с PID.",
+            "Проверка: Job control — состояние shell, process table — состояние kernel."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Job control — состояние shell, process table — состояние kernel."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-job-control-jobs-fg-bg-quiz",
+      "slug": "jobs-fg-bg-quiz",
+      "title": "Operator check: `jobs`, `fg` и `bg`",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "processes",
+      "concept": "job_table",
+      "version": 1,
+      "questionSlugs": [
+        "operator-job-control-jobs-fg-bg-action",
+        "operator-job-control-jobs-fg-bg-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-job-control-signals-lesson",
+      "slug": "signals",
+      "title": "INT, TERM и KILL",
+      "type": "theory",
+      "order": 5,
+      "category": "processes",
+      "concept": "signal_choice",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "INT, TERM и KILL"
+        },
+        {
+          "type": "paragraph",
+          "text": "`Ctrl+C` обычно отправляет INT foreground job. Для управляемой остановки сначала используют TERM; KILL оставляют для процесса, который не реагирует."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "kill -TERM \"$(cat worker.pid)\""
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Отправьте процессу из `worker.pid` сигнал TERM.",
+            "Проверка: TERM даёт процессу шанс очистить ресурсы и записать состояние."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "TERM даёт процессу шанс очистить ресурсы и записать состояние."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-job-control-signals-quiz",
+      "slug": "signals-quiz",
+      "title": "Operator check: INT, TERM и KILL",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "processes",
+      "concept": "signal_choice",
+      "version": 1,
+      "questionSlugs": [
+        "operator-job-control-signals-action",
+        "signals-graceful-stop"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-job-control-lifetime-nohup-lesson",
+      "slug": "lifetime-nohup",
+      "title": "Lifetime процесса и `nohup`",
+      "type": "theory",
+      "order": 7,
+      "category": "processes",
+      "concept": "process_lifetime",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Lifetime процесса и `nohup`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Background job всё ещё связан с shell lifecycle. `nohup` игнорирует HUP и перенаправляет output, но не даёт supervision, restart policy или readiness."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "nohup ./worker.sh >worker.log 2>&1 & echo $!"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Запустите worker с `nohup` и явным логом.",
+            "Проверка: Для production service нужен supervisor; в sandbox изучается только process lifetime."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Для production service нужен supervisor; в sandbox изучается только process lifetime."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-job-control-lifetime-nohup-quiz",
+      "slug": "lifetime-nohup-quiz",
+      "title": "Operator check: Lifetime процесса и `nohup`",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "processes",
+      "concept": "process_lifetime",
+      "version": 1,
+      "questionSlugs": [
+        "operator-job-control-lifetime-nohup-action",
+        "operator-job-control-lifetime-nohup-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-job-control-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "processes",
+      "concept": "job_control_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "process-start-idle-worker",
+        "process-stop-worker-preserve-evidence",
+        "process-clean-stale-pid-after-stop"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-job-control-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "processes",
+      "concept": "job_control_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "process-start-worker-write-marker"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-job-control-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Job Control и Long-running Processes",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "processes",
+      "concept": "job_control_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-job-control-checkpoint-1",
+        "operator-job-control-checkpoint-2",
+        "operator-job-control-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

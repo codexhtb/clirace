@@ -12,14 +12,14 @@ assert(course, 'Zero to Operator course missing');
 const report = paths.report.zeroToOperator;
 assert(report, 'Zero to Operator report missing');
 
-check(paths.report.courses === 2, 'legacy and beginner courses coexist');
+check(paths.report.courses === 3, 'legacy, beginner, and Operator courses coexist');
 check(course.order === 0 && course.level === 'beginner', 'beginner course is primary');
 check(report.modules === 17, '17 focused modules');
 check(report.lessons === 68, '68 short lessons');
 check(report.questions === 187, '187 unique quiz questions');
 check(report.newQuestions === 162 && report.reusedQuestions === 25, 'new and reused question totals');
 check(report.requiredPractice === 17 && report.optionalPractice === 34, 'required and optional practice totals');
-check(core.report.total === 187 && core.report.warnings.length === 0, 'question bank validates without warnings');
+check(core.report.total === 324 && core.report.warnings.length === 0, 'expanded question bank validates without warnings');
 check(paths.report.invalidReferences === 0 && paths.report.warnings.length === 0, 'path references validate without warnings');
 
 const catalog = new Map(listChallengeLibraryV2().map((challenge) => [challenge.id, challenge]));

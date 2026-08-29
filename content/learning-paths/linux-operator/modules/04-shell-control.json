@@ -1,0 +1,297 @@
+{
+  "slug": "shell-control",
+  "title": "Shell Control и Exit Logic",
+  "description": "Управляйте последовательностью команд через exit status, условные связки, grouping и command substitution.",
+  "order": 4,
+  "prerequisites": [
+    "metadata-archives"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-shell-control-exit-code-lesson",
+      "slug": "exit-code",
+      "title": "Exit status как контракт",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "exit_status_contract",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Exit status как контракт"
+        },
+        {
+          "type": "paragraph",
+          "text": "Automation принимает решения по exit code. Ноль означает успех по соглашению, а ненулевые значения требуют интерпретации конкретной команды."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "test -f /workspace/app.conf; status=$?; echo \"$status\""
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Запустите проверку и сразу сохраните её exit code.",
+            "Проверка: Следующая команда перезаписывает `$?`, поэтому значение читают сразу."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Следующая команда перезаписывает `$?`, поэтому значение читают сразу."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shell-control-exit-code-quiz",
+      "slug": "exit-code-quiz",
+      "title": "Operator check: Exit status как контракт",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "bash",
+      "concept": "exit_status_contract",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shell-control-exit-code-action",
+        "bash-exit-status"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shell-control-and-or-lesson",
+      "slug": "and-or",
+      "title": "`&&` и `||` в сценариях",
+      "type": "theory",
+      "order": 3,
+      "category": "bash",
+      "concept": "conditional_lists",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`&&` и `||` в сценариях"
+        },
+        {
+          "type": "paragraph",
+          "text": "`A && B` запускает B только после успеха A; `A || B` — только после неуспеха A. Это управление потоком, а не текстовые синонимы AND/OR."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "test -f app.conf && echo ready"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Напечатайте `ready` только если config существует.",
+            "Проверка: Условные списки опираются на status команды слева."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Условные списки опираются на status команды слева."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shell-control-and-or-quiz",
+      "slug": "and-or-quiz",
+      "title": "Operator check: `&&` и `||` в сценариях",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "bash",
+      "concept": "conditional_lists",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shell-control-and-or-action",
+        "operator-shell-control-and-or-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shell-control-sequence-group-lesson",
+      "slug": "sequence-group",
+      "title": "Последовательность и grouping",
+      "type": "theory",
+      "order": 5,
+      "category": "bash",
+      "concept": "shell_grouping",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Последовательность и grouping"
+        },
+        {
+          "type": "paragraph",
+          "text": "`;` разделяет команды без условия. Скобки `( ... )` выполняют группу в subshell, а `{ ...; }` — в текущем shell."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "(cd /tmp && pwd); pwd"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Измените каталог только внутри subshell и проверьте исходный `pwd`.",
+            "Проверка: Subshell изолирует изменения shell state."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Subshell изолирует изменения shell state."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shell-control-sequence-group-quiz",
+      "slug": "sequence-group-quiz",
+      "title": "Operator check: Последовательность и grouping",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "bash",
+      "concept": "shell_grouping",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shell-control-sequence-group-action",
+        "operator-shell-control-sequence-group-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shell-control-substitution-lesson",
+      "slug": "substitution",
+      "title": "Command substitution без потери кавычек",
+      "type": "theory",
+      "order": 7,
+      "category": "bash",
+      "concept": "command_substitution",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Command substitution без потери кавычек"
+        },
+        {
+          "type": "paragraph",
+          "text": "`$(command)` подставляет stdout команды. Результат обычно заключают в двойные кавычки, чтобы пробелы не превратились в новые аргументы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "stamp=\"$(date -u +%FT%TZ)\"; printf \"%s\n\" \"$stamp\""
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Сохраните текущий timestamp в переменную и выведите его.",
+            "Проверка: Command substitution переносит stdout, но кавычки управляют последующим word splitting."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Command substitution переносит stdout, но кавычки управляют последующим word splitting."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shell-control-substitution-quiz",
+      "slug": "substitution-quiz",
+      "title": "Operator check: Command substitution без потери кавычек",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "bash",
+      "concept": "command_substitution",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shell-control-substitution-action",
+        "operator-shell-control-substitution-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shell-control-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "bash",
+      "concept": "shell_control_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-append-deployment-audit",
+        "shell-merge-config-fragments",
+        "shell-write-service-config-heredoc"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-shell-control-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "bash",
+      "concept": "shell_control_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-capture-command-streams"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-shell-control-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Shell Control и Exit Logic",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "bash",
+      "concept": "shell_control_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shell-control-checkpoint-1",
+        "operator-shell-control-checkpoint-2",
+        "operator-shell-control-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

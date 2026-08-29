@@ -1,0 +1,297 @@
+{
+  "slug": "metadata-archives",
+  "title": "Files, Metadata и Archives",
+  "description": "Читайте метаданные и уверенно создавайте, проверяйте и распаковывайте tar-архивы внутри workspace.",
+  "order": 3,
+  "prerequisites": [
+    "storage-disk-usage"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-metadata-archives-stat-file-lesson",
+      "slug": "stat-file",
+      "title": "`stat`, `file` и timestamps",
+      "type": "theory",
+      "order": 1,
+      "category": "filesystem",
+      "concept": "metadata_inspection",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`stat`, `file` и timestamps"
+        },
+        {
+          "type": "paragraph",
+          "text": "`stat` показывает mode, owner, size и timestamps; `file` определяет формат по содержимому. Это разные вопросы к одному path."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "stat artifact.bin; file artifact.bin"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите metadata и предполагаемый тип `artifact.bin`.",
+            "Проверка: `stat` описывает inode metadata, а `file` — вероятный формат."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`stat` описывает inode metadata, а `file` — вероятный формат."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-metadata-archives-stat-file-quiz",
+      "slug": "stat-file-quiz",
+      "title": "Operator check: `stat`, `file` и timestamps",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "filesystem",
+      "concept": "metadata_inspection",
+      "version": 1,
+      "questionSlugs": [
+        "operator-metadata-archives-stat-file-action",
+        "operator-metadata-archives-stat-file-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-metadata-archives-archive-compression-lesson",
+      "slug": "archive-compression",
+      "title": "Archive и compression — не одно и то же",
+      "type": "theory",
+      "order": 3,
+      "category": "filesystem",
+      "concept": "archive_compression",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Archive и compression — не одно и то же"
+        },
+        {
+          "type": "paragraph",
+          "text": "`tar` объединяет множество paths в один stream; gzip сжимает поток. Суффикс `.tar.gz` отражает два отдельных действия."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "tar -czf logs.tar.gz logs/"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Создайте gzip-сжатый архив каталога `logs`.",
+            "Проверка: Архивация сохраняет структуру, compression уменьшает представление данных."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Архивация сохраняет структуру, compression уменьшает представление данных."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-metadata-archives-archive-compression-quiz",
+      "slug": "archive-compression-quiz",
+      "title": "Operator check: Archive и compression — не одно и то же",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "filesystem",
+      "concept": "archive_compression",
+      "version": 1,
+      "questionSlugs": [
+        "operator-metadata-archives-archive-compression-action",
+        "operator-metadata-archives-archive-compression-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-metadata-archives-inspect-extract-lesson",
+      "slug": "inspect-extract",
+      "title": "Проверьте архив до распаковки",
+      "type": "theory",
+      "order": 5,
+      "category": "filesystem",
+      "concept": "archive_inspection",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверьте архив до распаковки"
+        },
+        {
+          "type": "paragraph",
+          "text": "Перед extraction посмотрите список через `tar -tf`. Распаковывайте в заранее выбранный каталог, чтобы не смешивать файлы с текущей рабочей областью."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "tar -tf logs.tar.gz; mkdir -p /workspace/restore; tar -xzf logs.tar.gz -C /workspace/restore"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Просмотрите архив и распакуйте его в `/workspace/restore`.",
+            "Проверка: Предварительный список защищает от неожиданной структуры архива."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Предварительный список защищает от неожиданной структуры архива."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-metadata-archives-inspect-extract-quiz",
+      "slug": "inspect-extract-quiz",
+      "title": "Operator check: Проверьте архив до распаковки",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "filesystem",
+      "concept": "archive_inspection",
+      "version": 1,
+      "questionSlugs": [
+        "operator-metadata-archives-inspect-extract-action",
+        "operator-metadata-archives-inspect-extract-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-metadata-archives-preserve-verify-lesson",
+      "slug": "preserve-verify",
+      "title": "Проверка backup artifact",
+      "type": "theory",
+      "order": 7,
+      "category": "filesystem",
+      "concept": "archive_verification",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверка backup artifact"
+        },
+        {
+          "type": "paragraph",
+          "text": "Архив считается полезным только после проверки списка и test extraction. Не удаляйте исходники лишь потому, что команда создания завершилась с code 0."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "tar -tzf logs.tar.gz >/dev/null && echo archive-ok"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Проверьте, что архив читается, не распаковывая его поверх данных.",
+            "Проверка: Проверка artifact и понимание ссылок уменьшают риск ложного backup."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Проверка artifact и понимание ссылок уменьшают риск ложного backup."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-metadata-archives-preserve-verify-quiz",
+      "slug": "preserve-verify-quiz",
+      "title": "Operator check: Проверка backup artifact",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "filesystem",
+      "concept": "archive_verification",
+      "version": 1,
+      "questionSlugs": [
+        "operator-metadata-archives-preserve-verify-action",
+        "filesystem-symlink-behavior"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-metadata-archives-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "filesystem",
+      "concept": "metadata_archives_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "filesystem-backup-service-manifest",
+        "filesystem-organize-service-logs",
+        "filesystem-rehome-database-backup"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-metadata-archives-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "filesystem",
+      "concept": "metadata_archives_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-audit-archive-toolchain"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-metadata-archives-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Files, Metadata и Archives",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "filesystem",
+      "concept": "metadata_archives_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-metadata-archives-checkpoint-1",
+        "operator-metadata-archives-checkpoint-2",
+        "operator-metadata-archives-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

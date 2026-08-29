@@ -1,0 +1,297 @@
+{
+  "slug": "process-port-troubleshooting",
+  "title": "Process, Port и Service Troubleshooting",
+  "description": "Коррелируйте PID, process, socket и port, освобождая конфликт минимальным изменением и проверяя результат.",
+  "order": 12,
+  "prerequisites": [
+    "dns-resolution"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-process-port-troubleshooting-port-evidence-lesson",
+      "slug": "port-evidence",
+      "title": "Начните с socket evidence",
+      "type": "theory",
+      "order": 1,
+      "category": "networking",
+      "concept": "port_evidence",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Начните с socket evidence"
+        },
+        {
+          "type": "paragraph",
+          "text": "Ошибка address already in use означает конфликт bind. Сначала найдите точный listener через `ss`, не останавливайте случайные процессы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ss -lntp 'sport = :8080'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Найдите listener TCP/8080.",
+            "Проверка: Socket evidence связывает symptom с конкретным owner."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Socket evidence связывает symptom с конкретным owner."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-port-evidence-quiz",
+      "slug": "port-evidence-quiz",
+      "title": "Operator check: Начните с socket evidence",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "networking",
+      "concept": "port_evidence",
+      "version": 1,
+      "questionSlugs": [
+        "operator-process-port-troubleshooting-port-evidence-action",
+        "operator-process-port-troubleshooting-port-evidence-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-pid-process-lesson",
+      "slug": "pid-process",
+      "title": "От PID к command и parent",
+      "type": "theory",
+      "order": 3,
+      "category": "networking",
+      "concept": "pid_correlation",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "От PID к command и parent"
+        },
+        {
+          "type": "paragraph",
+          "text": "После получения PID изучите command, parent, state и start time. Одинаковое имя не гарантирует одинаковую роль процесса."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ps -p \"$PID\" -o pid,ppid,state,lstart,cmd"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите PID, PPID, state и command выбранного процесса.",
+            "Проверка: `pgrep` ищет process name, но результат всё равно нужно сопоставить с socket и command."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`pgrep` ищет process name, но результат всё равно нужно сопоставить с socket и command."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-pid-process-quiz",
+      "slug": "pid-process-quiz",
+      "title": "Operator check: От PID к command и parent",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "networking",
+      "concept": "pid_correlation",
+      "version": 1,
+      "questionSlugs": [
+        "operator-process-port-troubleshooting-pid-process-action",
+        "processes-find-pid"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-graceful-change-lesson",
+      "slug": "graceful-change",
+      "title": "Минимальная остановка",
+      "type": "theory",
+      "order": 5,
+      "category": "networking",
+      "concept": "graceful_port_recovery",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Минимальная остановка"
+        },
+        {
+          "type": "paragraph",
+          "text": "Если owner действительно stale, отправьте TERM и дождитесь освобождения port. KILL применяют только после evidence, timeout и отсутствия реакции."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "kill -TERM \"$PID\"; while kill -0 \"$PID\" 2>/dev/null; do sleep 0.1; done"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Корректно остановите PID и дождитесь его завершения.",
+            "Проверка: Минимальное изменение сохраняет больше evidence и меньше collateral damage."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Минимальное изменение сохраняет больше evidence и меньше collateral damage."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-graceful-change-quiz",
+      "slug": "graceful-change-quiz",
+      "title": "Operator check: Минимальная остановка",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "networking",
+      "concept": "graceful_port_recovery",
+      "version": 1,
+      "questionSlugs": [
+        "operator-process-port-troubleshooting-graceful-change-action",
+        "operator-process-port-troubleshooting-graceful-change-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-verify-listener-lesson",
+      "slug": "verify-listener",
+      "title": "Проверьте port и ожидаемый service",
+      "type": "theory",
+      "order": 7,
+      "category": "networking",
+      "concept": "listener_verification",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Проверьте port и ожидаемый service"
+        },
+        {
+          "type": "paragraph",
+          "text": "Свободный port ещё не означает восстановление. Запустите ожидаемый listener, проверьте bind address и выполните protocol-level probe."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ss -lntp 'sport = :8080'; curl --fail http://127.0.0.1:8080/status"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Проверьте listener и локальный HTTP response после восстановления.",
+            "Проверка: VERIFY повторяет пользовательский путь, а не только внутренний процессный state."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "VERIFY повторяет пользовательский путь, а не только внутренний процессный state."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-verify-listener-quiz",
+      "slug": "verify-listener-quiz",
+      "title": "Operator check: Проверьте port и ожидаемый service",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "networking",
+      "concept": "listener_verification",
+      "version": 1,
+      "questionSlugs": [
+        "operator-process-port-troubleshooting-verify-listener-action",
+        "operator-process-port-troubleshooting-verify-listener-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "networking",
+      "concept": "process_port_troubleshooting_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "process-stop-port-owner",
+        "networking-remove-conflict-pid-file",
+        "networking-recover-metrics-after-conflict"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "networking",
+      "concept": "process_port_troubleshooting_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-free-conflicting-tcp-port"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-process-port-troubleshooting-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Process, Port и Service Troubleshooting",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "networking",
+      "concept": "process_port_troubleshooting_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-process-port-troubleshooting-checkpoint-1",
+        "operator-process-port-troubleshooting-checkpoint-2",
+        "operator-process-port-troubleshooting-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

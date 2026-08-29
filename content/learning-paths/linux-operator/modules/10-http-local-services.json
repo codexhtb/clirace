@@ -1,0 +1,297 @@
+{
+  "slug": "http-local-services",
+  "title": "HTTP и Local Services",
+  "description": "Разбирайте локальный HTTP request/response, status, headers и transport errors без внешнего Интернета.",
+  "order": 10,
+  "prerequisites": [
+    "networking-ii"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-http-local-services-request-response-lesson",
+      "slug": "request-response",
+      "title": "HTTP request и response",
+      "type": "theory",
+      "order": 1,
+      "category": "networking",
+      "concept": "http_exchange",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "HTTP request и response"
+        },
+        {
+          "type": "paragraph",
+          "text": "HTTP работает поверх transport connection: client отправляет method, path и headers, server возвращает status, headers и body."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl -i http://127.0.0.1:8081/status.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Получите локальный status endpoint с headers.",
+            "Проверка: HTTP success не доказывает внешний reachability или корректность всего приложения."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "HTTP success не доказывает внешний reachability или корректность всего приложения."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-http-local-services-request-response-quiz",
+      "slug": "request-response-quiz",
+      "title": "Operator check: HTTP request и response",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "networking",
+      "concept": "http_exchange",
+      "version": 1,
+      "questionSlugs": [
+        "operator-http-local-services-request-response-action",
+        "operator-http-local-services-request-response-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-http-local-services-head-headers-lesson",
+      "slug": "head-headers",
+      "title": "Methods и headers",
+      "type": "theory",
+      "order": 3,
+      "category": "networking",
+      "concept": "http_headers",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Methods и headers"
+        },
+        {
+          "type": "paragraph",
+          "text": "`curl -I` запрашивает headers через HEAD, если server поддерживает method. Заголовки описывают content, caching и другие response properties."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl -I http://127.0.0.1:8081/status.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите только response headers локального сервиса.",
+            "Проверка: Метод выбирается client и обрабатывается server."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Метод выбирается client и обрабатывается server."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-http-local-services-head-headers-quiz",
+      "slug": "head-headers-quiz",
+      "title": "Operator check: Methods и headers",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "networking",
+      "concept": "http_headers",
+      "version": 1,
+      "questionSlugs": [
+        "operator-http-local-services-head-headers-action",
+        "operator-http-local-services-head-headers-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-http-local-services-verbose-lesson",
+      "slug": "verbose",
+      "title": "`curl -v` разделяет transport и HTTP",
+      "type": "theory",
+      "order": 5,
+      "category": "networking",
+      "concept": "http_diagnostics",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`curl -v` разделяет transport и HTTP"
+        },
+        {
+          "type": "paragraph",
+          "text": "Verbose output показывает resolution, connect, request и response. Это помогает отличить connection refused от HTTP 404 или 500."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl -v http://127.0.0.1:8081/status.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Выполните подробный локальный probe.",
+            "Проверка: Transport failure происходит до получения HTTP status."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Transport failure происходит до получения HTTP status."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-http-local-services-verbose-quiz",
+      "slug": "verbose-quiz",
+      "title": "Operator check: `curl -v` разделяет transport и HTTP",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "networking",
+      "concept": "http_diagnostics",
+      "version": 1,
+      "questionSlugs": [
+        "operator-http-local-services-verbose-action",
+        "networking-connection-refused"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-http-local-services-save-verify-lesson",
+      "slug": "save-verify",
+      "title": "Сохраните body и проверьте результат",
+      "type": "theory",
+      "order": 7,
+      "category": "networking",
+      "concept": "http_body_artifact",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Сохраните body и проверьте результат"
+        },
+        {
+          "type": "paragraph",
+          "text": "Флаг `-o` сохраняет body, а `--fail` делает HTTP errors ненулевым exit status. Проверяйте и command status, и artifact."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "curl --fail --silent http://127.0.0.1:8081/status.txt -o /workspace/response.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Сохраните body только после успешного local response.",
+            "Проверка: Artifact должен происходить из настоящего response, а не быть подставлен вручную."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Artifact должен происходить из настоящего response, а не быть подставлен вручную."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-http-local-services-save-verify-quiz",
+      "slug": "save-verify-quiz",
+      "title": "Operator check: Сохраните body и проверьте результат",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "networking",
+      "concept": "http_body_artifact",
+      "version": 1,
+      "questionSlugs": [
+        "operator-http-local-services-save-verify-action",
+        "operator-http-local-services-save-verify-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-http-local-services-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "networking",
+      "concept": "http_local_services_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-fetch-local-status-endpoint",
+        "networking-publish-local-health-response",
+        "troubleshooting-probe-http-secure-response"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-http-local-services-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "networking",
+      "concept": "http_local_services_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-verify-local-http-and-save-body"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-http-local-services-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: HTTP и Local Services",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "networking",
+      "concept": "http_local_services_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-http-local-services-checkpoint-1",
+        "operator-http-local-services-checkpoint-2",
+        "operator-http-local-services-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

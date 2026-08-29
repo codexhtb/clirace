@@ -1,0 +1,295 @@
+{
+  "slug": "system-inspection",
+  "title": "System Inspection",
+  "description": "Собирайте краткий паспорт Linux-системы: identity, версия, uptime, CPU, память, load и процессы.",
+  "order": 1,
+  "prerequisites": [],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-system-inspection-identity-lesson",
+      "slug": "identity",
+      "title": "Паспорт системы и identity",
+      "type": "theory",
+      "order": 1,
+      "category": "processes",
+      "concept": "system_identity",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Паспорт системы и identity"
+        },
+        {
+          "type": "paragraph",
+          "text": "Оператор сначала фиксирует hostname, kernel, время и эффективную identity. Эти данные задают контекст для любой дальнейшей диагностики."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "hostname; uname -sr; whoami; id"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Соберите hostname, версию kernel и текущую identity одной последовательностью.",
+            "Проверка: `id` раскрывает группы, которые часто объясняют доступ к файлам и каталогам."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`id` раскрывает группы, которые часто объясняют доступ к файлам и каталогам."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-inspection-identity-quiz",
+      "slug": "identity-quiz",
+      "title": "Operator check: Паспорт системы и identity",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "processes",
+      "concept": "system_identity",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-inspection-identity-action",
+        "users-effective-groups"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-inspection-uptime-load-lesson",
+      "slug": "uptime-load",
+      "title": "Uptime и load без паники",
+      "type": "theory",
+      "order": 3,
+      "category": "processes",
+      "concept": "system_load",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Uptime и load без паники"
+        },
+        {
+          "type": "paragraph",
+          "text": "Load average показывает число выполняемых и ожидающих CPU или непрерываемый I/O задач за интервалы 1, 5 и 15 минут. Его сравнивают с числом CPU и другими evidence."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "uptime"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите uptime и load average.",
+            "Проверка: Одно число load без CPU count и временной динамики не доказывает проблему."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Одно число load без CPU count и временной динамики не доказывает проблему."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-inspection-uptime-load-quiz",
+      "slug": "uptime-load-quiz",
+      "title": "Operator check: Uptime и load без паники",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "processes",
+      "concept": "system_load",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-inspection-uptime-load-action",
+        "operator-system-inspection-uptime-load-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-inspection-cpu-memory-lesson",
+      "slug": "cpu-memory",
+      "title": "CPU и память",
+      "type": "theory",
+      "order": 5,
+      "category": "processes",
+      "concept": "cpu_memory_inspection",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "CPU и память"
+        },
+        {
+          "type": "paragraph",
+          "text": "`lscpu` описывает процессоры, а `free -h` суммирует память. Поле available обычно полезнее, чем буквальное free: Linux использует RAM под cache."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "printf 'CPU='; nproc; free -h"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите число CPU и доступную память.",
+            "Проверка: `free -h` отделяет available memory от буквально неиспользуемых страниц."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`free -h` отделяет available memory от буквально неиспользуемых страниц."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-inspection-cpu-memory-quiz",
+      "slug": "cpu-memory-quiz",
+      "title": "Operator check: CPU и память",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "processes",
+      "concept": "cpu_memory_inspection",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-inspection-cpu-memory-action",
+        "operator-system-inspection-cpu-memory-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-inspection-proc-overview-lesson",
+      "slug": "proc-overview",
+      "title": "`/proc` и обзор процессов",
+      "type": "theory",
+      "order": 7,
+      "category": "processes",
+      "concept": "proc_runtime",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`/proc` и обзор процессов"
+        },
+        {
+          "type": "paragraph",
+          "text": "`/proc` — виртуальная filesystem с runtime-данными kernel и процессов. Файлы `/proc/cpuinfo`, `/proc/meminfo` и каталоги `/proc/PID` не являются обычным архивом на диске."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ps -eo pid,ppid,state,comm --sort=pid | head; head -n 5 /proc/meminfo"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите краткий список процессов и первые строки `/proc/meminfo`.",
+            "Проверка: `ps` и `/proc` дают разные представления одного runtime-состояния."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`ps` и `/proc` дают разные представления одного runtime-состояния."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-system-inspection-proc-overview-quiz",
+      "slug": "proc-overview-quiz",
+      "title": "Operator check: `/proc` и обзор процессов",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "processes",
+      "concept": "proc_runtime",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-inspection-proc-overview-action",
+        "processes-zombie-state"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-system-inspection-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "processes",
+      "concept": "system_inspection_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-verify-coreutils-toolkit",
+        "process-reconcile-runtime-state",
+        "troubleshooting-audit-required-toolchain"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-system-inspection-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "processes",
+      "concept": "system_inspection_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-verify-procps-process-tools"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-system-inspection-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: System Inspection",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "processes",
+      "concept": "system_inspection_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-system-inspection-checkpoint-1",
+        "operator-system-inspection-checkpoint-2",
+        "operator-system-inspection-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

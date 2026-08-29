@@ -1,0 +1,297 @@
+{
+  "slug": "dns-resolution",
+  "title": "DNS и Name Resolution",
+  "description": "Понимайте hostname resolution через hosts и resolver configuration, не полагаясь на Internet DNS.",
+  "order": 11,
+  "prerequisites": [
+    "http-local-services"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-dns-resolution-names-addresses-lesson",
+      "slug": "names-addresses",
+      "title": "Имя — не address",
+      "type": "theory",
+      "order": 1,
+      "category": "networking",
+      "concept": "dns_name_address",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Имя — не address"
+        },
+        {
+          "type": "paragraph",
+          "text": "Hostname должен быть преобразован в address до connection. Успешный connection по IP при ошибке по имени локализует проблему в resolution path."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "hostname; getent hosts \"$(hostname)\""
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите hostname и его локальное resolution через NSS.",
+            "Проверка: Работающий IP отделяет transport route от name resolution."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Работающий IP отделяет transport route от name resolution."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-dns-resolution-names-addresses-quiz",
+      "slug": "names-addresses-quiz",
+      "title": "Operator check: Имя — не address",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "networking",
+      "concept": "dns_name_address",
+      "version": 1,
+      "questionSlugs": [
+        "operator-dns-resolution-names-addresses-action",
+        "troubleshooting-dns-order"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-dns-resolution-hosts-lesson",
+      "slug": "hosts",
+      "title": "`/etc/hosts` как локальный источник",
+      "type": "theory",
+      "order": 3,
+      "category": "networking",
+      "concept": "hosts_file",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`/etc/hosts` как локальный источник"
+        },
+        {
+          "type": "paragraph",
+          "text": "`/etc/hosts` задаёт статические name-to-address mappings. Порядок источников определяет `/etc/nsswitch.conf`; файл не является DNS server."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "getent hosts localhost"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Найдите localhost через системный NSS API.",
+            "Проверка: `getent` проверяет поведение приложений, а не только один файл."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "`getent` проверяет поведение приложений, а не только один файл."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-dns-resolution-hosts-quiz",
+      "slug": "hosts-quiz",
+      "title": "Operator check: `/etc/hosts` как локальный источник",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "networking",
+      "concept": "hosts_file",
+      "version": 1,
+      "questionSlugs": [
+        "operator-dns-resolution-hosts-action",
+        "operator-dns-resolution-hosts-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-dns-resolution-resolver-config-lesson",
+      "slug": "resolver-config",
+      "title": "Resolver configuration",
+      "type": "theory",
+      "order": 5,
+      "category": "networking",
+      "concept": "resolver_configuration",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Resolver configuration"
+        },
+        {
+          "type": "paragraph",
+          "text": "`/etc/resolv.conf` обычно задаёт nameserver и search domains для DNS resolver. В container он может управляться runtime и не должен переписываться учебной lab."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "sed -n \"1,20p\" /etc/resolv.conf"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Без изменений покажите resolver configuration.",
+            "Проверка: Operator сначала читает effective config и избегает недетерминированного внешнего DNS."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Operator сначала читает effective config и избегает недетерминированного внешнего DNS."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-dns-resolution-resolver-config-quiz",
+      "slug": "resolver-config-quiz",
+      "title": "Operator check: Resolver configuration",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "networking",
+      "concept": "resolver_configuration",
+      "version": 1,
+      "questionSlugs": [
+        "operator-dns-resolution-resolver-config-action",
+        "operator-dns-resolution-resolver-config-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-dns-resolution-resolution-workflow-lesson",
+      "slug": "resolution-workflow",
+      "title": "Resolution troubleshooting workflow",
+      "type": "theory",
+      "order": 7,
+      "category": "networking",
+      "concept": "dns_workflow",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Resolution troubleshooting workflow"
+        },
+        {
+          "type": "paragraph",
+          "text": "Проверяйте точное имя, `getent`, hosts/NSS config, затем route и listener. Не смешивайте DNS failure с HTTP status."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "getent hosts localhost; ip route"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Сравните resolution имени и локальный route state.",
+            "Проверка: Resolution предшествует transport connection и HTTP exchange."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Resolution предшествует transport connection и HTTP exchange."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-dns-resolution-resolution-workflow-quiz",
+      "slug": "resolution-workflow-quiz",
+      "title": "Operator check: Resolution troubleshooting workflow",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "networking",
+      "concept": "dns_workflow",
+      "version": 1,
+      "questionSlugs": [
+        "operator-dns-resolution-resolution-workflow-action",
+        "operator-dns-resolution-resolution-workflow-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-dns-resolution-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "networking",
+      "concept": "dns_resolution_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-start-port-from-config",
+        "networking-record-listener-readiness",
+        "packages-confirm-curl-client"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-dns-resolution-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "networking",
+      "concept": "dns_resolution_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "packages-verify-iproute2-networking"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-dns-resolution-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: DNS и Name Resolution",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "networking",
+      "concept": "dns_resolution_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-dns-resolution-checkpoint-1",
+        "operator-dns-resolution-checkpoint-2",
+        "operator-dns-resolution-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

@@ -1,0 +1,297 @@
+{
+  "slug": "bash-scripting",
+  "title": "Bash Scripting Basics",
+  "description": "Пишите короткие предсказуемые Bash-скрипты с аргументами, условиями, циклами, functions и аккуратными кавычками.",
+  "order": 6,
+  "prerequisites": [
+    "job-control"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-bash-scripting-script-contract-lesson",
+      "slug": "script-contract",
+      "title": "Shebang, аргументы и exit codes",
+      "type": "theory",
+      "order": 1,
+      "category": "bash",
+      "concept": "script_contract",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Shebang, аргументы и exit codes"
+        },
+        {
+          "type": "paragraph",
+          "text": "Shebang выбирает interpreter. Проверяйте `$#`, читайте `$1` в кавычках и возвращайте ненулевой code при неверном использовании."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "if [ \"$#\" -lt 1 ]; then echo \"usage: $0 DIR\" >&2; exit 2; fi"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Создайте проверку обязательного первого аргумента.",
+            "Проверка: Явный contract делает ошибку вызова отличимой от ошибки обработки."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Явный contract делает ошибку вызова отличимой от ошибки обработки."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-bash-scripting-script-contract-quiz",
+      "slug": "script-contract-quiz",
+      "title": "Operator check: Shebang, аргументы и exit codes",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "bash",
+      "concept": "script_contract",
+      "version": 1,
+      "questionSlugs": [
+        "operator-bash-scripting-script-contract-action",
+        "operator-bash-scripting-script-contract-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-bash-scripting-variables-quoting-lesson",
+      "slug": "variables-quoting",
+      "title": "Variables и quoting",
+      "type": "theory",
+      "order": 3,
+      "category": "bash",
+      "concept": "bash_quoting",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Variables и quoting"
+        },
+        {
+          "type": "paragraph",
+          "text": "Незакавыченная переменная проходит word splitting и glob expansion. Для paths и пользовательских arguments почти всегда используйте `\"$value\"`."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "dir=${1:-}; [ -n \"$dir\" ] && [ -d \"$dir\" ]"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Безопасно проверьте, является ли argument каталогом.",
+            "Проверка: Локальное присваивание перед command не меняет environment текущего shell."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Локальное присваивание перед command не меняет environment текущего shell."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-bash-scripting-variables-quoting-quiz",
+      "slug": "variables-quoting-quiz",
+      "title": "Operator check: Variables и quoting",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "bash",
+      "concept": "bash_quoting",
+      "version": 1,
+      "questionSlugs": [
+        "operator-bash-scripting-variables-quoting-action",
+        "environment-temporary-variable"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-bash-scripting-if-test-lesson",
+      "slug": "if-test",
+      "title": "`if`, `test` и проверяемые ветви",
+      "type": "theory",
+      "order": 5,
+      "category": "bash",
+      "concept": "bash_conditions",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`if`, `test` и проверяемые ветви"
+        },
+        {
+          "type": "paragraph",
+          "text": "`[` — команда `test`, поэтому пробелы обязательны. Условие `if` оценивает exit status команды, а не требует специального boolean типа."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "if [ -s report.txt ]; then echo ready; else echo missing; fi"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Выведите сообщение, если report существует и непуст.",
+            "Проверка: Condition можно тестировать отдельно как обычную command."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Condition можно тестировать отдельно как обычную command."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-bash-scripting-if-test-quiz",
+      "slug": "if-test-quiz",
+      "title": "Operator check: `if`, `test` и проверяемые ветви",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "bash",
+      "concept": "bash_conditions",
+      "version": 1,
+      "questionSlugs": [
+        "operator-bash-scripting-if-test-action",
+        "operator-bash-scripting-if-test-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-bash-scripting-loops-functions-lesson",
+      "slug": "loops-functions",
+      "title": "Loops и маленькие functions",
+      "type": "theory",
+      "order": 7,
+      "category": "bash",
+      "concept": "bash_loops_functions",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Loops и маленькие functions"
+        },
+        {
+          "type": "paragraph",
+          "text": "Function скрывает повторяемое действие, а `for item in \"$@\"` безопасно обходит аргументы. Сценарий должен создавать проверяемый final state."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "for service in \"$@\"; do printf \"ready\n\" > \"${service}.ready\"; done"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Создайте ready-marker для каждого переданного service.",
+            "Проверка: Checker оценивает итоговые marker files, а не единственный текст скрипта."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Checker оценивает итоговые marker files, а не единственный текст скрипта."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-bash-scripting-loops-functions-quiz",
+      "slug": "loops-functions-quiz",
+      "title": "Operator check: Loops и маленькие functions",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "bash",
+      "concept": "bash_loops_functions",
+      "version": 1,
+      "questionSlugs": [
+        "operator-bash-scripting-loops-functions-action",
+        "operator-bash-scripting-loops-functions-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-bash-scripting-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "bash",
+      "concept": "bash_scripting_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-build-unique-user-pipeline",
+        "shell-sum-worker-durations",
+        "shell-build-safe-runtime-env"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-bash-scripting-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "bash",
+      "concept": "bash_scripting_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "shell-create-markers-from-service-list"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-bash-scripting-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Bash Scripting Basics",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "bash",
+      "concept": "bash_scripting_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-bash-scripting-checkpoint-1",
+        "operator-bash-scripting-checkpoint-2",
+        "operator-bash-scripting-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

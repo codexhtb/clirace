@@ -1,0 +1,298 @@
+{
+  "slug": "operator-capstone",
+  "title": "Operator Capstone",
+  "description": "Решайте составные incidents по symptoms: deployment, disk pressure, shared access, local service и log investigation.",
+  "order": 14,
+  "prerequisites": [
+    "system-troubleshooting"
+  ],
+  "estimatedMinutes": 55,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-operator-capstone-broken-deployment-lesson",
+      "slug": "broken-deployment",
+      "title": "Capstone: broken deployment",
+      "type": "theory",
+      "order": 1,
+      "category": "troubleshooting",
+      "concept": "capstone_deployment",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Capstone: broken deployment"
+        },
+        {
+          "type": "paragraph",
+          "text": "Symptom: новый release не отвечает. Проверьте `current` symlink, config permissions и listener; исправляйте только подтверждённые причины."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "readlink -f current; stat -c '%a %U:%G' app.conf; ss -lntp 'sport = :8080'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Соберите evidence о release link, config и TCP/8080.",
+            "Проверка: Составной incident оценивает конечное состояние через canonical checker."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Составной incident оценивает конечное состояние через canonical checker."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-operator-capstone-broken-deployment-quiz",
+      "slug": "broken-deployment-quiz",
+      "title": "Operator check: Capstone: broken deployment",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "troubleshooting",
+      "concept": "capstone_deployment",
+      "version": 1,
+      "questionSlugs": [
+        "operator-operator-capstone-broken-deployment-action",
+        "operator-operator-capstone-broken-deployment-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-operator-capstone-disk-access-lesson",
+      "slug": "disk-access",
+      "title": "Capstone: disk pressure и deploy access",
+      "type": "theory",
+      "order": 3,
+      "category": "troubleshooting",
+      "concept": "capstone_disk_access",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Capstone: disk pressure и deploy access"
+        },
+        {
+          "type": "paragraph",
+          "text": "Symptom: workspace заполнен, а deploy user не может обновить artifacts. Сохраните нужное, очистите только disposable data и восстановите group model без 777."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "du -h --max-depth=2 /workspace | sort -h; stat -c '%a %U:%G' /workspace/releases"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Снимите размеры и access metadata перед изменением.",
+            "Проверка: Capacity и access — разные причины; обе требуют отдельного evidence."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Capacity и access — разные причины; обе требуют отдельного evidence."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-operator-capstone-disk-access-quiz",
+      "slug": "disk-access-quiz",
+      "title": "Operator check: Capstone: disk pressure и deploy access",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "troubleshooting",
+      "concept": "capstone_disk_access",
+      "version": 1,
+      "questionSlugs": [
+        "operator-operator-capstone-disk-access-action",
+        "ssh-key-permissions"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-operator-capstone-service-logs-lesson",
+      "slug": "service-logs",
+      "title": "Capstone: local service и logs",
+      "type": "theory",
+      "order": 5,
+      "category": "troubleshooting",
+      "concept": "capstone_service_logs",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Capstone: local service и logs"
+        },
+        {
+          "type": "paragraph",
+          "text": "Symptom: health endpoint недоступен, а в нескольких logs повторяются failures. Свяжите listener owner, request и error records, затем сформируйте summary."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "mkdir -p evidence; ss -lntp >evidence/sockets.txt; grep -R -n 'ERROR' logs >evidence/errors.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Соберите socket и log evidence в отдельный каталог.",
+            "Проверка: Transport и application evidence нельзя смешивать в одну гипотезу."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Transport и application evidence нельзя смешивать в одну гипотезу."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-operator-capstone-service-logs-quiz",
+      "slug": "service-logs-quiz",
+      "title": "Operator check: Capstone: local service и logs",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "troubleshooting",
+      "concept": "capstone_service_logs",
+      "version": 1,
+      "questionSlugs": [
+        "operator-operator-capstone-service-logs-action",
+        "operator-operator-capstone-service-logs-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-operator-capstone-operator-report-lesson",
+      "slug": "operator-report",
+      "title": "Capstone: итоговый operator report",
+      "type": "theory",
+      "order": 7,
+      "category": "troubleshooting",
+      "concept": "capstone_report",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Capstone: итоговый operator report"
+        },
+        {
+          "type": "paragraph",
+          "text": "Финальный report коротко фиксирует scope, evidence, root cause, change и verification. Он не должен содержать secrets или неподтверждённые выводы."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "printf '%s\n' 'SCOPE:' 'EVIDENCE:' 'ROOT CAUSE:' 'CHANGE:' 'VERIFY:' > operator-report.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Создайте структуру отчёта без копирования секретов.",
+            "Проверка: Capstone завершается проверяемым final state и воспроизводимой записью решения."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Capstone завершается проверяемым final state и воспроизводимой записью решения."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-operator-capstone-operator-report-quiz",
+      "slug": "operator-report-quiz",
+      "title": "Operator check: Capstone: итоговый operator report",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "troubleshooting",
+      "concept": "capstone_report",
+      "version": 1,
+      "questionSlugs": [
+        "operator-operator-capstone-operator-report-action",
+        "operator-operator-capstone-operator-report-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-operator-capstone-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительные capstone incidents",
+      "type": "practice",
+      "order": 9,
+      "category": "troubleshooting",
+      "concept": "operator_capstone_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "troubleshooting-reconcile-release-v6",
+        "troubleshooting-harden-exposed-deploy",
+        "troubleshooting-repair-analyst-access",
+        "troubleshooting-recover-api-endpoint"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-operator-capstone-required-lab",
+      "slug": "required-lab",
+      "title": "Финальный Operator incident",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "troubleshooting",
+      "concept": "operator_capstone_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "troubleshooting-recover-oncall-runtime"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-operator-capstone-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Operator Capstone",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "troubleshooting",
+      "concept": "operator_capstone_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-operator-capstone-checkpoint-1",
+        "operator-operator-capstone-checkpoint-2",
+        "operator-operator-capstone-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

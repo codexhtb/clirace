@@ -1,0 +1,297 @@
+{
+  "slug": "shared-access",
+  "title": "Permissions и Shared Access",
+  "description": "Настраивайте совместную работу через groups, umask и directory semantics вместо небезопасного chmod 777.",
+  "order": 7,
+  "prerequisites": [
+    "bash-scripting"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-shared-access-umask-lesson",
+      "slug": "umask",
+      "title": "`umask` как политика создания",
+      "type": "theory",
+      "order": 1,
+      "category": "permissions",
+      "concept": "umask_policy",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "`umask` как политика создания"
+        },
+        {
+          "type": "paragraph",
+          "text": "`umask` убирает права из базового mode новых объектов. Он не изменяет существующие paths и не является окончательной ACL policy."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "umask; umask 0002"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите текущий umask и временно установите групповой 002.",
+            "Проверка: `umask 0002` обычно сохраняет group write для новых team artifacts."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "`umask 0002` обычно сохраняет group write для новых team artifacts."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shared-access-umask-quiz",
+      "slug": "umask-quiz",
+      "title": "Operator check: `umask` как политика создания",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "permissions",
+      "concept": "umask_policy",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shared-access-umask-action",
+        "operator-shared-access-umask-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shared-access-directory-access-lesson",
+      "slug": "directory-access",
+      "title": "Read, write и execute у каталога",
+      "type": "theory",
+      "order": 3,
+      "category": "permissions",
+      "concept": "directory_access",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Read, write и execute у каталога"
+        },
+        {
+          "type": "paragraph",
+          "text": "Для каталога read перечисляет имена, write меняет entries, execute разрешает traversal. Рабочая group должна получать только необходимые комбинации."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "stat -c '%a %U %G' /workspace/shared"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите numeric mode и owner общего каталога.",
+            "Проверка: Без execute пользователь не сможет открыть child path даже при известном имени."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Без execute пользователь не сможет открыть child path даже при известном имени."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shared-access-directory-access-quiz",
+      "slug": "directory-access-quiz",
+      "title": "Operator check: Read, write и execute у каталога",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "permissions",
+      "concept": "directory_access",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shared-access-directory-access-action",
+        "permissions-directory-execute"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shared-access-setgid-sticky-lesson",
+      "slug": "setgid-sticky",
+      "title": "setgid directory и sticky bit",
+      "type": "theory",
+      "order": 5,
+      "category": "permissions",
+      "concept": "special_directory_modes",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "setgid directory и sticky bit"
+        },
+        {
+          "type": "paragraph",
+          "text": "setgid на каталоге наследует group для новых entries. Sticky bit ограничивает удаление чужих entries в общем writable-каталоге."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "chmod 2770 /workspace/shared"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Установите setgid и group-write для командного каталога.",
+            "Проверка: setgid решает наследование group без world-write."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "setgid решает наследование group без world-write."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shared-access-setgid-sticky-quiz",
+      "slug": "setgid-sticky-quiz",
+      "title": "Operator check: setgid directory и sticky bit",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "permissions",
+      "concept": "special_directory_modes",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shared-access-setgid-sticky-action",
+        "operator-shared-access-setgid-sticky-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shared-access-shared-workflow-lesson",
+      "slug": "shared-workflow",
+      "title": "Shared access без `777`",
+      "type": "theory",
+      "order": 7,
+      "category": "permissions",
+      "concept": "shared_access_workflow",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Shared access без `777`"
+        },
+        {
+          "type": "paragraph",
+          "text": "Правильный workflow: определить identities, создать group, назначить group ownership, выбрать mode и проверить доступ от нужных users."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "stat -c '%U:%G %a' /workspace/shared; id"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите owner/group/mode и membership текущего пользователя.",
+            "Проверка: Mode и membership проверяются вместе; один chmod не создаёт модель доступа."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Mode и membership проверяются вместе; один chmod не создаёт модель доступа."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-shared-access-shared-workflow-quiz",
+      "slug": "shared-workflow-quiz",
+      "title": "Operator check: Shared access без `777`",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "permissions",
+      "concept": "shared_access_workflow",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shared-access-shared-workflow-action",
+        "permissions-mode-750"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-shared-access-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "permissions",
+      "concept": "shared_access_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "permissions-team-runbook-scripts",
+        "permissions-traverse-config-directory",
+        "users-repair-worker-membership"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-shared-access-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "permissions",
+      "concept": "shared_access_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "users-secure-shared-release-team"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-shared-access-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Permissions и Shared Access",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "permissions",
+      "concept": "shared_access_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-shared-access-checkpoint-1",
+        "operator-shared-access-checkpoint-2",
+        "operator-shared-access-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

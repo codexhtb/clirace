@@ -1,0 +1,297 @@
+{
+  "slug": "networking-ii",
+  "title": "Networking II",
+  "description": "Связывайте interfaces, addresses, routes, TCP/UDP sockets и bind-address с доступностью локального сервиса.",
+  "order": 9,
+  "prerequisites": [
+    "logs-incidents"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-networking-ii-interfaces-lesson",
+      "slug": "interfaces",
+      "title": "Interfaces и addresses",
+      "type": "theory",
+      "order": 1,
+      "category": "networking",
+      "concept": "network_interfaces",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Interfaces и addresses"
+        },
+        {
+          "type": "paragraph",
+          "text": "`ip -brief addr` показывает interfaces и addresses компактно. Prefix длина описывает network boundary, но не гарантирует route или listener."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ip -brief -4 addr"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите interfaces и IPv4 addresses.",
+            "Проверка: Address и prefix описывают local configuration, не внешний reachability."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Address и prefix описывают local configuration, не внешний reachability."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-networking-ii-interfaces-quiz",
+      "slug": "interfaces-quiz",
+      "title": "Operator check: Interfaces и addresses",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "networking",
+      "concept": "network_interfaces",
+      "version": 1,
+      "questionSlugs": [
+        "operator-networking-ii-interfaces-action",
+        "operator-networking-ii-interfaces-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-networking-ii-routes-lesson",
+      "slug": "routes",
+      "title": "Routing table и default route",
+      "type": "theory",
+      "order": 3,
+      "category": "networking",
+      "concept": "routing_table",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Routing table и default route"
+        },
+        {
+          "type": "paragraph",
+          "text": "`ip route` показывает, куда kernel отправит packets. Default route используется, когда нет более специфичного match."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ip route"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите текущую routing table.",
+            "Проверка: Сначала выбирается наиболее специфичный route."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Сначала выбирается наиболее специфичный route."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-networking-ii-routes-quiz",
+      "slug": "routes-quiz",
+      "title": "Operator check: Routing table и default route",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "networking",
+      "concept": "routing_table",
+      "version": 1,
+      "questionSlugs": [
+        "operator-networking-ii-routes-action",
+        "operator-networking-ii-routes-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-networking-ii-sockets-lesson",
+      "slug": "sockets",
+      "title": "TCP, UDP и listener",
+      "type": "theory",
+      "order": 5,
+      "category": "networking",
+      "concept": "socket_listener",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "TCP, UDP и listener"
+        },
+        {
+          "type": "paragraph",
+          "text": "Socket связывает protocol, local address и port. TCP LISTEN ожидает connections; UDP не имеет аналогичного connection state."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ss -lntup"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите TCP/UDP listeners и связанные processes.",
+            "Проверка: `ss` связывает transport state с local endpoint и, при доступе, process."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "`ss` связывает transport state с local endpoint и, при доступе, process."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-networking-ii-sockets-quiz",
+      "slug": "sockets-quiz",
+      "title": "Operator check: TCP, UDP и listener",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "networking",
+      "concept": "socket_listener",
+      "version": 1,
+      "questionSlugs": [
+        "operator-networking-ii-sockets-action",
+        "networking-listen-sockets"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-networking-ii-bind-address-lesson",
+      "slug": "bind-address",
+      "title": "Loopback против всех interfaces",
+      "type": "theory",
+      "order": 7,
+      "category": "networking",
+      "concept": "bind_address",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Loopback против всех interfaces"
+        },
+        {
+          "type": "paragraph",
+          "text": "`127.0.0.1:8080` доступен только через loopback. `0.0.0.0:8080` означает listener на всех IPv4 interfaces, но firewall и routes всё ещё имеют значение."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "ss -lntp 'sport = :8080'"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Сравните listeners конкретного порта.",
+            "Проверка: Bind address определяет local interfaces, принимающие traffic."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Bind address определяет local interfaces, принимающие traffic."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-networking-ii-bind-address-quiz",
+      "slug": "bind-address-quiz",
+      "title": "Operator check: Loopback против всех interfaces",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "networking",
+      "concept": "bind_address",
+      "version": 1,
+      "questionSlugs": [
+        "operator-networking-ii-bind-address-action",
+        "operator-networking-ii-bind-address-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-networking-ii-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "networking",
+      "concept": "networking_ii_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-keep-admin-port-loopback-only",
+        "networking-serve-tcp-and-udp-same-port",
+        "networking-complete-service-port-map"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-networking-ii-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "networking",
+      "concept": "networking_ii_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "networking-bind-service-all-interfaces"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-networking-ii-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Networking II",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "networking",
+      "concept": "networking_ii_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-networking-ii-checkpoint-1",
+        "operator-networking-ii-checkpoint-2",
+        "operator-networking-ii-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

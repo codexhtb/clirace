@@ -1,0 +1,297 @@
+{
+  "slug": "logs-incidents",
+  "title": "Logs и Incident Investigation",
+  "description": "Сужайте deterministic logs по времени, severity, request и повторяемости, сохраняя evidence и итоговый report.",
+  "order": 8,
+  "prerequisites": [
+    "shared-access"
+  ],
+  "estimatedMinutes": 40,
+  "version": 1,
+  "completion": {
+    "allItemsRequired": true
+  },
+  "items": [
+    {
+      "id": "operator-logs-incidents-scope-tail-lesson",
+      "slug": "scope-tail",
+      "title": "Начните с узкого временного окна",
+      "type": "theory",
+      "order": 1,
+      "category": "logs",
+      "concept": "log_scope",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Начните с узкого временного окна"
+        },
+        {
+          "type": "paragraph",
+          "text": "Не читайте весь log сверху. Сначала выберите нужный файл, последние строки и момент симптома через `tail`, timestamps и request ID."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "tail -n 50 /workspace/logs/app.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Покажите последние 50 строк application log.",
+            "Проверка: Узкое окно снижает шум до появления первой гипотезы."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Узкое окно снижает шум до появления первой гипотезы."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-logs-incidents-scope-tail-quiz",
+      "slug": "scope-tail-quiz",
+      "title": "Operator check: Начните с узкого временного окна",
+      "type": "knowledge_check",
+      "order": 2,
+      "category": "logs",
+      "concept": "log_scope",
+      "version": 1,
+      "questionSlugs": [
+        "operator-logs-incidents-scope-tail-action",
+        "operator-logs-incidents-scope-tail-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-logs-incidents-grep-context-lesson",
+      "slug": "grep-context",
+      "title": "Поиск с номером и context",
+      "type": "theory",
+      "order": 3,
+      "category": "logs",
+      "concept": "grep_context",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Поиск с номером и context"
+        },
+        {
+          "type": "paragraph",
+          "text": "`grep -n` добавляет номер строки, `-i` игнорирует case, `-C` показывает соседний context. Ищите стабильный marker, а не случайный фрагмент."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "grep -n -C 2 \"ERROR\" /workspace/logs/app.log"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Найдите ERROR с двумя строками context.",
+            "Проверка: Context связывает error с предшествующим request и последующим outcome."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Context связывает error с предшествующим request и последующим outcome."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-logs-incidents-grep-context-quiz",
+      "slug": "grep-context-quiz",
+      "title": "Operator check: Поиск с номером и context",
+      "type": "knowledge_check",
+      "order": 4,
+      "category": "logs",
+      "concept": "grep_context",
+      "version": 1,
+      "questionSlugs": [
+        "operator-logs-incidents-grep-context-action",
+        "operator-logs-incidents-grep-context-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-logs-incidents-aggregate-lesson",
+      "slug": "aggregate",
+      "title": "Считайте повторяемость, а не впечатления",
+      "type": "theory",
+      "order": 5,
+      "category": "logs",
+      "concept": "log_aggregation",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Считайте повторяемость, а не впечатления"
+        },
+        {
+          "type": "paragraph",
+          "text": "Поля можно извлечь через `awk`, затем `sort | uniq -c | sort -nr`. Это показывает доминирующую ошибку вместо ручного просмотра."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "awk '{print $2}' /workspace/logs/access.log | sort | uniq -c | sort -nr"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Посчитайте HTTP status из второго поля log.",
+            "Проверка: Счётчик строк полезен, но для причин нужны дополнительные fields."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "note",
+          "text": "Счётчик строк полезен, но для причин нужны дополнительные fields."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-logs-incidents-aggregate-quiz",
+      "slug": "aggregate-quiz",
+      "title": "Operator check: Считайте повторяемость, а не впечатления",
+      "type": "knowledge_check",
+      "order": 6,
+      "category": "logs",
+      "concept": "log_aggregation",
+      "version": 1,
+      "questionSlugs": [
+        "operator-logs-incidents-aggregate-action",
+        "pipes-filter-errors"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-logs-incidents-evidence-report-lesson",
+      "slug": "evidence-report",
+      "title": "Evidence и incident summary",
+      "type": "theory",
+      "order": 7,
+      "category": "logs",
+      "concept": "incident_summary",
+      "version": 1,
+      "content": [
+        {
+          "type": "heading",
+          "text": "Evidence и incident summary"
+        },
+        {
+          "type": "paragraph",
+          "text": "Хороший summary содержит scope, наблюдаемый symptom, ключевые records и проверяемый вывод. Не переписывайте весь log и не меняйте source fixtures."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "code": "grep -n \"ERROR\" /workspace/logs/app.log > /workspace/error-evidence.txt"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Цель: Сохраните строки ERROR в отдельный evidence file.",
+            "Проверка: Отдельный artifact можно проверить, передать и повторно построить."
+          ]
+        },
+        {
+          "type": "note",
+          "tone": "warning",
+          "text": "Отдельный artifact можно проверить, передать и повторно построить."
+        }
+      ],
+      "completion": {
+        "explicitContinue": true
+      }
+    },
+    {
+      "id": "operator-logs-incidents-evidence-report-quiz",
+      "slug": "evidence-report-quiz",
+      "title": "Operator check: Evidence и incident summary",
+      "type": "knowledge_check",
+      "order": 8,
+      "category": "logs",
+      "concept": "incident_summary",
+      "version": 1,
+      "questionSlugs": [
+        "operator-logs-incidents-evidence-report-action",
+        "operator-logs-incidents-evidence-report-concept"
+      ],
+      "completion": {
+        "passThreshold": 50
+      }
+    },
+    {
+      "id": "operator-logs-incidents-optional-practice",
+      "slug": "optional-practice",
+      "title": "Дополнительная Operator Practice",
+      "type": "practice",
+      "order": 9,
+      "category": "logs",
+      "concept": "logs_incidents_optional",
+      "version": 1,
+      "challengeSlugs": [
+        "text-collect-error-lines",
+        "text-summarize-response-statuses",
+        "text-count-failed-logins"
+      ],
+      "completion": {
+        "requireAll": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "operator-logs-incidents-required-lab",
+      "slug": "required-lab",
+      "title": "Обязательный Operator checkpoint",
+      "type": "shell_lab",
+      "order": 10,
+      "category": "logs",
+      "concept": "logs_incidents_practice",
+      "version": 1,
+      "challengeSlugs": [
+        "text-compose-incident-summary"
+      ],
+      "completion": {
+        "requireAll": true
+      }
+    },
+    {
+      "id": "operator-logs-incidents-checkpoint",
+      "slug": "checkpoint",
+      "title": "Checkpoint: Logs и Incident Investigation",
+      "type": "checkpoint",
+      "order": 11,
+      "category": "logs",
+      "concept": "logs_incidents_checkpoint",
+      "version": 1,
+      "questionSlugs": [
+        "operator-logs-incidents-checkpoint-1",
+        "operator-logs-incidents-checkpoint-2",
+        "operator-logs-incidents-checkpoint-3"
+      ],
+      "completion": {
+        "passThreshold": 67
+      }
+    }
+  ]
+}

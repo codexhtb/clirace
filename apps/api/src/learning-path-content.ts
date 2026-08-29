@@ -87,6 +87,11 @@ export interface LearningPathDatasetReport {
     modules: number; lessons: number; questions: number; reusedQuestions: number;
     newQuestions: number; requiredPractice: number; optionalPractice: number;
   };
+  linuxOperator: null | {
+    modules: number; lessons: number; questions: number; reusedQuestions: number;
+    newQuestions: number; requiredPractice: number; optionalPractice: number;
+    uniqueCanonicalChallenges: number; newChallenges: number;
+  };
 }
 
 export async function loadAndValidateLearningPathsContent(): Promise<{ courses: LearningPathCourseContent[]; report: LearningPathDatasetReport }> {
@@ -103,6 +108,7 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
   const allItemIds = new Set<string>();
   const warnings: string[] = [];
   let zeroToOperator: LearningPathDatasetReport['zeroToOperator'] = null;
+  let linuxOperator: LearningPathDatasetReport['linuxOperator'] = null;
 
   for (const directory of courseDirectories) {
     const base = new URL(`${directory}/`, root);
@@ -130,8 +136,18 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
     if (parsedCourse.data.slug === 'linux-zero-to-operator') {
       zeroToOperator = validateZeroToOperatorCourse(modules, linuxCore.questions.map((question) => question.slug));
     }
+    if (parsedCourse.data.slug === 'linux-operator') {
+      linuxOperator = validateLinuxOperatorCourse(modules, linuxCore.questions.map((question) => question.slug));
+    }
     const { modules: _filenames, ...course } = parsedCourse.data;
     courses.push({ ...course, modules });
+  }
+
+  const knownCourses = new Set(courses.map((course) => course.slug));
+  for (const course of courses) for (const prerequisite of course.prerequisites) {
+    if (prerequisite === course.slug || !knownCourses.has(prerequisite)) {
+      throw new Error(`${course.slug}: invalid course prerequisite ${prerequisite}`);
+    }
   }
 
   const items = courses.flatMap((course) => course.modules.flatMap((module) => module.items));
@@ -152,6 +168,7 @@ export async function loadAndValidateLearningPathsContent(): Promise<{ courses: 
       challengeReferences: challengeReferences.length,
       uniqueChallengeReferences: new Set(challengeReferences).size,
       zeroToOperator,
+      linuxOperator,
     },
   };
 }
@@ -202,6 +219,60 @@ export function validateZeroToOperatorCourse(modules: LearningPathModuleContent[
     modules: modules.length, lessons: lessonTitles.size, questions: questionReferences.length,
     reusedQuestions: questionReferences.length - newQuestions.length, newQuestions: newQuestions.length,
     requiredPractice: requiredPractice.length, optionalPractice: optionalPractice.length,
+  };
+}
+
+export function validateLinuxOperatorCourse(modules: LearningPathModuleContent[], allQuestionSlugs: string[]): NonNullable<LearningPathDatasetReport['linuxOperator']> {
+  if (modules.length !== 14) throw new Error(`linux-operator: expected 14 modules, received ${modules.length}`);
+  const lessonTitles = new Set<string>();
+  const questionReferences: string[] = [];
+  const requiredPractice: string[] = [];
+  const optionalPractice: string[] = [];
+  const unsafeLabTerms = /(?:https?:\/\/(?!127\.0\.0\.1|localhost)|\bsudo\b|\bsystemctl\b|\bjournalctl\b|\bmount\b|\bmkfs\b|\bfdisk\b)/iu;
+  for (const [index, module] of modules.entries()) {
+    const theory = module.items.filter((item) => item.type === 'theory');
+    const knowledge = module.items.filter((item) => item.type === 'knowledge_check');
+    const checkpoints = module.items.filter((item) => item.type === 'checkpoint');
+    const required = module.items.filter((item) => (item.type === 'practice' || item.type === 'shell_lab') && item.completion.optional !== true);
+    const optional = module.items.filter((item) => (item.type === 'practice' || item.type === 'shell_lab') && item.completion.optional === true);
+    if (theory.length !== 4 || knowledge.length !== 4 || checkpoints.length !== 1 || required.length !== 1 || optional.length !== 1) {
+      throw new Error(`${module.slug}: Linux Operator expects four lesson/quiz pairs, one required lab, one optional practice and one checkpoint`);
+    }
+    if (index === 0 ? module.prerequisites.length !== 0 : module.prerequisites.length !== 1 || module.prerequisites[0] !== modules[index - 1]?.slug) {
+      throw new Error(`${module.slug}: Linux Operator prerequisite chain is not linear`);
+    }
+    for (const item of theory) {
+      const normalizedTitle = item.title.toLocaleLowerCase('ru-RU').replace(/\s+/gu, ' ').trim();
+      if (lessonTitles.has(normalizedTitle)) throw new Error(`${item.id}: duplicate Operator lesson title`);
+      lessonTitles.add(normalizedTitle);
+      const commandBlocks = item.content.filter((block) => block.type === 'code');
+      if (item.content.length < 5 || commandBlocks.length !== 1) throw new Error(`${item.id}: Operator lesson needs one focused command example`);
+      if (commandBlocks.some((block) => block.type === 'code' && unsafeLabTerms.test(block.code))) {
+        throw new Error(`${item.id}: Operator example depends on Internet or unsupported privileges`);
+      }
+    }
+    questionReferences.push(...knowledge.flatMap((item) => 'questionSlugs' in item ? item.questionSlugs : []),
+      ...checkpoints.flatMap((item) => 'questionSlugs' in item ? item.questionSlugs : []));
+    requiredPractice.push(...required.flatMap((item) => 'challengeSlugs' in item ? item.challengeSlugs : []));
+    optionalPractice.push(...optional.flatMap((item) => 'challengeSlugs' in item ? item.challengeSlugs : []));
+  }
+  const allReferences = [...requiredPractice, ...optionalPractice];
+  if (lessonTitles.size !== 56) throw new Error(`linux-operator: expected 56 lessons, received ${lessonTitles.size}`);
+  if (questionReferences.length !== 154 || new Set(questionReferences).size !== 154) throw new Error('linux-operator: expected 154 unique question references');
+  if (requiredPractice.length !== 14 || optionalPractice.length !== 43 || new Set(allReferences).size !== 57) {
+    throw new Error('linux-operator: expected 14 required and 43 optional unique canonical challenge references');
+  }
+  const newQuestions = questionReferences.filter((value) => value.startsWith('operator-'));
+  const allQuestions = new Set(allQuestionSlugs);
+  const orphaned = allQuestionSlugs.filter((value) => value.startsWith('operator-') && !questionReferences.includes(value));
+  if (newQuestions.length !== 137 || orphaned.length || questionReferences.some((value) => !allQuestions.has(value))) {
+    throw new Error(`linux-operator: invalid question ownership or orphaned content (${orphaned.join(', ')})`);
+  }
+  return {
+    modules: modules.length, lessons: lessonTitles.size, questions: questionReferences.length,
+    reusedQuestions: questionReferences.length - newQuestions.length, newQuestions: newQuestions.length,
+    requiredPractice: requiredPractice.length, optionalPractice: optionalPractice.length,
+    uniqueCanonicalChallenges: new Set(allReferences).size, newChallenges: 0,
   };
 }
 
